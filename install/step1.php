@@ -19,6 +19,10 @@ if (!Loader::includeModule('iblock') || !Loader::includeModule('catalog')) {
     return;
 }
 
+// Восстанавливаем выбранные значения из сессии (если есть)
+$savedProductIblockId = (int)($_SESSION['PROSPEKTWEB_CALC_STEP1_DATA']['PRODUCT_IBLOCK_ID'] ?? 0);
+$savedCreateDemoData = ($_SESSION['PROSPEKTWEB_CALC_STEP1_DATA']['CREATE_DEMO_DATA'] ?? 'Y') === 'Y';
+
 // Получаем список каталогов
 $catalogs = [];
 $rsIBlocks = \CIBlock::GetList(
@@ -119,7 +123,8 @@ while ($arIBlock = $rsIBlocks->Fetch()) {
                     <?php foreach ($catalogs as $catalog): ?>
                         <option value="<?= (int)$catalog['ID'] ?>" 
                                 data-sku-id="<?= (int)($catalog['SKU_IBLOCK_ID'] ?? 0) ?>"
-                                data-name="<?= htmlspecialcharsbx($catalog['NAME']) ?>">
+                                data-name="<?= htmlspecialcharsbx($catalog['NAME']) ?>"
+                                <?= ($savedProductIblockId === (int)$catalog['ID']) ? 'selected' : '' ?>>
                             <?= htmlspecialcharsbx($catalog['NAME']) ?> [<?= (int)$catalog['ID'] ?>]
                             <?php if ($catalog['SKU_IBLOCK_ID']): ?>
                                 (<?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_HAS_SKU') ?>)
@@ -135,7 +140,7 @@ while ($arIBlock = $rsIBlocks->Fetch()) {
                 <label for="CREATE_DEMO_DATA"><?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_CREATE_DEMO') ?></label>
             </td>
             <td>
-                <input type="checkbox" name="CREATE_DEMO_DATA" id="CREATE_DEMO_DATA" value="Y" checked>
+                <input type="checkbox" name="CREATE_DEMO_DATA" id="CREATE_DEMO_DATA" value="Y" <?= $savedCreateDemoData ? 'checked' : '' ?>>
                 <label for="CREATE_DEMO_DATA" class="adm-checkbox-label"></label>
             </td>
         </tr>
