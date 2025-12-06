@@ -144,15 +144,37 @@ class prospektweb_calc extends CModule
         
         $success = true;
         
-        // Проверяем существование исходных директорий
+        // Проверяем существование исходных директорий и создаём целевые директории
         if (is_dir($sourceJs)) {
-            CopyDirFiles($sourceJs, $targetJs, true, true);
+            // Создаём директорию если не существует
+            // Проверка !mkdir() && !is_dir() защищает от race condition
+            if (!is_dir($targetJs)) {
+                if (!mkdir($targetJs, 0755, true) && !is_dir($targetJs)) {
+                    $success = false;
+                }
+            }
+            if (is_dir($targetJs)) {
+                CopyDirFiles($sourceJs, $targetJs, true, true);
+            } else {
+                $success = false;
+            }
         } else {
             $success = false;
         }
         
         if (is_dir($sourceCss)) {
-            CopyDirFiles($sourceCss, $targetCss, true, true);
+            // Создаём директорию если не существует
+            // Проверка !mkdir() && !is_dir() защищает от race condition
+            if (!is_dir($targetCss)) {
+                if (!mkdir($targetCss, 0755, true) && !is_dir($targetCss)) {
+                    $success = false;
+                }
+            }
+            if (is_dir($targetCss)) {
+                CopyDirFiles($sourceCss, $targetCss, true, true);
+            } else {
+                $success = false;
+            }
         } else {
             $success = false;
         }

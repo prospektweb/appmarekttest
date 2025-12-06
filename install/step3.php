@@ -317,27 +317,38 @@ switch ($currentStep) {
             installLog("");
             installLog("Создание демо-данных...", 'header');
             
-            if (!class_exists('\\Prospektweb\\Calc\\Install\\DemoDataCreator')) {
-                installLog("ОШИБКА: Класс DemoDataCreator не найден", 'error');
-                $_SESSION['PROSPEKTWEB_CALC_INSTALL']['errors'][] = "Класс DemoDataCreator не найден";
-            } elseif (empty($installData['iblock_ids'])) {
-                installLog("ОШИБКА: Инфоблоки не созданы", 'error');
-                $_SESSION['PROSPEKTWEB_CALC_INSTALL']['errors'][] = "Инфоблоки не созданы";
+            // Добавляем прямой require для DemoDataCreator перед использованием
+            $demoDataCreatorPath = __DIR__ . '/../lib/Install/DemoDataCreator.php';
+            if (file_exists($demoDataCreatorPath)) {
+                require_once $demoDataCreatorPath;
+                
+                if (class_exists('\\Prospektweb\\Calc\\Install\\DemoDataCreator')) {
+                    if (empty($installData['iblock_ids'])) {
+                        installLog("ОШИБКА: Инфоблоки не созданы", 'error');
+                        $_SESSION['PROSPEKTWEB_CALC_INSTALL']['errors'][] = "Инфоблоки не созданы";
+                    } else {
+                        $demoCreator = new \Prospektweb\Calc\Install\DemoDataCreator();
+                        $demoResult = $demoCreator->create($installData['iblock_ids']);
+                        
+                        foreach ($demoResult['created'] as $createdMessage) {
+                            installLog($createdMessage, 'success');
+                        }
+                        
+                        foreach ($demoResult['errors'] as $errorMessage) {
+                            installLog($errorMessage, 'error');
+                            $_SESSION['PROSPEKTWEB_CALC_INSTALL']['errors'][] = $errorMessage;
+                        }
+                        
+                        $totalCreated = count($demoResult['created']);
+                        installLog("Всего создано элементов: {$totalCreated}", 'success');
+                    }
+                } else {
+                    installLog("Класс DemoDataCreator не найден после загрузки файла", 'error');
+                    $_SESSION['PROSPEKTWEB_CALC_INSTALL']['errors'][] = "Класс DemoDataCreator не найден после загрузки файла";
+                }
             } else {
-                $demoCreator = new \Prospektweb\Calc\Install\DemoDataCreator();
-                $demoResult = $demoCreator->create($installData['iblock_ids']);
-                
-                foreach ($demoResult['created'] as $createdMessage) {
-                    installLog($createdMessage, 'success');
-                }
-                
-                foreach ($demoResult['errors'] as $errorMessage) {
-                    installLog($errorMessage, 'error');
-                    $_SESSION['PROSPEKTWEB_CALC_INSTALL']['errors'][] = $errorMessage;
-                }
-                
-                $totalCreated = count($demoResult['created']);
-                installLog("Всего создано элементов: {$totalCreated}", 'success');
+                installLog("Файл DemoDataCreator.php не найден: " . $demoDataCreatorPath, 'error');
+                $_SESSION['PROSPEKTWEB_CALC_INSTALL']['errors'][] = "Файл DemoDataCreator.php не найден: " . $demoDataCreatorPath;
             }
         }
         
