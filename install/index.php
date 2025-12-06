@@ -44,11 +44,50 @@ class prospektweb_calc extends CModule
     public function DoInstall()
     {
         global $APPLICATION;
+        
         if (!$this->checkDependencies()) {
             return false;
         }
-        // НЕ регистрируем модуль здесь - регистрация будет в конце установки (step3.php, шаг 5)
-        $APPLICATION->IncludeAdminFile(Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_TITLE'), __DIR__ . '/step1.php');
+        
+        // Определяем текущий шаг установки
+        $step = (int)($_REQUEST['step'] ?? 1);
+        
+        switch ($step) {
+            case 1:
+                $APPLICATION->IncludeAdminFile(
+                    Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_TITLE'), 
+                    __DIR__ . '/step1.php'
+                );
+                break;
+                
+            case 2:
+                $APPLICATION->IncludeAdminFile(
+                    Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_TITLE'), 
+                    __DIR__ . '/step2.php'
+                );
+                break;
+                
+            case 3:
+                $APPLICATION->IncludeAdminFile(
+                    Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_TITLE'), 
+                    __DIR__ . '/step3.php'
+                );
+                break;
+                
+            case 4:
+                $APPLICATION->IncludeAdminFile(
+                    Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_TITLE'), 
+                    __DIR__ . '/step4.php'
+                );
+                break;
+                
+            default:
+                $APPLICATION->IncludeAdminFile(
+                    Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_TITLE'), 
+                    __DIR__ . '/step1.php'
+                );
+        }
+        
         return true;
     }
 

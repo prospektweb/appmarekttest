@@ -12,8 +12,23 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
 
 Loc::loadMessages(__FILE__);
 
+// Получаем данные из POST/REQUEST, если пусто — пробуем из сессии
 $productIblockId = (int)($_REQUEST['PRODUCT_IBLOCK_ID'] ?? 0);
 $createDemoData = ($_REQUEST['CREATE_DEMO_DATA'] ?? '') === 'Y';
+
+// Если данные из REQUEST пусты, пробуем восстановить из сессии
+if ($productIblockId <= 0 && !empty($_SESSION['PROSPEKTWEB_CALC_STEP1_DATA'])) {
+    $productIblockId = (int)($_SESSION['PROSPEKTWEB_CALC_STEP1_DATA']['PRODUCT_IBLOCK_ID'] ?? 0);
+    $createDemoData = ($_SESSION['PROSPEKTWEB_CALC_STEP1_DATA']['CREATE_DEMO_DATA'] ?? '') === 'Y';
+}
+
+// Сохраняем данные в сессию для надёжности (на случай перезагрузки)
+if ($productIblockId > 0) {
+    $_SESSION['PROSPEKTWEB_CALC_STEP1_DATA'] = [
+        'PRODUCT_IBLOCK_ID' => $productIblockId,
+        'CREATE_DEMO_DATA' => $createDemoData ? 'Y' : 'N',
+    ];
+}
 
 if ($productIblockId <= 0) {
     echo '<div class="adm-info-message adm-info-message-red">' .
