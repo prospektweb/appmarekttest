@@ -40,8 +40,7 @@ $installData['log'] = [];
 // Функция логирования
 function installLog(string $message, string $type = 'info'): void
 {
-    global $installData;
-    $installData['log'][] = ['message' => $message, 'type' => $type];
+    $_SESSION['PROSPEKTWEB_CALC_INSTALL']['log'][] = ['message' => $message, 'type' => $type];
 }
 
 // Функция получения ошибки Bitrix
@@ -55,8 +54,6 @@ function getBitrixError(): string
 // Создание типа инфоблоков
 function createIblockTypeWithLog(string $id, string $name): bool
 {
-    global $installData;
-    
     $type = \CIBlockType::GetByID($id)->Fetch();
     if ($type) {
         installLog("Тип инфоблоков '{$id}' уже существует", 'warning');
@@ -83,7 +80,7 @@ function createIblockTypeWithLog(string $id, string $name): bool
     } else {
         $error = getBitrixError();
         installLog("Ошибка создания типа '{$id}': {$error}", 'error');
-        $installData['errors'][] = "Тип '{$id}': {$error}";
+        $_SESSION['PROSPEKTWEB_CALC_INSTALL']['errors'][] = "Тип '{$id}': {$error}";
         return false;
     }
 }
@@ -91,8 +88,6 @@ function createIblockTypeWithLog(string $id, string $name): bool
 // Создание инфоблока
 function createIblockWithLog(string $typeId, string $code, string $name, array $properties = []): int
 {
-    global $installData;
-    
     installLog("Обработка инфоблока '{$code}'.. .");
     
     $rsIBlock = \CIBlock::GetList([], ['CODE' => $code, 'TYPE' => $typeId]);
@@ -121,7 +116,7 @@ function createIblockWithLog(string $typeId, string $code, string $name, array $
     if (! $iblockId) {
         $error = getBitrixError();
         installLog("ОШИБКА создания инфоблока '{$code}': {$error}", 'error');
-        $installData['errors'][] = "Инфоблок '{$code}': {$error}";
+        $_SESSION['PROSPEKTWEB_CALC_INSTALL']['errors'][] = "Инфоблок '{$code}': {$error}";
         return 0;
     }
 
@@ -166,8 +161,6 @@ function createIblockWithLog(string $typeId, string $code, string $name, array $
 // Создание SKU-связи
 function createSkuRelationWithLog(int $productIblockId, int $offersIblockId, string $name): bool
 {
-    global $installData;
-    
     if ($productIblockId <= 0 || $offersIblockId <= 0) {
         installLog("Пропуск SKU-связи '{$name}': некорректные ID", 'warning');
         return false;
@@ -318,6 +311,35 @@ switch ($currentStep) {
         Option::set($moduleId, 'SKU_IBLOCK_ID', $installData['sku_iblock_id']);
         installLog("Сохранено: PRODUCT_IBLOCK_ID = " . $installData['product_iblock_id'], 'success');
         installLog("Сохранено: SKU_IBLOCK_ID = " . $installData['sku_iblock_id'], 'success');
+        
+        // Создание демо-данных (если выбрано)
+        if ($installData['create_demo_data']) {
+            installLog("");
+            installLog("Создание демо-данных...", 'header');
+            
+            if (!class_exists('\\Prospektweb\\Calc\\Install\\DemoDataCreator')) {
+                installLog("ОШИБКА: Класс DemoDataCreator не найден", 'error');
+                $_SESSION['PROSPEKTWEB_CALC_INSTALL']['errors'][] = "Класс DemoDataCreator не найден";
+            } elseif (empty($installData['iblock_ids'])) {
+                installLog("ОШИБКА: Инфоблоки не созданы", 'error');
+                $_SESSION['PROSPEKTWEB_CALC_INSTALL']['errors'][] = "Инфоблоки не созданы";
+            } else {
+                $demoCreator = new \Prospektweb\Calc\Install\DemoDataCreator();
+                $demoResult = $demoCreator->create($installData['iblock_ids']);
+                
+                foreach ($demoResult['created'] as $createdMessage) {
+                    installLog($createdMessage, 'success');
+                }
+                
+                foreach ($demoResult['errors'] as $errorMessage) {
+                    installLog($errorMessage, 'error');
+                    $_SESSION['PROSPEKTWEB_CALC_INSTALL']['errors'][] = $errorMessage;
+                }
+                
+                $totalCreated = count($demoResult['created']);
+                installLog("Всего создано элементов: {$totalCreated}", 'success');
+            }
+        }
         
         installLog("--- Шаг 4 выполнен ---", 'header');
         break;
