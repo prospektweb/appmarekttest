@@ -326,7 +326,7 @@ switch ($currentStep) {
             
             foreach ($demoResult['errors'] as $errorMessage) {
                 installLog($errorMessage, 'error');
-                $installData['errors'][] = $errorMessage;
+                $_SESSION['PROSPEKTWEB_CALC_INSTALL']['errors'][] = $errorMessage;
             }
             
             $totalCreated = count($demoResult['created']);
