@@ -1,0 +1,31 @@
+<?php
+
+$MESS['PROSPEKTWEB_CALC_DIGITAL_SHEET_TITLE'] = 'Цифровая листовая печать';
+$MESS['PROSPEKTWEB_CALC_ROLL_LAMINATION_TITLE'] = 'Ламинирование рулонное';
+$MESS['PROSPEKTWEB_CALC_DIMENSIONS_WEIGHT_TITLE'] = 'Габариты и вес';
+$MESS['PROSPEKTWEB_CALC_PRICE_SETTINGS_TITLE'] = 'Настройка цен';
+
+$MESS['PROSPEKTWEB_CALC_GROUP_COMMON'] = 'Общие';
+$MESS['PROSPEKTWEB_CALC_GROUP_DIGITAL_PRINT'] = 'Цифровая печать';
+$MESS['PROSPEKTWEB_CALC_GROUP_POSTPRESS'] = 'Постпечатные работы';
+
+$MESS['PROSPEKTWEB_CALC_OPT_PAPER'] = 'Бумага';
+$MESS['PROSPEKTWEB_CALC_OPT_PRESS'] = 'Печать';
+$MESS['PROSPEKTWEB_CALC_OPT_BLEED'] = 'Припуски, мм';
+$MESS['PROSPEKTWEB_CALC_OPT_FILM'] = 'Плёнка';
+$MESS['PROSPEKTWEB_CALC_OPT_DOUBLE_SIDED'] = 'Двухстороннее ламинирование';
+$MESS['PROSPEKTWEB_CALC_OPT_WORK'] = 'Работа';
+$MESS['PROSPEKTWEB_CALC_OPT_WASTE_PERCENT'] = 'Процент отходов';
+$MESS['PROSPEKTWEB_CALC_OPT_RECALC_WIDTH'] = 'Пересчитывать ширину (WIDTH)';
+$MESS['PROSPEKTWEB_CALC_OPT_RECALC_LENGTH'] = 'Пересчитывать длину (LENGTH)';
+$MESS['PROSPEKTWEB_CALC_OPT_RECALC_HEIGHT'] = 'Пересчитывать толщину (HEIGHT)';
+$MESS['PROSPEKTWEB_CALC_OPT_RECALC_WEIGHT'] = 'Пересчитывать вес (WEIGHT)';
+$MESS['PROSPEKTWEB_CALC_OPT_MEASURE'] = 'Ед. измерения';
+$MESS['PROSPEKTWEB_CALC_OPT_MATERIAL_COMPONENTS'] = 'Состоит из материалов';
+$MESS['PROSPEKTWEB_CALC_OPT_PRICE_MARKUPS'] = 'Наценки по типам цен';
+$MESS['PROSPEKTWEB_CALC_OPT_MARKETING_PRICE'] = 'Маркетинговое снижение цены';
+
+$MESS['PROSPEKTWEB_CALC_ERROR_NO_MATERIAL'] = 'Не указан материал';
+$MESS['PROSPEKTWEB_CALC_ERROR_NO_WORK'] = 'Не указана работа';
+$MESS['PROSPEKTWEB_CALC_ERROR_NO_EQUIPMENT'] = 'Не указано оборудование';
+$MESS['PROSPEKTWEB_CALC_ERROR_INVALID_DIMENSIONS'] = 'Некорректные размеры';

@@ -1,0 +1,24 @@
+<?php
+
+$MESS['PROSPEKTWEB_CALC_MODULE_NOT_INSTALLED'] = 'Модуль "Калькулятор себестоимости" не установлен';
+$MESS['PROSPEKTWEB_CALC_SETTINGS_SAVED'] = 'Настройки успешно сохранены';
+
+$MESS['PROSPEKTWEB_CALC_TAB_MAIN'] = 'Основные';
+$MESS['PROSPEKTWEB_CALC_TAB_MAIN_TITLE'] = 'Основные настройки модуля';
+$MESS['PROSPEKTWEB_CALC_TAB_IBLOCKS'] = 'Инфоблоки';
+$MESS['PROSPEKTWEB_CALC_TAB_IBLOCKS_TITLE'] = 'Инфоблоки модуля';
+
+$MESS['PROSPEKTWEB_CALC_DEFAULT_PRICE_TYPE'] = 'Тип цены по умолчанию';
+$MESS['PROSPEKTWEB_CALC_DEFAULT_CURRENCY'] = 'Валюта по умолчанию';
+$MESS['PROSPEKTWEB_CALC_LOGGING_ENABLED'] = 'Включить логирование';
+
+$MESS['PROSPEKTWEB_CALC_IBLOCK_CALC_CONFIG'] = 'Конфигурации калькуляций';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_CALC_SETTINGS'] = 'Настройки калькуляторов';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_MATERIALS'] = 'Материалы';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_MATERIALS_VARIANTS'] = 'Варианты материалов';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_WORKS'] = 'Работы';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_WORKS_VARIANTS'] = 'Варианты работ';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_EQUIPMENT'] = 'Оборудование';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_DETAILS'] = 'Детали';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_DETAILS_VARIANTS'] = 'Варианты деталей';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_NOT_CREATED'] = 'Не создан';

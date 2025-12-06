@@ -1,0 +1,288 @@
+/**
+ * ProspekwebCalc CSS
+ * Стили для UI калькулятора себестоимости
+ * @version 1.0.0
+ */
+
+.prospektweb-calc-container {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.prospektweb-calc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+}
+
+.prospektweb-calc-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+}
+
+.prospektweb-calc-chain {
+    padding: 15px;
+}
+
+.prospektweb-calc-accordion {
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+}
+
+.prospektweb-calc-accordion.system {
+    border-color: #2196f3;
+    background: #e3f2fd;
+}
+
+.prospektweb-calc-accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.prospektweb-calc-accordion-header:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.prospektweb-calc-accordion-title {
+    font-weight: 500;
+    color: #333;
+}
+
+.prospektweb-calc-accordion-toggle {
+    color: #999;
+    transition: transform 0.2s;
+}
+
+.prospektweb-calc-accordion.collapsed .prospektweb-calc-accordion-toggle {
+    transform: rotate(-90deg);
+}
+
+.prospektweb-calc-accordion-content {
+    padding: 15px;
+    border-top: 1px solid #eee;
+}
+
+.prospektweb-calc-accordion.collapsed .prospektweb-calc-accordion-content {
+    display: none;
+}
+
+.prospektweb-calc-chain-controls {
+    display: flex;
+    gap: 5px;
+}
+
+.prospektweb-calc-chain-btn {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #666;
+}
+
+.prospektweb-calc-chain-btn:hover {
+    background: #f5f5f5;
+}
+
+.prospektweb-calc-chain-btn-remove {
+    color: #f44336;
+    border-color: #f44336;
+}
+
+.prospektweb-calc-chain-btn-remove:hover {
+    background: #ffebee;
+}
+
+.prospektweb-calc-row {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.prospektweb-calc-label {
+    flex: 0 0 40%;
+    padding-right: 10px;
+    color: #666;
+}
+
+.prospektweb-calc-control {
+    flex: 1;
+}
+
+.prospektweb-calc-input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.prospektweb-calc-input:focus {
+    border-color: #2196f3;
+    outline: none;
+}
+
+.prospektweb-calc-select {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 13px;
+    background: #fff;
+}
+
+.prospektweb-calc-checkbox {
+    margin: 0;
+}
+
+.prospektweb-calc-add-section {
+    padding: 15px;
+    background: #f9f9f9;
+    border-top: 1px solid #eee;
+}
+
+.prospektweb-calc-btn {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.prospektweb-calc-btn:hover {
+    background: #f5f5f5;
+}
+
+.prospektweb-calc-btn-primary {
+    background: #2196f3;
+    border-color: #2196f3;
+    color: #fff;
+}
+
+.prospektweb-calc-btn-primary:hover {
+    background: #1976d2;
+}
+
+.prospektweb-calc-progress {
+    padding: 10px 15px;
+    background: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+}
+
+.prospektweb-calc-progress-bar {
+    height: 4px;
+    background: #e0e0e0;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.prospektweb-calc-progress-fill {
+    height: 100%;
+    background: #4caf50;
+    transition: width 0.3s;
+}
+
+.prospektweb-calc-progress-text {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.prospektweb-calc-message {
+    padding: 10px 15px;
+    border-radius: 3px;
+    margin: 10px 15px;
+}
+
+.prospektweb-calc-message-success {
+    background: #e8f5e9;
+    border: 1px solid #c8e6c9;
+    color: #2e7d32;
+}
+
+.prospektweb-calc-message-error {
+    background: #ffebee;
+    border: 1px solid #ffcdd2;
+    color: #c62828;
+}
+
+.prospektweb-calc-message-info {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    color: #1565c0;
+}
+
+/* Markups control styles */
+.prospektweb-calc-markups {
+    margin-top: 10px;
+}
+
+.prospektweb-calc-markup-group {
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+}
+
+.prospektweb-calc-markup-title {
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+
+.prospektweb-calc-markup-rows {
+    margin-bottom: 10px;
+}
+
+.prospektweb-calc-markup-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.prospektweb-calc-markup-col {
+    flex: 1;
+}
+
+.prospektweb-calc-markup-label {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 3px;
+}
+
+.prospektweb-calc-markup-input {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.prospektweb-calc-markup-remove {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.prospektweb-calc-markup-add {
+    font-size: 12px;
+    padding: 4px 10px;
+}

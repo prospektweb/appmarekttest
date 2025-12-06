@@ -1,0 +1,23 @@
+<?php
+use Bitrix\Main\Loader;
+Loader::registerAutoloadClasses('prospektweb.calc', [
+    'Prospektweb\\Calc\\Calculator\\CalculatorInterface' => 'lib/Calculator/CalculatorInterface.php',
+    'Prospektweb\\Calc\\Calculator\\BaseCalculator' => 'lib/Calculator/BaseCalculator.php',
+    'Prospektweb\\Calc\\Calculator\\CalculatorRegistry' => 'lib/Calculator/CalculatorRegistry.php',
+    'Prospektweb\\Calc\\Calculator\\Calculators\\DigitalSheet' => 'lib/Calculator/Calculators/DigitalSheet.php',
+    'Prospektweb\\Calc\\Calculator\\Calculators\\RollLamination' => 'lib/Calculator/Calculators/RollLamination.php',
+    'Prospektweb\\Calc\\Calculator\\Calculators\\DimensionsWeight' => 'lib/Calculator/Calculators/DimensionsWeight.php',
+    'Prospektweb\\Calc\\Calculator\\Calculators\\PriceSettings' => 'lib/Calculator/Calculators/PriceSettings.php',
+    'Prospektweb\\Calc\\Config\\ConfigManager' => 'lib/Config/ConfigManager.php',
+    'Prospektweb\\Calc\\Config\\SettingsManager' => 'lib/Config/SettingsManager.php',
+    'Prospektweb\\Calc\\Install\\Installer' => 'lib/Install/Installer.php',
+    'Prospektweb\\Calc\\Install\\IblockCreator' => 'lib/Install/IblockCreator.php',
+    'Prospektweb\\Calc\\Install\\PropertyCreator' => 'lib/Install/PropertyCreator.php',
+    'Prospektweb\\Calc\\Install\\DemoDataCreator' => 'lib/Install/DemoDataCreator.php',
+    'Prospektweb\\Calc\\Services\\EntityLoader' => 'lib/Services/EntityLoader.php',
+    'Prospektweb\\Calc\\Services\\ResultWriter' => 'lib/Services/ResultWriter.php',
+    'Prospektweb\\Calc\\Services\\ValidationService' => 'lib/Services/ValidationService.php',
+    'Prospektweb\\Calc\\Services\\DependencyTracker' => 'lib/Services/DependencyTracker.php',
+    'Prospektweb\\Calc\\Handlers\\AdminHandler' => 'lib/Handlers/AdminHandler.php',
+    'Prospektweb\\Calc\\Handlers\\DependencyHandler' => 'lib/Handlers/DependencyHandler.php',
+]);
