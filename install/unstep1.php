@@ -35,19 +35,21 @@ if (Loader::includeModule('iblock')) {
         if ($iblockId > 0) {
             $rsIBlock = \CIBlock::GetByID($iblockId);
             if ($arIBlock = $rsIBlock->Fetch()) {
-                $elementsCount = \CIBlockElement::GetList(
+                // Получаем количество элементов через GetList с использованием CNT
+                $rsCount = \CIBlockElement::GetList(
                     [],
                     ['IBLOCK_ID' => $iblockId],
-                    [],
                     false,
-                    []
+                    false,
+                    ['ID']
                 );
+                $elementsCount = $rsCount->SelectedRowsCount();
                 $createdData[] = [
                     'type' => 'iblock',
                     'id' => $iblockId,
                     'name' => $arIBlock['NAME'],
                     'code' => $code,
-                    'elements' => $elementsCount,
+                    'elements' => (int)$elementsCount,
                 ];
                 $hasData = true;
             }

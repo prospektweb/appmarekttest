@@ -212,14 +212,14 @@ uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP3'), 'header');
 $em = EventManager::getInstance();
 
 $events = [
-    ['main', 'OnAdminTabControlBegin', '\\Prospektweb\\Calc\\Handlers\\AdminHandler', 'onTabControlBegin'],
-    ['main', 'OnAdminListDisplay', '\\Prospektweb\\Calc\\Handlers\\AdminHandler', 'onAdminListDisplay'],
-    ['iblock', 'OnAfterIBlockElementUpdate', '\\Prospektweb\\Calc\\Handlers\\DependencyHandler', 'onElementUpdate'],
+    ['module' => 'main', 'event' => 'OnAdminTabControlBegin', 'class' => '\\Prospektweb\\Calc\\Handlers\\AdminHandler', 'method' => 'onTabControlBegin'],
+    ['module' => 'main', 'event' => 'OnAdminListDisplay', 'class' => '\\Prospektweb\\Calc\\Handlers\\AdminHandler', 'method' => 'onAdminListDisplay'],
+    ['module' => 'iblock', 'event' => 'OnAfterIBlockElementUpdate', 'class' => '\\Prospektweb\\Calc\\Handlers\\DependencyHandler', 'method' => 'onElementUpdate'],
 ];
 
-foreach ($events as $event) {
-    $em->unRegisterEventHandler($event[0], $event[1], $moduleId, $event[2], $event[3]);
-    uninstallLog("  → {$event[0]}::{$event[1]}: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
+foreach ($events as $eventData) {
+    $em->unRegisterEventHandler($eventData['module'], $eventData['event'], $moduleId, $eventData['class'], $eventData['method']);
+    uninstallLog("  → {$eventData['module']}::{$eventData['event']}: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
 }
 uninstallLog('');
 

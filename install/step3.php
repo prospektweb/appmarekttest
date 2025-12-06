@@ -331,7 +331,7 @@ switch ($currentStep) {
         
         $moduleClass = new prospektweb_calc();
         
-        installLog("Проверка директории assets...");
+        installLog("Проверка директорий assets...");
         $assetsJsDir = __DIR__ . '/assets/js';
         $assetsCssDir = __DIR__ . '/assets/css';
         
@@ -347,7 +347,7 @@ switch ($currentStep) {
             installLog("  → Директория CSS не найдена: {$assetsCssDir}", 'warning');
         }
         
-        installLog("Копирование JS/CSS файлов...");
+        installLog("Копирование JS/CSS файлов.");
         $filesResult = $moduleClass->installFiles();
         if ($filesResult) {
             installLog("Файлы скопированы", 'success');
@@ -355,12 +355,12 @@ switch ($currentStep) {
             installLog("Некоторые файлы не были скопированы (возможно, отсутствуют исходные директории)", 'warning');
         }
         
-        installLog("Регистрация обработчиков событий...");
+        installLog("Регистрация обработчиков событий.");
         $moduleClass->installEvents();
         installLog("Обработчики зарегистрированы", 'success');
         
         // Регистрируем модуль ТОЛЬКО после успешного завершения всех шагов
-        installLog("Регистрация модуля в системе...");
+        installLog("Регистрация модуля в системе.");
         $moduleClass->registerModule();
         installLog("Модуль зарегистрирован", 'success');
         
