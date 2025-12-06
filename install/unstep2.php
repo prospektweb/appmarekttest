@@ -1,9 +1,14 @@
 <?php
+/**
+ * Шаг 2 удаления модуля: Пошаговый процесс с детальным логированием
+ */
+
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ModuleManager;
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\EventManager;
 use Bitrix\Main\Loader;
+use Bitrix\Main\Application;
 
 if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
     die();
@@ -16,88 +21,296 @@ global $APPLICATION;
 $deleteData = ($_REQUEST['DELETE_DATA'] ?? '') === 'Y';
 $moduleId = 'prospektweb.calc';
 
-// Удаляем обработчики событий
-$em = EventManager::getInstance();
-$em->unRegisterEventHandler('main', 'OnAdminTabControlBegin', $moduleId);
-$em->unRegisterEventHandler('main', 'OnAdminListDisplay', $moduleId);
-$em->unRegisterEventHandler('iblock', 'OnAfterIBlockElementUpdate', $moduleId);
+// Инициализация логов
+$log = [];
+$errors = [];
 
-// Удаляем файлы
-DeleteDirFilesEx('/local/js/prospektweb.calc');
-DeleteDirFilesEx('/local/css/prospektweb.calc');
-
-// Удаляем данные если выбрано
-if ($deleteData) {
-    Loader::includeModule('iblock');
-    Loader::includeModule('catalog');
-
-    // Порядок важен: сначала варианты (SKU), потом родительские
-    $iblockCodes = [
-        'CALC_MATERIALS_VARIANTS',
-        'CALC_WORKS_VARIANTS',
-        'CALC_DETAILS_VARIANTS',
-        'CALC_MATERIALS',
-        'CALC_WORKS',
-        'CALC_DETAILS',
-        'CALC_EQUIPMENT',
-        'CALC_CONFIG',
-        'CALC_SETTINGS',
-    ];
-
-    // Собираем ID инфоблоков один раз
-    $iblockIds = [];
-    foreach ($iblockCodes as $code) {
-        $rsIBlock = \CIBlock::GetList([], ['CODE' => $code]);
-        while ($arIBlock = $rsIBlock->Fetch()) {
-            $iblockIds[] = (int)$arIBlock['ID'];
-        }
-    }
-
-    // Шаг 1: Разрываем SKU-связи
-    foreach ($iblockIds as $iblockId) {
-        \CCatalog::Delete($iblockId);
-    }
-
-    // Шаг 2: Удаляем элементы
-    foreach ($iblockIds as $iblockId) {
-        $rsElements = \CIBlockElement::GetList([], ['IBLOCK_ID' => $iblockId], false, false, ['ID']);
-        while ($arElement = $rsElements->Fetch()) {
-            \CIBlockElement::Delete($arElement['ID']);
-        }
-    }
-
-    // Шаг 3: Удаляем разделы
-    foreach ($iblockIds as $iblockId) {
-        $rsSections = \CIBlockSection::GetList(['DEPTH_LEVEL' => 'DESC'], ['IBLOCK_ID' => $iblockId], false, ['ID']);
-        while ($arSection = $rsSections->Fetch()) {
-            \CIBlockSection::Delete($arSection['ID']);
-        }
-    }
-
-    // Шаг 4: Удаляем инфоблоки
-    foreach ($iblockIds as $iblockId) {
-        \CIBlock::Delete($iblockId);
-    }
-
-    // Шаг 5: Удаляем типы инфоблоков
-    \CIBlockType::Delete('calculator');
-    \CIBlockType::Delete('calculator_catalog');
-
-    // Удаляем настройки
-    Option::delete($moduleId);
+/**
+ * Функция логирования
+ */
+function uninstallLog(string $message, string $type = 'info'): void
+{
+    global $log;
+    $log[] = ['message' => $message, 'type' => $type];
 }
 
-// Снимаем модуль с регистрации
-ModuleManager::unRegisterModule($moduleId);
+/**
+ * Получение ошибки Bitrix
+ */
+function getUninstallError(): string
+{
+    global $APPLICATION;
+    $ex = $APPLICATION->GetException();
+    return $ex ? $ex->GetString() : 'Неизвестная ошибка';
+}
+
+// ============= НАЧАЛО ПРОЦЕССА УДАЛЕНИЯ =============
+
+uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_START'), 'header');
+uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_MODULE_ID') . ': ' . $moduleId);
+uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_DATA_OPTION') . ': ' . ($deleteData ? Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_YES') : Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_NO')));
+uninstallLog('');
+
+// ============= ШАГ 1: УДАЛЕНИЕ ДАННЫХ (ЕСЛИ ВЫБРАНО) =============
+
+if ($deleteData) {
+    uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP1'), 'header');
+    
+    if (Loader::includeModule('iblock') && Loader::includeModule('catalog')) {
+        
+        // Порядок важен: сначала варианты (SKU), потом родительские
+        $iblockCodes = [
+            'CALC_MATERIALS_VARIANTS',
+            'CALC_WORKS_VARIANTS',
+            'CALC_DETAILS_VARIANTS',
+            'CALC_MATERIALS',
+            'CALC_WORKS',
+            'CALC_DETAILS',
+            'CALC_EQUIPMENT',
+            'CALC_CONFIG',
+            'CALC_SETTINGS',
+        ];
+
+        // Собираем ID инфоблоков
+        $iblockIds = [];
+        uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_COLLECTING_IBLOCKS'));
+        
+        foreach ($iblockCodes as $code) {
+            $iblockId = (int)Option::get($moduleId, 'IBLOCK_' . $code, 0);
+            if ($iblockId > 0) {
+                $iblockIds[$code] = $iblockId;
+                uninstallLog("  → {$code}: ID {$iblockId}", 'success');
+            } else {
+                uninstallLog("  → {$code}: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_NOT_FOUND'), 'warning');
+            }
+        }
+        uninstallLog('');
+
+        // Шаг 1.1: Удаляем все элементы инфоблоков
+        uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP1_1'), 'header');
+        foreach ($iblockIds as $code => $iblockId) {
+            $deletedElements = 0;
+            $rsElements = \CIBlockElement::GetList([], ['IBLOCK_ID' => $iblockId], false, false, ['ID']);
+            while ($arElement = $rsElements->Fetch()) {
+                if (\CIBlockElement::Delete($arElement['ID'])) {
+                    $deletedElements++;
+                }
+            }
+            if ($deletedElements > 0) {
+                uninstallLog("  → {$code}: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED') . " {$deletedElements} " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_ELEMENTS'), 'success');
+            } else {
+                uninstallLog("  → {$code}: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_NO_ELEMENTS'), 'info');
+            }
+        }
+        uninstallLog('');
+
+        // Шаг 1.2: Удаляем разделы инфоблоков
+        uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP1_2'), 'header');
+        foreach ($iblockIds as $code => $iblockId) {
+            $deletedSections = 0;
+            $rsSections = \CIBlockSection::GetList(
+                ['DEPTH_LEVEL' => 'DESC'],
+                ['IBLOCK_ID' => $iblockId],
+                false,
+                ['ID']
+            );
+            while ($arSection = $rsSections->Fetch()) {
+                if (\CIBlockSection::Delete($arSection['ID'])) {
+                    $deletedSections++;
+                }
+            }
+            if ($deletedSections > 0) {
+                uninstallLog("  → {$code}: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED') . " {$deletedSections} " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_SECTIONS'), 'success');
+            }
+        }
+        uninstallLog('');
+
+        // Шаг 1.3: Разрываем SKU-связи
+        uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP1_3'), 'header');
+        $skuRelations = [
+            'CALC_MATERIALS' => 'CALC_MATERIALS_VARIANTS',
+            'CALC_WORKS' => 'CALC_WORKS_VARIANTS',
+            'CALC_DETAILS' => 'CALC_DETAILS_VARIANTS',
+        ];
+        
+        foreach ($skuRelations as $parentCode => $offersCode) {
+            $offersIblockId = $iblockIds[$offersCode] ?? 0;
+            if ($offersIblockId > 0) {
+                if (\CCatalog::Delete($offersIblockId)) {
+                    uninstallLog("  → {$parentCode} ↔ {$offersCode}: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_SKU_DELETED'), 'success');
+                } else {
+                    uninstallLog("  → {$parentCode} ↔ {$offersCode}: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_SKU_NOT_EXISTS'), 'warning');
+                }
+            }
+        }
+        uninstallLog('');
+
+        // Шаг 1.4: Удаляем инфоблоки
+        uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP1_4'), 'header');
+        foreach ($iblockIds as $code => $iblockId) {
+            if (\CIBlock::Delete($iblockId)) {
+                uninstallLog("  → {$code} (ID: {$iblockId}): " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
+            } else {
+                $error = getUninstallError();
+                uninstallLog("  → {$code} (ID: {$iblockId}): " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_ERROR') . " - {$error}", 'error');
+                $errors[] = "Инфоблок {$code}: {$error}";
+            }
+        }
+        uninstallLog('');
+
+        // Шаг 1.5: Удаляем типы инфоблоков
+        uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP1_5'), 'header');
+        $types = ['calculator', 'calculator_catalog'];
+        foreach ($types as $type) {
+            if (\CIBlockType::Delete($type)) {
+                uninstallLog("  → {$type}: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
+            } else {
+                uninstallLog("  → {$type}: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_TYPE_NOT_EXISTS'), 'warning');
+            }
+        }
+        uninstallLog('');
+        
+    } else {
+        uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_MODULES_NOT_LOADED'), 'error');
+        $errors[] = Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_MODULES_NOT_LOADED');
+    }
+}
+
+// ============= ШАГ 2: УДАЛЕНИЕ ФАЙЛОВ =============
+
+uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP2'), 'header');
+
+$docRoot = Application::getDocumentRoot();
+$jsDir = $docRoot . '/local/js/prospektweb.calc';
+$cssDir = $docRoot . '/local/css/prospektweb.calc';
+
+if (is_dir($jsDir)) {
+    if (DeleteDirFilesEx('/local/js/prospektweb.calc')) {
+        uninstallLog("  → JS: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
+    } else {
+        uninstallLog("  → JS: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_ERROR'), 'error');
+    }
+} else {
+    uninstallLog("  → JS: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DIR_NOT_EXISTS'), 'warning');
+}
+
+if (is_dir($cssDir)) {
+    if (DeleteDirFilesEx('/local/css/prospektweb.calc')) {
+        uninstallLog("  → CSS: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
+    } else {
+        uninstallLog("  → CSS: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_ERROR'), 'error');
+    }
+} else {
+    uninstallLog("  → CSS: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DIR_NOT_EXISTS'), 'warning');
+}
+uninstallLog('');
+
+// ============= ШАГ 3: УДАЛЕНИЕ ОБРАБОТЧИКОВ СОБЫТИЙ =============
+
+uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP3'), 'header');
+
+$em = EventManager::getInstance();
+
+$events = [
+    ['main', 'OnAdminTabControlBegin', '\\Prospektweb\\Calc\\Handlers\\AdminHandler', 'onTabControlBegin'],
+    ['main', 'OnAdminListDisplay', '\\Prospektweb\\Calc\\Handlers\\AdminHandler', 'onAdminListDisplay'],
+    ['iblock', 'OnAfterIBlockElementUpdate', '\\Prospektweb\\Calc\\Handlers\\DependencyHandler', 'onElementUpdate'],
+];
+
+foreach ($events as $event) {
+    $em->unRegisterEventHandler($event[0], $event[1], $moduleId, $event[2], $event[3]);
+    uninstallLog("  → {$event[0]}::{$event[1]}: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
+}
+uninstallLog('');
+
+// ============= ШАГ 4: УДАЛЕНИЕ НАСТРОЕК МОДУЛЯ =============
+
+uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP4'), 'header');
+
+Option::delete($moduleId);
+uninstallLog("  → " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_OPTIONS_DELETED'), 'success');
+uninstallLog('');
+
+// ============= ШАГ 5: СНЯТИЕ МОДУЛЯ С РЕГИСТРАЦИИ =============
+
+uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP5'), 'header');
 
 // Очищаем таблицу событий
 global $DB;
 $DB->Query("DELETE FROM b_module_to_module WHERE TO_MODULE_ID = '" . $DB->ForSql($moduleId) . "'");
+uninstallLog("  → " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_EVENTS_TABLE_CLEARED'), 'success');
+
+// Снимаем модуль с регистрации
+ModuleManager::unRegisterModule($moduleId);
+uninstallLog("  → " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_MODULE_UNREGISTERED'), 'success');
+uninstallLog('');
+
+// ============= ЗАВЕРШЕНИЕ =============
+
+if (empty($errors)) {
+    uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_COMPLETED'), 'header');
+} else {
+    uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_COMPLETED_WITH_ERRORS'), 'header');
+}
+
 ?>
 
+<style>
+.uninstall-log {
+    background: #0c0c0c;
+    color: #d4d4d4;
+    padding: 20px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    border-radius: 4px;
+    max-height: 600px;
+    overflow-y: auto;
+    margin: 20px 0;
+    border: 1px solid #333;
+}
+.uninstall-log .log-info { color: #808080; }
+.uninstall-log .log-info::before { content: '  '; }
+.uninstall-log .log-success { color: #4ec9b0; }
+.uninstall-log .log-success::before { content: '✓ '; }
+.uninstall-log .log-warning { color: #dcdcaa; }
+.uninstall-log .log-warning::before { content: '⚠ '; }
+.uninstall-log .log-error { color: #f14c4c; }
+.uninstall-log .log-error::before { content: '✗ '; }
+.uninstall-log .log-header { 
+    color: #569cd6; 
+    font-weight: bold; 
+    margin-top: 5px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 5px;
+}
+.uninstall-log .log-header::before { content: ''; }
+</style>
+
+<div class="uninstall-log">
+    <?php foreach ($log as $entry): ?>
+    <?php if ($entry['message'] === ''): ?>
+    <div>&nbsp;</div>
+    <?php else: ?>
+    <div class="log-<?= $entry['type'] ?>"><?= htmlspecialcharsbx($entry['message']) ?></div>
+    <?php endif; ?>
+    <?php endforeach; ?>
+</div>
+
+<?php if (!empty($errors)): ?>
+<div class="adm-info-message adm-info-message-red">
+    <strong><?= Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_ERRORS_FOUND') ?></strong>
+    <ul>
+        <?php foreach ($errors as $error): ?>
+        <li><?= htmlspecialcharsbx($error) ?></li>
+        <?php endforeach; ?>
+    </ul>
+</div>
+<?php else: ?>
 <div class="adm-info-message adm-info-message-green">
     <?= Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_SUCCESS') ?>
 </div>
+<?php endif; ?>
 
 <div style="margin-top: 20px;">
     <a href="/bitrix/admin/partner_modules.php?lang=<?= LANGUAGE_ID ?>" class="adm-btn-save"><?= Loc::getMessage('PROSPEKTWEB_CALC_BACK_TO_MODULES') ?></a>

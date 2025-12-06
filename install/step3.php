@@ -325,21 +325,46 @@ switch ($currentStep) {
     case 5:
         installLog("ШАГ 5 из {$totalSteps}: УСТАНОВКА ФАЙЛОВ И СОБЫТИЙ", 'header');
         
-        if (! class_exists('prospektweb_calc')) {
+        if (!class_exists('prospektweb_calc')) {
             include_once __DIR__ . '/index.php';
         }
         
         $moduleClass = new prospektweb_calc();
         
-        installLog("Копирование JS/CSS файлов.. .");
-        $moduleClass->installFiles();
-        installLog("Файлы скопированы", 'success');
+        installLog("Проверка директории assets...");
+        $assetsJsDir = __DIR__ . '/assets/js';
+        $assetsCssDir = __DIR__ . '/assets/css';
+        
+        if (is_dir($assetsJsDir)) {
+            installLog("  → Директория JS найдена: {$assetsJsDir}", 'success');
+        } else {
+            installLog("  → Директория JS не найдена: {$assetsJsDir}", 'warning');
+        }
+        
+        if (is_dir($assetsCssDir)) {
+            installLog("  → Директория CSS найдена: {$assetsCssDir}", 'success');
+        } else {
+            installLog("  → Директория CSS не найдена: {$assetsCssDir}", 'warning');
+        }
+        
+        installLog("Копирование JS/CSS файлов...");
+        $filesResult = $moduleClass->installFiles();
+        if ($filesResult) {
+            installLog("Файлы скопированы", 'success');
+        } else {
+            installLog("Некоторые файлы не были скопированы (возможно, отсутствуют исходные директории)", 'warning');
+        }
         
         installLog("Регистрация обработчиков событий...");
         $moduleClass->installEvents();
         installLog("Обработчики зарегистрированы", 'success');
         
-        installLog("═══ УСТАНОВКА ЗАВЕРШЕНА!  ═══", 'header');
+        // Регистрируем модуль ТОЛЬКО после успешного завершения всех шагов
+        installLog("Регистрация модуля в системе...");
+        $moduleClass->registerModule();
+        installLog("Модуль зарегистрирован", 'success');
+        
+        installLog("═══ УСТАНОВКА ЗАВЕРШЕНА! ═══", 'header');
         
         unset($_SESSION['PROSPEKTWEB_CALC_INSTALL']);
         break;
@@ -350,7 +375,7 @@ $installData['current_step'] = $currentStep + 1;
 ?>
 
 <style>
-. install-log {
+.install-log {
     background: #1e1e1e;
     color: #d4d4d4;
     padding: 20px;
@@ -362,46 +387,46 @@ $installData['current_step'] = $currentStep + 1;
     overflow-y: auto;
     margin: 20px 0;
 }
-. install-log . log-info { color: #d4d4d4; }
+.install-log .log-info { color: #d4d4d4; }
 .install-log .log-info::before { content: '→ '; }
-.install-log . log-success { color: #4ec9b0; }
+.install-log .log-success { color: #4ec9b0; }
 .install-log .log-success::before { content: '✓ '; }
 .install-log .log-warning { color: #dcdcaa; }
 .install-log .log-warning::before { content: '⚠ '; }
 .install-log .log-error { color: #f14c4c; }
-.install-log . log-error::before { content: '✗ '; }
+.install-log .log-error::before { content: '✗ '; }
 .install-log .log-header { color: #569cd6; font-weight: bold; margin-top: 10px; }
-. install-log .log-header::before { content: ''; }
-. install-buttons { margin-top: 20px; }
-.install-buttons . adm-btn-save { margin-right: 10px; }
+.install-log .log-header::before { content: ''; }
+.install-buttons { margin-top: 20px; }
+.install-buttons .adm-btn-save { margin-right: 10px; }
 </style>
 
 <div class="install-log">
-    <? php foreach ($installData['log'] as $entry): ?>
-    <div class="log-<? = $entry['type'] ? >"><?= htmlspecialcharsbx($entry['message']) ?></div>
+    <?php foreach ($installData['log'] as $entry): ?>
+    <div class="log-<?= $entry['type'] ?>"><?= htmlspecialcharsbx($entry['message']) ?></div>
     <?php endforeach; ?>
 </div>
 
-<? php if (! empty($installData['errors'])): ?>
+<?php if (!empty($installData['errors'])): ?>
 <div class="adm-info-message adm-info-message-red">
     <strong>Обнаружены ошибки:</strong>
     <ul>
         <?php foreach ($installData['errors'] as $error): ?>
-        <li><?= htmlspecialcharsbx($error) ? ></li>
+        <li><?= htmlspecialcharsbx($error) ?></li>
         <?php endforeach; ?>
     </ul>
 </div>
 <?php endif; ?>
 
 <div class="install-buttons">
-    <? php if ($currentStep < 5): ?>
+    <?php if ($currentStep < 5): ?>
     <form action="<?= $APPLICATION->GetCurPage() ?>" method="post" style="display: inline;">
-        <? = bitrix_sessid_post() ?>
+        <?= bitrix_sessid_post() ?>
         <input type="hidden" name="lang" value="<?= LANGUAGE_ID ?>">
-        <input type="hidden" name="id" value="prospektweb. calc">
+        <input type="hidden" name="id" value="prospektweb.calc">
         <input type="hidden" name="install" value="Y">
         <input type="hidden" name="step" value="3">
-        <input type="hidden" name="install_step" value="<? = $currentStep + 1 ?>">
+        <input type="hidden" name="install_step" value="<?= $currentStep + 1 ?>">
         <input type="submit" value="Продолжить → Шаг <?= $currentStep + 1 ?>" class="adm-btn-save">
     </form>
     <?php else: ?>

@@ -1,5 +1,7 @@
 <?php
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\Config\Option;
+use Bitrix\Main\Loader;
 
 if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
     die();
@@ -8,6 +10,50 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
 Loc::loadMessages(__FILE__);
 
 global $APPLICATION;
+
+$moduleId = 'prospektweb.calc';
+
+// Получаем информацию о созданных данных
+$createdData = [];
+$hasData = false;
+
+if (Loader::includeModule('iblock')) {
+    $iblockCodes = [
+        'CALC_CONFIG' => 'Конфигурации калькуляций',
+        'CALC_SETTINGS' => 'Настройки калькуляторов',
+        'CALC_MATERIALS' => 'Материалы',
+        'CALC_MATERIALS_VARIANTS' => 'Варианты материалов',
+        'CALC_WORKS' => 'Работы',
+        'CALC_WORKS_VARIANTS' => 'Варианты работ',
+        'CALC_EQUIPMENT' => 'Оборудование',
+        'CALC_DETAILS' => 'Детали',
+        'CALC_DETAILS_VARIANTS' => 'Варианты деталей',
+    ];
+
+    foreach ($iblockCodes as $code => $name) {
+        $iblockId = (int)Option::get($moduleId, 'IBLOCK_' . $code, 0);
+        if ($iblockId > 0) {
+            $rsIBlock = \CIBlock::GetByID($iblockId);
+            if ($arIBlock = $rsIBlock->Fetch()) {
+                $elementsCount = \CIBlockElement::GetList(
+                    [],
+                    ['IBLOCK_ID' => $iblockId],
+                    [],
+                    false,
+                    []
+                );
+                $createdData[] = [
+                    'type' => 'iblock',
+                    'id' => $iblockId,
+                    'name' => $arIBlock['NAME'],
+                    'code' => $code,
+                    'elements' => $elementsCount,
+                ];
+                $hasData = true;
+            }
+        }
+    }
+}
 ?>
 
 <form action="<?= $APPLICATION->GetCurPage() ?>" method="post">
@@ -27,15 +73,43 @@ global $APPLICATION;
         </tr>
         <tr>
             <td colspan="2">
-                <label>
-                    <input type="checkbox" name="DELETE_DATA" value="Y">
-                    <?= Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_DATA') ?>
+                <label style="display: flex; align-items: flex-start; gap: 10px;">
+                    <input type="checkbox" name="DELETE_DATA" value="Y" style="margin-top: 3px;">
+                    <span>
+                        <strong><?= Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_DATA') ?></strong>
+                        <br>
+                        <small style="color:#666;"><?= Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_DATA_NOTE') ?></small>
+                    </span>
                 </label>
-                <br><br>
-                <small style="color:#666;"><?= Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_DATA_NOTE') ?></small>
             </td>
         </tr>
     </table>
+
+    <?php if ($hasData): ?>
+    <div class="adm-info-message" style="margin-top: 15px;">
+        <strong><?= Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DATA_LIST') ?></strong>
+        <ul style="margin: 10px 0 0 20px; padding: 0;">
+            <?php foreach ($createdData as $item): ?>
+            <li>
+                <strong><?= htmlspecialcharsbx($item['name']) ?></strong> 
+                [ID: <?= $item['id'] ?>]
+                <?php if ($item['elements'] > 0): ?>
+                    — <?= $item['elements'] ?> <?= Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_ELEMENTS') ?>
+                <?php endif; ?>
+            </li>
+            <?php endforeach; ?>
+        </ul>
+        <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 4px;">
+            <strong><?= Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_ALSO_DELETE') ?></strong>
+            <ul style="margin: 5px 0 0 20px; padding: 0;">
+                <li><?= Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_IBLOCK_TYPES') ?></li>
+                <li><?= Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_FILES') ?></li>
+                <li><?= Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_EVENTS') ?></li>
+                <li><?= Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_OPTIONS') ?></li>
+            </ul>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <div style="margin-top: 20px;">
         <input type="submit" name="uninstall_confirm" value="<?= Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_CONFIRM_BTN') ?>" class="adm-btn-save">
