@@ -178,6 +178,13 @@ class prospektweb_calc extends CModule
         $em = EventManager::getInstance();
         $em->registerEventHandler(
             'main',
+            'OnProlog',
+            $this->MODULE_ID,
+            '\\Prospektweb\\Calc\\Handlers\\AdminHandler',
+            'onProlog'
+        );
+        $em->registerEventHandler(
+            'main',
             'OnAdminTabControlBegin',
             $this->MODULE_ID,
             '\\Prospektweb\\Calc\\Handlers\\AdminHandler',
@@ -202,6 +209,14 @@ class prospektweb_calc extends CModule
     public function uninstallEvents(): void
     {
         $eventManager = EventManager::getInstance();
+        
+        $eventManager->unRegisterEventHandler(
+            'main',
+            'OnProlog',
+            $this->MODULE_ID,
+            '\\Prospektweb\\Calc\\Handlers\\AdminHandler',
+            'onProlog'
+        );
         
         $eventManager->unRegisterEventHandler(
             'main',

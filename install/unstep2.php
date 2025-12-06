@@ -212,6 +212,7 @@ uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP3'), 'header');
 $em = EventManager::getInstance();
 
 $events = [
+    ['module' => 'main', 'event' => 'OnProlog', 'class' => '\\Prospektweb\\Calc\\Handlers\\AdminHandler', 'method' => 'onProlog'],
     ['module' => 'main', 'event' => 'OnAdminTabControlBegin', 'class' => '\\Prospektweb\\Calc\\Handlers\\AdminHandler', 'method' => 'onTabControlBegin'],
     ['module' => 'main', 'event' => 'OnAdminListDisplay', 'class' => '\\Prospektweb\\Calc\\Handlers\\AdminHandler', 'method' => 'onAdminListDisplay'],
     ['module' => 'iblock', 'event' => 'OnAfterIBlockElementUpdate', 'class' => '\\Prospektweb\\Calc\\Handlers\\DependencyHandler', 'method' => 'onElementUpdate'],
