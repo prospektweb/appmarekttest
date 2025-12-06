@@ -147,6 +147,7 @@ class prospektweb_calc extends CModule
         // Проверяем существование исходных директорий и создаём целевые директории
         if (is_dir($sourceJs)) {
             // Создаём директорию если не существует
+            // Проверка !mkdir() && !is_dir() защищает от race condition
             if (!is_dir($targetJs)) {
                 if (!mkdir($targetJs, 0755, true) && !is_dir($targetJs)) {
                     $success = false;
@@ -163,6 +164,7 @@ class prospektweb_calc extends CModule
         
         if (is_dir($sourceCss)) {
             // Создаём директорию если не существует
+            // Проверка !mkdir() && !is_dir() защищает от race condition
             if (!is_dir($targetCss)) {
                 if (!mkdir($targetCss, 0755, true) && !is_dir($targetCss)) {
                     $success = false;
