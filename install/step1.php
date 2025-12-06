@@ -179,6 +179,7 @@ while ($arIBlock = $rsIBlocks->Fetch()) {
     var LANG = {
         selected: '<?= CUtil::JSEscape(Loc::getMessage('PROSPEKTWEB_CALC_CONSOLE_SELECTED')) ?>',
         type: '<?= CUtil::JSEscape(Loc::getMessage('PROSPEKTWEB_CALC_CONSOLE_TYPE')) ?>',
+        typeCatalog: '<?= CUtil::JSEscape(Loc::getMessage('PROSPEKTWEB_CALC_CONSOLE_TYPE_CATALOG')) ?>',
         skuDetected: '<?= CUtil::JSEscape(Loc::getMessage('PROSPEKTWEB_CALC_CONSOLE_SKU_DETECTED')) ?>',
         noSku: '<?= CUtil::JSEscape(Loc::getMessage('PROSPEKTWEB_CALC_CONSOLE_NO_SKU')) ?>',
         modeWithSku: '<?= CUtil::JSEscape(Loc::getMessage('PROSPEKTWEB_CALC_CONSOLE_MODE_WITH_SKU')) ?>',
@@ -245,7 +246,7 @@ while ($arIBlock = $rsIBlocks->Fetch()) {
         btnNext.disabled = false;
 
         logToConsole('→ ' + LANG.selected + ': ' + iblockName + ' [ID: ' + iblockId + ']', 'info');
-        logToConsole('→ ' + LANG.type + ': catalog', 'info');
+        logToConsole('→ ' + LANG.type + ': ' + LANG.typeCatalog, 'info');
 
         if (skuId && skuId !== '0' && skuId !== '') {
             logToConsole('→ ' + LANG.skuDetected + ': ID ' + skuId, 'success');
@@ -286,6 +287,7 @@ while ($arIBlock = $rsIBlocks->Fetch()) {
     function onNextClick() {
         var iblockId = selectIblock.value;
 
+        // Defensive validation: button should be disabled, but check anyway for edge cases
         if (!iblockId) {
             clearConsole();
             showConsole();

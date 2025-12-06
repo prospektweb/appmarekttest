@@ -27,6 +27,7 @@ $MESS['PROSPEKTWEB_CALC_INSTALL_NO_SKU'] = 'Инфоблок ТП не обна�
 // Консольные сообщения для шага 1
 $MESS['PROSPEKTWEB_CALC_CONSOLE_SELECTED'] = 'Выбран инфоблок';
 $MESS['PROSPEKTWEB_CALC_CONSOLE_TYPE'] = 'Тип';
+$MESS['PROSPEKTWEB_CALC_CONSOLE_TYPE_CATALOG'] = 'catalog';
 $MESS['PROSPEKTWEB_CALC_CONSOLE_SKU_DETECTED'] = 'Обнаружен инфоблок торговых предложений';
 $MESS['PROSPEKTWEB_CALC_CONSOLE_NO_SKU'] = 'Инфоблок ТП не обнаружен';
 $MESS['PROSPEKTWEB_CALC_CONSOLE_MODE_WITH_SKU'] = 'Режим работы: с торговыми предложениями';
