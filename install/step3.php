@@ -318,7 +318,7 @@ switch ($currentStep) {
             installLog("Создание демо-данных...", 'header');
             
             // Добавляем прямой require для DemoDataCreator перед использованием
-            $demoDataCreatorPath = dirname(__DIR__) . '/lib/Install/DemoDataCreator.php';
+            $demoDataCreatorPath = __DIR__ . '/../lib/Install/DemoDataCreator.php';
             if (file_exists($demoDataCreatorPath)) {
                 require_once $demoDataCreatorPath;
                 
