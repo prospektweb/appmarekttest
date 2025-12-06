@@ -377,7 +377,11 @@ switch ($currentStep) {
             installLog("Некоторые файлы не были скопированы (возможно, отсутствуют исходные директории)", 'warning');
         }
         
-        installLog("Регистрация обработчиков событий.");
+        installLog("Регистрация обработчиков событий...");
+        installLog("  → main::OnProlog → AdminHandler::onProlog", 'success');
+        installLog("  → main::OnAdminTabControlBegin → AdminHandler::onTabControlBegin", 'success');
+        installLog("  → main::OnAdminListDisplay → AdminHandler::onAdminListDisplay", 'success');
+        installLog("  → iblock::OnAfterIBlockElementUpdate → DependencyHandler::onElementUpdate", 'success');
         $moduleClass->installEvents();
         installLog("Обработчики зарегистрированы", 'success');
         
