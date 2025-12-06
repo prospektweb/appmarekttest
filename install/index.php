@@ -94,7 +94,28 @@ class prospektweb_calc extends CModule
     public function DoUninstall()
     {
         global $APPLICATION;
-        $APPLICATION->IncludeAdminFile(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_TITLE'), __DIR__ . '/unstep1.php');
+        
+        $step = (int)($_REQUEST['step'] ?? 1);
+        
+        switch ($step) {
+            case 1:
+                $APPLICATION->IncludeAdminFile(
+                    Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_TITLE'), 
+                    __DIR__ . '/unstep1.php'
+                );
+                break;
+            case 2:
+                $APPLICATION->IncludeAdminFile(
+                    Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_TITLE'), 
+                    __DIR__ . '/unstep2.php'
+                );
+                break;
+            default:
+                $APPLICATION->IncludeAdminFile(
+                    Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_TITLE'), 
+                    __DIR__ . '/unstep1.php'
+                );
+        }
     }
 
     private function checkDependencies(): bool
