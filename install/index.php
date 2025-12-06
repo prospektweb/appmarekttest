@@ -47,7 +47,7 @@ class prospektweb_calc extends CModule
         if (!$this->checkDependencies()) {
             return false;
         }
-        ModuleManager::registerModule($this->MODULE_ID);
+        // НЕ регистрируем модуль здесь - регистрация будет в конце установки (step3.php, шаг 5)
         $APPLICATION->IncludeAdminFile(Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_TITLE'), __DIR__ . '/step1.php');
         return true;
     }
@@ -71,10 +71,33 @@ class prospektweb_calc extends CModule
         return true;
     }
 
-    public function installFiles(): void
+    public function installFiles(): bool
     {
-        CopyDirFiles(__DIR__ . '/assets/js', Application::getDocumentRoot() . '/local/js/prospektweb.calc', true, true);
-        CopyDirFiles(__DIR__ . '/assets/css', Application::getDocumentRoot() . '/local/css/prospektweb.calc', true, true);
+        $docRoot = Application::getDocumentRoot();
+        
+        // Путь к assets относительно install директории
+        $sourceJs = __DIR__ . '/assets/js';
+        $sourceCss = __DIR__ . '/assets/css';
+        
+        $targetJs = $docRoot . '/local/js/prospektweb.calc';
+        $targetCss = $docRoot . '/local/css/prospektweb.calc';
+        
+        $success = true;
+        
+        // Проверяем существование исходных директорий
+        if (is_dir($sourceJs)) {
+            CopyDirFiles($sourceJs, $targetJs, true, true);
+        } else {
+            $success = false;
+        }
+        
+        if (is_dir($sourceCss)) {
+            CopyDirFiles($sourceCss, $targetCss, true, true);
+        } else {
+            $success = false;
+        }
+        
+        return $success;
     }
 
     public function uninstallFiles(): void
@@ -187,6 +210,67 @@ class prospektweb_calc extends CModule
     public function deleteOptions(): void
     {
         Option::delete($this->MODULE_ID);
+    }
+
+    /**
+     * Регистрация модуля
+     */
+    public function registerModule(): void
+    {
+        ModuleManager::registerModule($this->MODULE_ID);
+    }
+
+    /**
+     * Проверка целостности установки
+     * @return array Массив с результатами проверки
+     */
+    public function checkInstallationIntegrity(): array
+    {
+        $result = [
+            'success' => true,
+            'errors' => [],
+            'warnings' => [],
+        ];
+
+        // Проверяем регистрацию модуля
+        if (!ModuleManager::isModuleInstalled($this->MODULE_ID)) {
+            $result['errors'][] = 'Модуль не зарегистрирован';
+            $result['success'] = false;
+        }
+
+        // Проверяем наличие инфоблоков
+        $iblockCodes = [
+            'CALC_CONFIG',
+            'CALC_SETTINGS',
+            'CALC_MATERIALS',
+            'CALC_MATERIALS_VARIANTS',
+            'CALC_WORKS',
+            'CALC_WORKS_VARIANTS',
+            'CALC_EQUIPMENT',
+            'CALC_DETAILS',
+            'CALC_DETAILS_VARIANTS',
+        ];
+
+        foreach ($iblockCodes as $code) {
+            $iblockId = (int)Option::get($this->MODULE_ID, 'IBLOCK_' . $code, 0);
+            if ($iblockId <= 0) {
+                $result['warnings'][] = "Инфоблок {$code} не найден в настройках";
+            }
+        }
+
+        // Проверяем наличие файлов
+        $docRoot = Application::getDocumentRoot();
+        $jsDir = $docRoot . '/local/js/prospektweb.calc';
+        $cssDir = $docRoot . '/local/css/prospektweb.calc';
+
+        if (!is_dir($jsDir)) {
+            $result['warnings'][] = 'Директория JS не найдена';
+        }
+        if (!is_dir($cssDir)) {
+            $result['warnings'][] = 'Директория CSS не найдена';
+        }
+
+        return $result;
     }
 
     /**
