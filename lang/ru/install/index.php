@@ -24,6 +24,29 @@ $MESS['PROSPEKTWEB_CALC_INSTALL_NEXT'] = 'Далее';
 $MESS['PROSPEKTWEB_CALC_INSTALL_SKU_DETECTED'] = 'Обнаружен инфоблок ТП: ID ';
 $MESS['PROSPEKTWEB_CALC_INSTALL_NO_SKU'] = 'Инфоблок ТП не обнаружен';
 
+// Консольные сообщения для шага 1
+$MESS['PROSPEKTWEB_CALC_CONSOLE_SELECTED'] = 'Выбран инфоблок';
+$MESS['PROSPEKTWEB_CALC_CONSOLE_TYPE'] = 'Тип';
+$MESS['PROSPEKTWEB_CALC_CONSOLE_TYPE_CATALOG'] = 'catalog';
+$MESS['PROSPEKTWEB_CALC_CONSOLE_SKU_DETECTED'] = 'Обнаружен инфоблок торговых предложений';
+$MESS['PROSPEKTWEB_CALC_CONSOLE_NO_SKU'] = 'Инфоблок ТП не обнаружен';
+$MESS['PROSPEKTWEB_CALC_CONSOLE_MODE_WITH_SKU'] = 'Режим работы: с торговыми предложениями';
+$MESS['PROSPEKTWEB_CALC_CONSOLE_MODE_WITHOUT_SKU'] = 'Режим работы: без торговых предложений';
+$MESS['PROSPEKTWEB_CALC_CONSOLE_SELECT_ERROR'] = 'Ошибка: необходимо выбрать инфоблок';
+$MESS['PROSPEKTWEB_CALC_CONSOLE_PREPARATION'] = 'ПОДГОТОВКА К УСТАНОВКЕ';
+
+// Блок подтверждения для шага 1
+$MESS['PROSPEKTWEB_CALC_INSTALL_CONFIRM_TITLE'] = 'Подтверждение установки';
+$MESS['PROSPEKTWEB_CALC_INSTALL_CONFIRM_YES'] = 'Да, продолжить';
+$MESS['PROSPEKTWEB_CALC_INSTALL_CONFIRM_CANCEL'] = 'Отмена';
+$MESS['PROSPEKTWEB_CALC_CONFIRM_PRODUCT_IBLOCK'] = 'Инфоблок товаров';
+$MESS['PROSPEKTWEB_CALC_CONFIRM_SKU_IBLOCK'] = 'Инфоблок ТП';
+$MESS['PROSPEKTWEB_CALC_CONFIRM_DEMO_DATA'] = 'Создание демо-данных';
+$MESS['PROSPEKTWEB_CALC_CONFIRM_WILL_CREATE'] = 'Будут созданы следующие ресурсы:';
+$MESS['PROSPEKTWEB_CALC_CONFIRM_IBLOCK_COUNT'] = '9 инфоблоков с настройками';
+$MESS['PROSPEKTWEB_CALC_CONFIRM_SKU_LINKS'] = 'SKU-связи между инфоблоками';
+$MESS['PROSPEKTWEB_CALC_CONFIRM_EVENT_HANDLERS'] = 'Обработчики событий';
+
 // Шаг 2
 $MESS['PROSPEKTWEB_CALC_INSTALL_SELECT_IBLOCK_ERROR'] = 'Не выбран инфоблок товаров';
 $MESS['PROSPEKTWEB_CALC_INSTALL_BACK'] = 'Назад';
