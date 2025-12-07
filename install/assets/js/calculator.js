@@ -9,7 +9,7 @@
 
     var ProspekwebCalc = {
         // API endpoints
-        apiBase: '/bitrix/modules/prospektweb.calc/tools/',
+        apiBase: '/local/tools/prospektweb.calc/',
 
         // Текущее состояние
         container: null,
