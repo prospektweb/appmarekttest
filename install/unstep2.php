@@ -183,6 +183,7 @@ uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP2'), 'header');
 $docRoot = Application::getDocumentRoot();
 $jsDir = $docRoot . '/local/js/prospektweb.calc';
 $cssDir = $docRoot . '/local/css/prospektweb.calc';
+$toolsDir = $docRoot . '/local/tools/prospektweb.calc';
 
 if (is_dir($jsDir)) {
     if (DeleteDirFilesEx('/local/js/prospektweb.calc')) {
@@ -202,6 +203,16 @@ if (is_dir($cssDir)) {
     }
 } else {
     uninstallLog("  → CSS: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DIR_NOT_EXISTS'), 'warning');
+}
+
+if (is_dir($toolsDir)) {
+    if (DeleteDirFilesEx('/local/tools/prospektweb.calc')) {
+        uninstallLog("  → Tools: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
+    } else {
+        uninstallLog("  → Tools: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_ERROR'), 'error');
+    }
+} else {
+    uninstallLog("  → Tools: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DIR_NOT_EXISTS'), 'warning');
 }
 uninstallLog('');
 

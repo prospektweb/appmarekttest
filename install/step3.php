@@ -367,6 +367,7 @@ switch ($currentStep) {
         installLog("Проверка директорий assets...");
         $assetsJsDir = __DIR__ . '/assets/js';
         $assetsCssDir = __DIR__ . '/assets/css';
+        $toolsDir = dirname(__DIR__) . '/tools';
         
         if (is_dir($assetsJsDir)) {
             installLog("  → Директория JS найдена: {$assetsJsDir}", 'success');
@@ -380,10 +381,18 @@ switch ($currentStep) {
             installLog("  → Директория CSS не найдена: {$assetsCssDir}", 'warning');
         }
         
-        installLog("Копирование JS/CSS файлов.");
+        if (is_dir($toolsDir)) {
+            installLog("  → Директория Tools найдена: {$toolsDir}", 'success');
+        } else {
+            installLog("  → Директория Tools не найдена: {$toolsDir}", 'warning');
+        }
+        
+        installLog("Копирование файлов...");
         $filesResult = $moduleClass->installFiles();
         if ($filesResult) {
-            installLog("Файлы скопированы", 'success');
+            installLog("  → JS скопированы в /local/js/prospektweb.calc/", 'success');
+            installLog("  → CSS скопированы в /local/css/prospektweb.calc/", 'success');
+            installLog("  → Tools скопированы в /local/tools/prospektweb.calc/", 'success');
         } else {
             installLog("Некоторые файлы не были скопированы (возможно, отсутствуют исходные директории)", 'warning');
         }

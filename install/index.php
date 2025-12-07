@@ -139,20 +139,28 @@ class prospektweb_calc extends CModule
         $sourceJs = __DIR__ . '/assets/js';
         $sourceCss = __DIR__ . '/assets/css';
         
+        // НОВОЕ: Путь к tools (относительно корня модуля)
+        $sourceTools = dirname(__DIR__) . '/tools';
+        
         $targetJs = $docRoot . '/local/js/prospektweb.calc';
         $targetCss = $docRoot . '/local/css/prospektweb.calc';
         
+        // НОВОЕ: Публичная директория для API
+        $targetTools = $docRoot . '/local/tools/prospektweb.calc';
+        
         $success = true;
         
-        // Проверяем существование исходных директорий и создаём целевые директории
-        if (is_dir($sourceJs)) {
-            // Создаём директорию если не существует
-            // Проверка !mkdir() && !is_dir() защищает от race condition
-            if (!is_dir($targetJs)) {
-                if (!mkdir($targetJs, 0755, true) && !is_dir($targetJs)) {
+        // Создаём директории если не существуют
+        foreach ([$targetJs, $targetCss, $targetTools] as $dir) {
+            if (!is_dir($dir)) {
+                if (!mkdir($dir, 0755, true) && !is_dir($dir)) {
                     $success = false;
                 }
             }
+        }
+        
+        // Копируем JS
+        if (is_dir($sourceJs)) {
             if (is_dir($targetJs)) {
                 CopyDirFiles($sourceJs, $targetJs, true, true);
             } else {
@@ -162,16 +170,21 @@ class prospektweb_calc extends CModule
             $success = false;
         }
         
+        // Копируем CSS
         if (is_dir($sourceCss)) {
-            // Создаём директорию если не существует
-            // Проверка !mkdir() && !is_dir() защищает от race condition
-            if (!is_dir($targetCss)) {
-                if (!mkdir($targetCss, 0755, true) && !is_dir($targetCss)) {
-                    $success = false;
-                }
-            }
             if (is_dir($targetCss)) {
                 CopyDirFiles($sourceCss, $targetCss, true, true);
+            } else {
+                $success = false;
+            }
+        } else {
+            $success = false;
+        }
+        
+        // НОВОЕ: Копируем Tools (API endpoints)
+        if (is_dir($sourceTools)) {
+            if (is_dir($targetTools)) {
+                CopyDirFiles($sourceTools, $targetTools, true, true);
             } else {
                 $success = false;
             }
@@ -186,12 +199,17 @@ class prospektweb_calc extends CModule
     {
         $jsDir = Application::getDocumentRoot() . '/local/js/prospektweb.calc';
         $cssDir = Application::getDocumentRoot() . '/local/css/prospektweb.calc';
+        $toolsDir = Application::getDocumentRoot() . '/local/tools/prospektweb.calc';
 
         if (is_dir($jsDir)) {
             DeleteDirFilesEx('/local/js/prospektweb.calc');
         }
         if (is_dir($cssDir)) {
             DeleteDirFilesEx('/local/css/prospektweb.calc');
+        }
+        // НОВОЕ: Удаляем tools
+        if (is_dir($toolsDir)) {
+            DeleteDirFilesEx('/local/tools/prospektweb.calc');
         }
     }
 
@@ -359,12 +377,16 @@ class prospektweb_calc extends CModule
         $docRoot = Application::getDocumentRoot();
         $jsDir = $docRoot . '/local/js/prospektweb.calc';
         $cssDir = $docRoot . '/local/css/prospektweb.calc';
+        $toolsDir = $docRoot . '/local/tools/prospektweb.calc';
 
         if (!is_dir($jsDir)) {
             $result['warnings'][] = 'Директория JS не найдена';
         }
         if (!is_dir($cssDir)) {
             $result['warnings'][] = 'Директория CSS не найдена';
+        }
+        if (!is_dir($toolsDir)) {
+            $result['warnings'][] = 'Директория Tools не найдена';
         }
 
         return $result;
