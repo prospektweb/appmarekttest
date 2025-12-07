@@ -29,7 +29,7 @@
             // Проверяем, не загружен ли уже этот CSS
             var existingLinks = document.getElementsByTagName('link');
             for (var i = 0; i < existingLinks.length; i++) {
-                if (existingLinks[i].href === href || existingLinks[i].getAttribute('href') === href) {
+                if (existingLinks[i].getAttribute('href') === href) {
                     return;
                 }
             }
