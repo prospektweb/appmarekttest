@@ -79,7 +79,10 @@ var ProspekwebCalc = {
         var checkboxes = document.querySelectorAll('input[name="SUB_ID[]"]:checked');
         var offerIds = [];
         for (var i = 0; i < checkboxes.length; i++) {
-            offerIds.push(parseInt(checkboxes[i].value, 10));
+            var id = parseInt(checkboxes[i].value, 10);
+            if (!isNaN(id) && id > 0) {
+                offerIds.push(id);
+            }
         }
 
         if (offerIds.length === 0) {
@@ -128,7 +131,6 @@ var ProspekwebCalc = {
                 type: 'BITRIX_INIT',
                 payload: {
                     offerIds: offerIds,
-                    sessid: BX.bitrix_sessid(),
                     apiBase: self.apiBase,
                     productId: self.getProductId(),
                     iblockId: self.getIblockId()
@@ -303,7 +305,7 @@ var ProspekwebCalc = {
                 payload: {
                     requestId: request ? request.requestId : null,
                     success: false,
-                    error: 'Invalid request: endpoint must be a string'
+                    error: 'Invalid request'
                 }
             });
             return;
@@ -318,7 +320,7 @@ var ProspekwebCalc = {
                 payload: {
                     requestId: request.requestId,
                     success: false,
-                    error: 'Invalid HTTP method'
+                    error: 'Invalid method'
                 }
             });
             return;
@@ -331,7 +333,7 @@ var ProspekwebCalc = {
                 payload: {
                     requestId: request.requestId,
                     success: false,
-                    error: 'Endpoint not allowed'
+                    error: 'Access denied'
                 }
             });
             return;
