@@ -184,6 +184,7 @@ $docRoot = Application::getDocumentRoot();
 $jsDir = $docRoot . '/local/js/prospektweb.calc';
 $cssDir = $docRoot . '/local/css/prospektweb.calc';
 $toolsDir = $docRoot . '/local/tools/prospektweb.calc';
+$appsDir = $docRoot . '/local/apps/prospektweb.calc';
 
 if (is_dir($jsDir)) {
     if (DeleteDirFilesEx('/local/js/prospektweb.calc')) {
@@ -213,6 +214,16 @@ if (is_dir($toolsDir)) {
     }
 } else {
     uninstallLog("  → Tools: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DIR_NOT_EXISTS'), 'warning');
+}
+
+if (is_dir($appsDir)) {
+    if (DeleteDirFilesEx('/local/apps/prospektweb.calc')) {
+        uninstallLog("  → Apps: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
+    } else {
+        uninstallLog("  → Apps: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_ERROR'), 'error');
+    }
+} else {
+    uninstallLog("  → Apps: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DIR_NOT_EXISTS'), 'warning');
 }
 uninstallLog('');
 

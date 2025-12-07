@@ -148,10 +148,13 @@ class prospektweb_calc extends CModule
         // НОВОЕ: Публичная директория для API
         $targetTools = $docRoot . '/local/tools/prospektweb.calc';
         
+        // НОВОЕ: Директория для React-приложения
+        $targetApps = $docRoot . '/local/apps/prospektweb.calc';
+        
         $success = true;
         
         // Создаём директории если не существуют
-        foreach ([$targetJs, $targetCss, $targetTools] as $dir) {
+        foreach ([$targetJs, $targetCss, $targetTools, $targetApps] as $dir) {
             if (!is_dir($dir)) {
                 if (!mkdir($dir, 0755, true) && !is_dir($dir)) {
                     $success = false;
@@ -200,6 +203,7 @@ class prospektweb_calc extends CModule
         $jsDir = Application::getDocumentRoot() . '/local/js/prospektweb.calc';
         $cssDir = Application::getDocumentRoot() . '/local/css/prospektweb.calc';
         $toolsDir = Application::getDocumentRoot() . '/local/tools/prospektweb.calc';
+        $appsDir = Application::getDocumentRoot() . '/local/apps/prospektweb.calc';
 
         if (is_dir($jsDir)) {
             DeleteDirFilesEx('/local/js/prospektweb.calc');
@@ -210,6 +214,10 @@ class prospektweb_calc extends CModule
         // НОВОЕ: Удаляем tools
         if (is_dir($toolsDir)) {
             DeleteDirFilesEx('/local/tools/prospektweb.calc');
+        }
+        // НОВОЕ: Удаляем apps
+        if (is_dir($appsDir)) {
+            DeleteDirFilesEx('/local/apps/prospektweb.calc');
         }
     }
 
@@ -378,6 +386,7 @@ class prospektweb_calc extends CModule
         $jsDir = $docRoot . '/local/js/prospektweb.calc';
         $cssDir = $docRoot . '/local/css/prospektweb.calc';
         $toolsDir = $docRoot . '/local/tools/prospektweb.calc';
+        $appsDir = $docRoot . '/local/apps/prospektweb.calc';
 
         if (!is_dir($jsDir)) {
             $result['warnings'][] = 'Директория JS не найдена';
@@ -387,6 +396,9 @@ class prospektweb_calc extends CModule
         }
         if (!is_dir($toolsDir)) {
             $result['warnings'][] = 'Директория Tools не найдена';
+        }
+        if (!is_dir($appsDir)) {
+            $result['warnings'][] = 'Директория Apps не найдена';
         }
 
         return $result;
