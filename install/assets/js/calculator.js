@@ -134,7 +134,9 @@ var ProspekwebCalc = {
      */
     sendToIframe: function(message) {
         if (this.iframe && this.iframe.contentWindow) {
-            this.iframe.contentWindow.postMessage(message, '*');
+            // Отправляем в том же домене - безопасно использовать window.location.origin
+            var targetOrigin = window.location.origin;
+            this.iframe.contentWindow.postMessage(message, targetOrigin);
         }
     },
 
@@ -142,6 +144,11 @@ var ProspekwebCalc = {
      * Обработка сообщений от iframe
      */
     handleMessage: function(event) {
+        // Проверяем origin - принимаем только сообщения с того же домена
+        if (event.origin !== window.location.origin) {
+            return;
+        }
+        
         var data = event.data;
         
         if (!data || !data.type) {
@@ -265,10 +272,44 @@ var ProspekwebCalc = {
     proxyApiRequest: function(request) {
         var self = this;
         
+        // Белый список разрешённых endpoints для безопасности
+        var allowedEndpoints = [
+            'calculators.php',
+            'config.php',
+            'equipment.php',
+            'elements.php',
+            'calculator_config.php',
+            'calculate.php',
+            'save_result.php'
+        ];
+        
+        // Проверяем, что endpoint в белом списке
+        if (allowedEndpoints.indexOf(request.endpoint) === -1) {
+            self.sendToIframe({
+                type: 'BITRIX_API_RESPONSE',
+                payload: {
+                    requestId: request.requestId,
+                    success: false,
+                    error: 'Endpoint not allowed'
+                }
+            });
+            return;
+        }
+        
+        // Создаём объект данных вручную для поддержки старых браузеров
+        var data = { sessid: BX.bitrix_sessid() };
+        if (request.data) {
+            for (var key in request.data) {
+                if (request.data.hasOwnProperty(key)) {
+                    data[key] = request.data[key];
+                }
+            }
+        }
+        
         BX.ajax({
             method: request.method || 'GET',
             url: this.apiBase + request.endpoint,
-            data: Object.assign({}, request.data, { sessid: BX.bitrix_sessid() }),
+            data: data,
             dataType: 'json',
             onsuccess: function(data) {
                 self.sendToIframe({
