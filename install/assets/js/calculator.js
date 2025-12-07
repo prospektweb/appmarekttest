@@ -8,6 +8,18 @@ var ProspekwebCalc = {
     // Пути
     appUrl: '/local/apps/prospektweb.calc/index.html',
     apiBase: '/local/tools/prospektweb.calc/',
+    cssPath: '/local/css/prospektweb.calc/calculator.css',
+
+    loadCss: function(href) {
+        if (document.querySelector('link[href="' + href + '"]')) {
+            return;
+        }
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = href;
+        document.head.appendChild(link);
+    },
     
     // Белый список разрешённых endpoints для безопасности
     allowedEndpoints: [
@@ -29,6 +41,7 @@ var ProspekwebCalc = {
      * Инициализация кнопки в админке
      */
     init: function(containerId, props) {
+        this.loadCss(this.cssPath);
         if (!containerId) {
             this.initAdminButton();
         }
@@ -73,6 +86,7 @@ var ProspekwebCalc = {
      * Открытие диалога с iframe
      */
     openCalculatorDialog: function() {
+        this.loadCss(this.cssPath);
         var self = this;
 
         // Получаем выбранные ТП
