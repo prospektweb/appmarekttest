@@ -1,5 +1,6 @@
 .bx-core-adm-admin-dialog .bx-core-adm-dialog-content {
     padding: 0 !important;
+    margin-bottom: -12px !important;
 }
 
 .bx-core-adm-dialog .bx-core-adm-dialog-content-wrap {
