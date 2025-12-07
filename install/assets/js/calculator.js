@@ -242,6 +242,13 @@ var ProspekwebCalc = {
                         payload: 'Parse error'
                     });
                 }
+            },
+            function(error) {
+                // Обработка сетевых ошибок
+                self.sendToIframe({
+                    type: 'BITRIX_SAVE_ERROR',
+                    payload: 'Network error: ' + (error || 'Unknown error')
+                });
             }
         );
     },
@@ -272,6 +279,13 @@ var ProspekwebCalc = {
                         payload: 'Parse error'
                     });
                 }
+            },
+            function(error) {
+                // Обработка сетевых ошибок
+                self.sendToIframe({
+                    type: 'BITRIX_CONFIG_ERROR',
+                    payload: 'Network error: ' + (error || 'Unknown error')
+                });
             }
         );
     },
@@ -324,14 +338,17 @@ var ProspekwebCalc = {
         }
         
         // Создаём объект данных вручную для поддержки старых браузеров
-        var data = { sessid: BX.bitrix_sessid() };
+        // ВАЖНО: sessid добавляется последним, чтобы предотвратить переопределение
+        var data = {};
         if (request.data) {
             for (var key in request.data) {
-                if (request.data.hasOwnProperty(key)) {
+                if (request.data.hasOwnProperty(key) && key !== 'sessid') {
                     data[key] = request.data[key];
                 }
             }
         }
+        // Добавляем sessid в конце, чтобы он не мог быть переопределён
+        data.sessid = BX.bitrix_sessid();
         
         BX.ajax({
             method: method,
