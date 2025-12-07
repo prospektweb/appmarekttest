@@ -8,7 +8,17 @@ var ProspekwebCalc = {
     // Пути
     appUrl: '/local/apps/prospektweb.calc/index.html',
     apiBase: '/local/tools/prospektweb.calc/',
-    cssPath: '/local/css/prospektweb.calc/calculator.css',
+    
+    // Белый список разрешённых endpoints для безопасности
+    allowedEndpoints: [
+        'calculators.php',
+        'config.php',
+        'equipment.php',
+        'elements.php',
+        'calculator_config.php',
+        'calculate.php',
+        'save_result.php'
+    ],
     
     // Состояние
     dialog: null,
@@ -272,19 +282,36 @@ var ProspekwebCalc = {
     proxyApiRequest: function(request) {
         var self = this;
         
-        // Белый список разрешённых endpoints для безопасности
-        var allowedEndpoints = [
-            'calculators.php',
-            'config.php',
-            'equipment.php',
-            'elements.php',
-            'calculator_config.php',
-            'calculate.php',
-            'save_result.php'
-        ];
+        // Валидация входных данных
+        if (!request || typeof request.endpoint !== 'string') {
+            self.sendToIframe({
+                type: 'BITRIX_API_RESPONSE',
+                payload: {
+                    requestId: request ? request.requestId : null,
+                    success: false,
+                    error: 'Invalid request: endpoint must be a string'
+                }
+            });
+            return;
+        }
+        
+        // Валидация HTTP метода
+        var allowedMethods = ['GET', 'POST'];
+        var method = request.method || 'GET';
+        if (allowedMethods.indexOf(method.toUpperCase()) === -1) {
+            self.sendToIframe({
+                type: 'BITRIX_API_RESPONSE',
+                payload: {
+                    requestId: request.requestId,
+                    success: false,
+                    error: 'Invalid HTTP method'
+                }
+            });
+            return;
+        }
         
         // Проверяем, что endpoint в белом списке
-        if (allowedEndpoints.indexOf(request.endpoint) === -1) {
+        if (this.allowedEndpoints.indexOf(request.endpoint) === -1) {
             self.sendToIframe({
                 type: 'BITRIX_API_RESPONSE',
                 payload: {
@@ -307,7 +334,7 @@ var ProspekwebCalc = {
         }
         
         BX.ajax({
-            method: request.method || 'GET',
+            method: method,
             url: this.apiBase + request.endpoint,
             data: data,
             dataType: 'json',
