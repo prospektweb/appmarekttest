@@ -27,8 +27,11 @@
          */
         loadCss: function(href) {
             // Проверяем, не загружен ли уже этот CSS
-            if (document.querySelector('link[href="' + href + '"]')) {
-                return;
+            var existingLinks = document.getElementsByTagName('link');
+            for (var i = 0; i < existingLinks.length; i++) {
+                if (existingLinks[i].href === href || existingLinks[i].getAttribute('href') === href) {
+                    return;
+                }
             }
             var link = document.createElement('link');
             link.rel = 'stylesheet';
