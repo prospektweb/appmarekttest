@@ -11,6 +11,9 @@
         // API endpoints
         apiBase: '/local/tools/prospektweb.calc/',
 
+        // CSS path
+        cssPath: '/local/css/prospektweb.calc/calculator.css',
+
         // Текущее состояние
         container: null,
         props: {},
@@ -19,11 +22,30 @@
         groups: [],
 
         /**
+         * Динамическая загрузка CSS
+         * @param {string} href - Путь к CSS файлу
+         */
+        loadCss: function(href) {
+            // Проверяем, не загружен ли уже этот CSS
+            if (document.querySelector('link[href="' + href + '"]')) {
+                return;
+            }
+            var link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = href;
+            document.head.appendChild(link);
+        },
+
+        /**
          * Инициализация калькулятора в контейнере
          * @param {string} containerId - ID контейнера
          * @param {Object} props - Свойства инициализации
          */
         init: function(containerId, props) {
+            // Загружаем CSS при первой инициализации
+            this.loadCss(this.cssPath);
+
             if (containerId) {
                 var container = document.getElementById(containerId);
                 if (!container) {
@@ -83,6 +105,9 @@
          */
         openCalculatorDialog: function() {
             var self = this;
+
+            // Загружаем CSS перед открытием диалога
+            this.loadCss(this.cssPath);
 
             // Получаем выбранные ТП
             var checkboxes = document.querySelectorAll('input[name="SUB_ID[]"]:checked');
