@@ -295,7 +295,7 @@ switch ($currentStep) {
             'TOTAL_COST' => ['NAME' => 'Итоговая себестоимость', 'TYPE' => 'N'],
             'STRUCTURE' => ['NAME' => 'Структура', 'TYPE' => 'S', 'USER_TYPE' => 'HTML'],
             'USED_MATERIALS' => ['NAME' => 'Использованные материалы', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'USED_WORKS' => ['NAME' => 'Использованные операции', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'USED_OPERATIONS' => ['NAME' => 'Использованные операции', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'USED_EQUIPMENT' => ['NAME' => 'Использованное оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'USED_DETAILS' => ['NAME' => 'Использованные детали', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
         ];
@@ -324,8 +324,8 @@ switch ($currentStep) {
         $installData['iblock_ids']['CALC_SETTINGS'] = createIblockWithLog('calculator', 'CALC_SETTINGS', 'Настройки калькуляторов', $settingsProps);
         $installData['iblock_ids']['CALC_MATERIALS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS', 'Материалы', $catalogProps);
         $installData['iblock_ids']['CALC_MATERIALS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS_VARIANTS', 'Варианты материалов', $catalogProps);
-        $installData['iblock_ids']['CALC_WORKS'] = createIblockWithLog('calculator_catalog', 'CALC_WORKS', 'Операции', $catalogProps);
-        $installData['iblock_ids']['CALC_WORKS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_WORKS_VARIANTS', 'Варианты операций', $catalogProps);
+        $installData['iblock_ids']['CALC_OPERATIONS'] = createIblockWithLog('calculator_catalog', 'CALC_OPERATIONS', 'Операции', $catalogProps);
+        $installData['iblock_ids']['CALC_OPERATIONS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_OPERATIONS_VARIANTS', 'Варианты операций', $catalogProps);
         $installData['iblock_ids']['CALC_EQUIPMENT'] = createIblockWithLog('calculator_catalog', 'CALC_EQUIPMENT', 'Оборудование', $equipmentProps);
         $installData['iblock_ids']['CALC_DETAILS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS', 'Детали', $catalogProps);
         $installData['iblock_ids']['CALC_DETAILS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS_VARIANTS', 'Варианты деталей', $catalogProps);
@@ -345,7 +345,7 @@ switch ($currentStep) {
         
         $ids = $installData['iblock_ids'];
         createSkuRelationWithLog($ids['CALC_MATERIALS'] ??  0, $ids['CALC_MATERIALS_VARIANTS'] ??  0, 'Материалы');
-        createSkuRelationWithLog($ids['CALC_WORKS'] ?? 0, $ids['CALC_WORKS_VARIANTS'] ?? 0, 'Операции');
+        createSkuRelationWithLog($ids['CALC_OPERATIONS'] ?? 0, $ids['CALC_OPERATIONS_VARIANTS'] ?? 0, 'Операции');
         createSkuRelationWithLog($ids['CALC_DETAILS'] ?? 0, $ids['CALC_DETAILS_VARIANTS'] ?? 0, 'Детали');
         
         installLog("--- Шаг 3 выполнен ---", 'header');
