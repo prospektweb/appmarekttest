@@ -299,7 +299,7 @@ class IblockCreator
     }
 
     /**
-     * Создаёт инфоблок работ.
+     * Создаёт инфоблок операций.
      *
      * @return int
      */
@@ -310,23 +310,22 @@ class IblockCreator
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
         ];
 
-        return $this->createIblock('calculator_catalog', 'CALC_WORKS', 'Работы', $properties);
+        return $this->createIblock('calculator_catalog', 'CALC_WORKS', 'Операции', $properties);
     }
 
     /**
-     * Создаёт инфоблок вариантов работ.
+     * Создаёт инфоблок вариантов операций.
      *
      * @return int
      */
     public function createWorksVariantsIblock(): int
     {
         $properties = [
-            'WIDTH' => ['NAME' => 'Ширина, мм', 'TYPE' => 'N'],
-            'LENGTH' => ['NAME' => 'Длина, мм', 'TYPE' => 'N'],
+            'EQUIPMENTS' => ['NAME' => 'Оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
         ];
 
-        return $this->createIblock('calculator_catalog', 'CALC_WORKS_VARIANTS', 'Варианты работ', $properties);
+        return $this->createIblock('calculator_catalog', 'CALC_WORKS_VARIANTS', 'Варианты операций', $properties);
     }
 
     /**
