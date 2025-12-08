@@ -16,6 +16,12 @@ class DemoDataCreator
     /** @var string Код валюты */
     private const CURRENCY_CODE = 'RUB';
 
+    /** @var int ID базовой прайс-группы */
+    private const BASE_PRICE_GROUP_ID = 1;
+
+    /** @var float Минимальное значение для измерений (защита от деления на ноль) */
+    private const MIN_DIMENSION_VALUE = 0.0001;
+
     /** @var array Созданные элементы */
     protected array $created = [];
 
@@ -150,7 +156,7 @@ class DemoDataCreator
                             $section3Id,
                             [],
                             [
-                                'MEASURE' => 5, // шт. - стандартный ID в Bitrix
+                                'MEASURE' => 5, // шт. - стандартный ID в Bitrix (TODO: использовать динамическую загрузку)
                             ]
                         );
 
@@ -620,9 +626,9 @@ class DemoDataCreator
                     'PURCHASING_PRICE' => $variant['PURCHASING_PRICE'],
                     'BASE_PRICE' => $variant['PURCHASING_PRICE'] * $variant['MARKUP'],
                 ],
-                0, // Операции не используются для расчёта плотности
-                0,
-                0
+                0, // width - не используется для расчёта плотности операций
+                0, // length - не используется для расчёта плотности операций
+                0  // weight - операции не имеют веса
             );
 
             if ($variantId) {
@@ -783,7 +789,7 @@ class DemoDataCreator
 
         // Вычисляем плотность (только для материалов с весом)
         $density = 0;
-        if ($weight > 0 && $width > 0 && $length > 0) {
+        if ($weight > 0 && $width > self::MIN_DIMENSION_VALUE && $length > self::MIN_DIMENSION_VALUE) {
             $density = round($weight * self::DENSITY_CONVERSION_FACTOR / ($width * $length), 2);
         }
 
@@ -852,7 +858,7 @@ class DemoDataCreator
      */
     protected function setPrice(int $productId, float $purchasingPrice, float $basePrice): void
     {
-        // Базовая цена (ID = 1)
+        // Базовая цена (используется константа BASE_PRICE_GROUP_ID = 1)
         \CPrice::SetBasePrice($productId, $basePrice, self::CURRENCY_CODE);
         
         // Можно также установить закупочную цену, если есть соответствующий тип цены
