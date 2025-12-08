@@ -218,6 +218,58 @@ function createSkuRelationWithLog(int $productIblockId, int $offersIblockId, str
     }
 }
 
+// Создание единиц измерения
+function createMeasuresWithLog(): bool
+{
+    if (!\Bitrix\Main\Loader::includeModule('catalog')) {
+        installLog("ОШИБКА: Модуль catalog не загружен", 'error');
+        return false;
+    }
+
+    installLog("Создание единиц измерения...", 'header');
+
+    $measures = [
+        ['CODE' => 'SHEET', 'MEASURE_TITLE' => 'Лист', 'SYMBOL_RUS' => 'л.', 'SYMBOL_INTL' => 'sheet', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'PACKAGE', 'MEASURE_TITLE' => 'Упаковка', 'SYMBOL_RUS' => 'уп.', 'SYMBOL_INTL' => 'pack', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'ROLL', 'MEASURE_TITLE' => 'Рулон', 'SYMBOL_RUS' => 'рул.', 'SYMBOL_INTL' => 'roll', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'ROLE', 'MEASURE_TITLE' => 'Роль', 'SYMBOL_RUS' => 'роль', 'SYMBOL_INTL' => 'role', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'SQM', 'MEASURE_TITLE' => 'Квадратный метр', 'SYMBOL_RUS' => 'м²', 'SYMBOL_INTL' => 'm²', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'SQCM', 'MEASURE_TITLE' => 'Квадратный сантиметр', 'SYMBOL_RUS' => 'см²', 'SYMBOL_INTL' => 'cm²', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'SQDM', 'MEASURE_TITLE' => 'Квадратный дециметр', 'SYMBOL_RUS' => 'дм²', 'SYMBOL_INTL' => 'dm²', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'CIRCULATION', 'MEASURE_TITLE' => 'Тираж', 'SYMBOL_RUS' => 'тираж', 'SYMBOL_INTL' => 'circulation', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'RUN', 'MEASURE_TITLE' => 'Прогон', 'SYMBOL_RUS' => 'прогон', 'SYMBOL_INTL' => 'run', 'IS_DEFAULT' => 'N'],
+    ];
+
+    $createdCount = 0;
+    foreach ($measures as $measureData) {
+        // Проверяем, существует ли уже единица измерения с таким кодом
+        $rsExisting = \CCatalogMeasure::getList(
+            [],
+            ['CODE' => $measureData['CODE']],
+            false,
+            ['nTopCount' => 1],
+            ['ID', 'CODE']
+        );
+
+        if ($existing = $rsExisting->Fetch()) {
+            installLog("  → Единица измерения '{$measureData['MEASURE_TITLE']}' уже существует (ID: {$existing['ID']})", 'warning');
+            continue;
+        }
+
+        $result = \CCatalogMeasure::add($measureData);
+        
+        if ($result) {
+            installLog("  → Создана: {$measureData['MEASURE_TITLE']} ({$measureData['SYMBOL_RUS']})", 'success');
+            $createdCount++;
+        } else {
+            installLog("  → Ошибка создания: {$measureData['MEASURE_TITLE']}", 'error');
+        }
+    }
+
+    installLog("Создано единиц измерения: {$createdCount}/" . count($measures), $createdCount > 0 ? 'success' : 'warning');
+    return true;
+}
+
 // ============= ВЫПОЛНЕНИЕ ШАГОВ =============
 
 $totalSteps = 5;
@@ -243,7 +295,7 @@ switch ($currentStep) {
             'TOTAL_COST' => ['NAME' => 'Итоговая себестоимость', 'TYPE' => 'N'],
             'STRUCTURE' => ['NAME' => 'Структура', 'TYPE' => 'S', 'USER_TYPE' => 'HTML'],
             'USED_MATERIALS' => ['NAME' => 'Использованные материалы', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'USED_WORKS' => ['NAME' => 'Использованные работы', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'USED_WORKS' => ['NAME' => 'Использованные операции', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'USED_EQUIPMENT' => ['NAME' => 'Использованное оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'USED_DETAILS' => ['NAME' => 'Использованные детали', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
         ];
@@ -258,31 +310,33 @@ switch ($currentStep) {
         ];
         
         $catalogProps = [
-            'WIDTH' => ['NAME' => 'Ширина, мм', 'TYPE' => 'N'],
-            'LENGTH' => ['NAME' => 'Длина, мм', 'TYPE' => 'N'],
-            'HEIGHT' => ['NAME' => 'Высота, мм', 'TYPE' => 'N'],
             'DENSITY' => ['NAME' => 'Плотность', 'TYPE' => 'N'],
         ];
         
-        $equipmentProps = array_merge($catalogProps, [
+        $equipmentProps = [
             'FIELDS' => ['NAME' => 'Поля печатной машины', 'TYPE' => 'S'],
             'MAX_WIDTH' => ['NAME' => 'Макс. ширина, мм', 'TYPE' => 'N'],
             'MAX_LENGTH' => ['NAME' => 'Макс. длина, мм', 'TYPE' => 'N'],
             'START_COST' => ['NAME' => 'Стоимость приладки', 'TYPE' => 'N'],
-        ]);
+        ];
 
         $installData['iblock_ids']['CALC_CONFIG'] = createIblockWithLog('calculator', 'CALC_CONFIG', 'Конфигурации калькуляций', $configProps);
         $installData['iblock_ids']['CALC_SETTINGS'] = createIblockWithLog('calculator', 'CALC_SETTINGS', 'Настройки калькуляторов', $settingsProps);
         $installData['iblock_ids']['CALC_MATERIALS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS', 'Материалы', $catalogProps);
         $installData['iblock_ids']['CALC_MATERIALS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS_VARIANTS', 'Варианты материалов', $catalogProps);
-        $installData['iblock_ids']['CALC_WORKS'] = createIblockWithLog('calculator_catalog', 'CALC_WORKS', 'Работы', $catalogProps);
-        $installData['iblock_ids']['CALC_WORKS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_WORKS_VARIANTS', 'Варианты работ', $catalogProps);
+        $installData['iblock_ids']['CALC_WORKS'] = createIblockWithLog('calculator_catalog', 'CALC_WORKS', 'Операции', $catalogProps);
+        $installData['iblock_ids']['CALC_WORKS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_WORKS_VARIANTS', 'Варианты операций', $catalogProps);
         $installData['iblock_ids']['CALC_EQUIPMENT'] = createIblockWithLog('calculator_catalog', 'CALC_EQUIPMENT', 'Оборудование', $equipmentProps);
         $installData['iblock_ids']['CALC_DETAILS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS', 'Детали', $catalogProps);
         $installData['iblock_ids']['CALC_DETAILS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS_VARIANTS', 'Варианты деталей', $catalogProps);
 
         $created = count(array_filter($installData['iblock_ids'], fn($id) => $id > 0));
         installLog("Создано инфоблоков: {$created}/9", $created === 9 ? 'success' : 'warning');
+        
+        // Создание единиц измерения
+        installLog("");
+        createMeasuresWithLog();
+        
         installLog("--- Шаг 2 выполнен ---", 'header');
         break;
 
@@ -291,7 +345,7 @@ switch ($currentStep) {
         
         $ids = $installData['iblock_ids'];
         createSkuRelationWithLog($ids['CALC_MATERIALS'] ??  0, $ids['CALC_MATERIALS_VARIANTS'] ??  0, 'Материалы');
-        createSkuRelationWithLog($ids['CALC_WORKS'] ?? 0, $ids['CALC_WORKS_VARIANTS'] ?? 0, 'Работы');
+        createSkuRelationWithLog($ids['CALC_WORKS'] ?? 0, $ids['CALC_WORKS_VARIANTS'] ?? 0, 'Операции');
         createSkuRelationWithLog($ids['CALC_DETAILS'] ?? 0, $ids['CALC_DETAILS_VARIANTS'] ?? 0, 'Детали');
         
         installLog("--- Шаг 3 выполнен ---", 'header');

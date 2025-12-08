@@ -235,7 +235,7 @@ class IblockCreator
             'TOTAL_COST' => ['NAME' => 'Итоговая себестоимость', 'TYPE' => 'N'],
             'STRUCTURE' => ['NAME' => 'Структура', 'TYPE' => 'S', 'USER_TYPE' => 'HTML'],
             'USED_MATERIALS' => ['NAME' => 'Использованные материалы', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'USED_WORKS' => ['NAME' => 'Использованные работы', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'USED_WORKS' => ['NAME' => 'Использованные операции', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'USED_EQUIPMENT' => ['NAME' => 'Использованное оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'USED_DETAILS' => ['NAME' => 'Использованные детали', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
         ];
@@ -299,7 +299,7 @@ class IblockCreator
     }
 
     /**
-     * Создаёт инфоблок работ.
+     * Создаёт инфоблок операций.
      *
      * @return int
      */
@@ -310,23 +310,22 @@ class IblockCreator
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
         ];
 
-        return $this->createIblock('calculator_catalog', 'CALC_WORKS', 'Работы', $properties);
+        return $this->createIblock('calculator_catalog', 'CALC_WORKS', 'Операции', $properties);
     }
 
     /**
-     * Создаёт инфоблок вариантов работ.
+     * Создаёт инфоблок вариантов операций.
      *
      * @return int
      */
     public function createWorksVariantsIblock(): int
     {
         $properties = [
-            'WIDTH' => ['NAME' => 'Ширина, мм', 'TYPE' => 'N'],
-            'LENGTH' => ['NAME' => 'Длина, мм', 'TYPE' => 'N'],
+            'EQUIPMENTS' => ['NAME' => 'Оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
         ];
 
-        return $this->createIblock('calculator_catalog', 'CALC_WORKS_VARIANTS', 'Варианты работ', $properties);
+        return $this->createIblock('calculator_catalog', 'CALC_WORKS_VARIANTS', 'Варианты операций', $properties);
     }
 
     /**

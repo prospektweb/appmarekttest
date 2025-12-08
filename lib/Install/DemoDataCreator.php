@@ -6,14 +6,36 @@ use Bitrix\Main\Loader;
 
 /**
  * Класс для создания демо-данных.
+ * Версия 2.0 - с разделами, SKU, системными полями и ценами
  */
 class DemoDataCreator
 {
+    /** @var int Коэффициент конвертации для расчёта плотности */
+    private const DENSITY_CONVERSION_FACTOR = 1000000;
+
+    /** @var string Код валюты */
+    private const CURRENCY_CODE = 'RUB';
+
+    /** @var int ID базовой прайс-группы */
+    private const BASE_PRICE_GROUP_ID = 1;
+
+    /** @var float Минимальное значение для измерений (защита от деления на ноль) */
+    private const MIN_DIMENSION_VALUE = 0.0001;
+
     /** @var array Созданные элементы */
     protected array $created = [];
 
     /** @var array Ошибки */
     protected array $errors = [];
+
+    /** @var array Кэш ID разделов */
+    protected array $sectionCache = [];
+
+    /** @var array Кэш ID элементов */
+    protected array $elementCache = [];
+
+    /** @var array Кэш ID единиц измерения */
+    protected array $measureCache = [];
 
     /**
      * Создаёт демо-данные.
@@ -26,25 +48,126 @@ class DemoDataCreator
     {
         $this->created = [];
         $this->errors = [];
+        $this->sectionCache = [];
+        $this->elementCache = [];
+        $this->measureCache = [];
 
         if (!Loader::includeModule('iblock') || !Loader::includeModule('catalog')) {
             $this->errors[] = 'Не удалось загрузить модули';
             return $this->getResult();
         }
 
+        // Загружаем единицы измерения в кэш
+        $this->loadMeasures();
+
+        // Создаём оборудование (нужно для привязки к операциям)
+        $this->createEquipment($iblockIds);
+
         // Создаём материалы
         $this->createMaterials($iblockIds);
 
-        // Создаём работы
-        $this->createWorks($iblockIds);
-
-        // Создаём оборудование
-        $this->createEquipment($iblockIds);
-
-        // Создаём детали
-        $this->createDetails($iblockIds);
+        // Создаём операции (бывшие работы)
+        $this->createOperations($iblockIds);
 
         return $this->getResult();
+    }
+
+    /**
+     * Загружает единицы измерения в кэш.
+     */
+    protected function loadMeasures(): void
+    {
+        $rsMeasures = \CCatalogMeasure::getList();
+        while ($measure = $rsMeasures->Fetch()) {
+            $this->measureCache[$measure['CODE']] = (int)$measure['ID'];
+        }
+    }
+
+    /**
+     * Получает ID единицы измерения по коду.
+     */
+    protected function getMeasureId(string $code): int
+    {
+        $measureId = $this->measureCache[$code] ?? 0;
+        
+        if ($measureId === 0) {
+            $this->errors[] = "Единица измерения с кодом '{$code}' не найдена";
+        }
+        
+        return $measureId;
+    }
+
+    /**
+     * Создаёт оборудование.
+     *
+     * @param array $iblockIds ID инфоблоков.
+     */
+    protected function createEquipment(array $iblockIds): void
+    {
+        $equipmentIblockId = $iblockIds['CALC_EQUIPMENT'] ?? 0;
+
+        if ($equipmentIblockId <= 0) {
+            return;
+        }
+
+        // Структура: Разделы → Элементы оборудования
+        $structure = [
+            'Печатное оборудование' => [
+                'Цифровые лазерные принтеры' => [
+                    'Konica Minolta' => [
+                        ['NAME' => '2060L', 'CODE' => '2060L'],
+                        ['NAME' => '3070L', 'CODE' => '3070L'],
+                    ],
+                ],
+                'Офсетные станки' => [
+                    'Ryoby' => [
+                        ['NAME' => 'B2', 'CODE' => 'ryoby_b2'],
+                    ],
+                ],
+            ],
+            'Постпечатное оборудование' => [
+                'Бумагорезательные станки' => [
+                    'Wohlenberg' => [
+                        ['NAME' => '72', 'CODE' => 'wohlenberg_72'],
+                    ],
+                ],
+                'Ламинаторы' => [
+                    'Burlos' => [
+                        ['NAME' => 'PD480C', 'CODE' => 'pd480c'],
+                    ],
+                ],
+            ],
+        ];
+
+        foreach ($structure as $section1Name => $section1Data) {
+            $section1Id = $this->getOrCreateSection($equipmentIblockId, $section1Name, 0);
+
+            foreach ($section1Data as $section2Name => $section2Data) {
+                $section2Id = $this->getOrCreateSection($equipmentIblockId, $section2Name, $section1Id);
+
+                foreach ($section2Data as $section3Name => $equipmentItems) {
+                    $section3Id = $this->getOrCreateSection($equipmentIblockId, $section3Name, $section2Id);
+
+                    foreach ($equipmentItems as $equipment) {
+                        $elementId = $this->createOrUpdateProduct(
+                            $equipmentIblockId,
+                            $equipment['CODE'],
+                            $equipment['NAME'],
+                            $section3Id,
+                            [],
+                            [
+                                'MEASURE' => 5, // шт. - стандартный ID в Bitrix (TODO: использовать динамическую загрузку)
+                            ]
+                        );
+
+                        if ($elementId) {
+                            $this->elementCache[$equipment['CODE']] = $elementId;
+                            $this->created[] = "Оборудование: {$equipment['NAME']} (ID: {$elementId}, CODE: {$equipment['CODE']})";
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -61,300 +184,696 @@ class DemoDataCreator
             return;
         }
 
-        // Мелованная бумага
-        $paperId = $this->createElement($materialsIblockId, [
-            'NAME' => 'Мелованная бумага',
-            'CODE' => 'coated_paper',
-            'PROPERTY_VALUES' => [
-                'PARAMETRS' => [
-                    ['VALUE' => '130', 'DESCRIPTION' => 'плотность, г/м²'],
+        // Регистрируем инфоблоки как каталоги
+        $this->ensureCatalog($materialsIblockId);
+        $this->ensureCatalog($variantsIblockId);
+
+        // Материалы: Бумага
+        $paperSection = $this->getOrCreateSection($materialsIblockId, 'Бумага', 0);
+        
+        // Бумага → Мелованная
+        $coatedSection = $this->getOrCreateSection($materialsIblockId, 'Мелованная', $paperSection);
+        
+        // Бумага → Мелованная → Глянцевая
+        $glossySection = $this->getOrCreateSection($materialsIblockId, 'Глянцевая', $coatedSection);
+        
+        // Товары и SKU для Мелованной глянцевой бумаги
+        $this->createMaterialProduct($materialsIblockId, $variantsIblockId, $glossySection, [
+            'PRODUCT_NAME' => '150 г/м2',
+            'PRODUCT_CODE' => 'coated_gloss_150',
+            'VARIANTS' => [
+                [
+                    'NAME' => '320x470мм',
+                    'CODE' => 'coated_gloss_150_320x470',
+                    'WIDTH' => 320,
+                    'LENGTH' => 470,
+                    'HEIGHT' => 0.105,
+                    'WEIGHT' => 15,
+                    'PURCHASING_PRICE' => 3,
+                    'MARKUP' => 1.3,
+                    'MEASURE' => 'SHEET',
                 ],
             ],
         ]);
 
-        if ($paperId) {
-            $this->created[] = 'Материал: Мелованная бумага (ID: ' . $paperId . ')';
-
-            // Варианты
-            $variants = [
-                ['NAME' => 'Мелованная бумага 130г', 'DENSITY' => 130],
-                ['NAME' => 'Мелованная бумага 170г', 'DENSITY' => 170],
-                ['NAME' => 'Мелованная бумага 250г', 'DENSITY' => 250],
-                ['NAME' => 'Мелованная бумага 300г', 'DENSITY' => 300],
-            ];
-
-            foreach ($variants as $variant) {
-                $variantId = $this->createElement($variantsIblockId, [
-                    'NAME' => $variant['NAME'],
-                    'PROPERTY_VALUES' => [
-                        'CML2_LINK' => $paperId,
-                        'DENSITY' => $variant['DENSITY'],
-                        'WIDTH' => 320,
-                        'LENGTH' => 450,
-                    ],
-                ]);
-
-                if ($variantId) {
-                    $this->created[] = 'Вариант: ' . $variant['NAME'] . ' (ID: ' . $variantId . ')';
-                }
-            }
-        }
-
-        // Плёнка для ламинации
-        $filmId = $this->createElement($materialsIblockId, [
-            'NAME' => 'Плёнка для ламинации',
-            'CODE' => 'lamination_film',
+        $this->createMaterialProduct($materialsIblockId, $variantsIblockId, $glossySection, [
+            'PRODUCT_NAME' => '200 г/м2',
+            'PRODUCT_CODE' => 'coated_gloss_200',
+            'VARIANTS' => [
+                [
+                    'NAME' => '320x470мм',
+                    'CODE' => 'coated_gloss_200_320x470',
+                    'WIDTH' => 320,
+                    'LENGTH' => 470,
+                    'HEIGHT' => 0.14,
+                    'WEIGHT' => 30,
+                    'PURCHASING_PRICE' => 5,
+                    'MARKUP' => 1.3,
+                    'MEASURE' => 'SHEET',
+                ],
+            ],
         ]);
 
-        if ($filmId) {
-            $this->created[] = 'Материал: Плёнка для ламинации (ID: ' . $filmId . ')';
+        // Бумага → ВХИ
+        $vhiSection = $this->getOrCreateSection($materialsIblockId, 'ВХИ', $paperSection);
+        
+        $this->createMaterialProduct($materialsIblockId, $variantsIblockId, $vhiSection, [
+            'PRODUCT_NAME' => '80 г/м2',
+            'PRODUCT_CODE' => 'vhi_80',
+            'VARIANTS' => [
+                [
+                    'NAME' => '320x470мм',
+                    'CODE' => 'vhi_80_320x470',
+                    'WIDTH' => 320,
+                    'LENGTH' => 470,
+                    'HEIGHT' => 0.1,
+                    'WEIGHT' => 10.8,
+                    'PURCHASING_PRICE' => 3,
+                    'MARKUP' => 1.3,
+                    'MEASURE' => 'SHEET',
+                ],
+            ],
+        ]);
 
-            $filmVariants = [
-                ['NAME' => 'Плёнка глянец 30мкм', 'HEIGHT' => 30],
-                ['NAME' => 'Плёнка мат 30мкм', 'HEIGHT' => 30],
-            ];
+        $this->createMaterialProduct($materialsIblockId, $variantsIblockId, $vhiSection, [
+            'PRODUCT_NAME' => '160 г/м2',
+            'PRODUCT_CODE' => 'vhi_160',
+            'VARIANTS' => [
+                [
+                    'NAME' => '320x470мм',
+                    'CODE' => 'vhi_160_320x470',
+                    'WIDTH' => 320,
+                    'LENGTH' => 470,
+                    'HEIGHT' => 0.16,
+                    'WEIGHT' => 21.6,
+                    'PURCHASING_PRICE' => 4,
+                    'MARKUP' => 1.3,
+                    'MEASURE' => 'SHEET',
+                ],
+            ],
+        ]);
 
-            foreach ($filmVariants as $variant) {
-                $variantId = $this->createElement($variantsIblockId, [
-                    'NAME' => $variant['NAME'],
-                    'PROPERTY_VALUES' => [
-                        'CML2_LINK' => $filmId,
-                        'HEIGHT' => $variant['HEIGHT'],
-                    ],
-                ]);
+        // Бумага → Самоклеящаяся
+        $selfAdhesiveSection = $this->getOrCreateSection($materialsIblockId, 'Самоклеящаяся', $paperSection);
+        
+        // Бумага → Самоклеящаяся → Матовая
+        $matteSection = $this->getOrCreateSection($materialsIblockId, 'Матовая', $selfAdhesiveSection);
+        
+        $this->createMaterialProduct($materialsIblockId, $variantsIblockId, $matteSection, [
+            'PRODUCT_NAME' => '80(180) г/м2',
+            'PRODUCT_CODE' => 'self_adhesive_80_180',
+            'VARIANTS' => [
+                [
+                    'NAME' => '320x470мм',
+                    'CODE' => 'self_adhesive_80_180_320x470',
+                    'WIDTH' => 320,
+                    'LENGTH' => 470,
+                    'HEIGHT' => 0.13,
+                    'WEIGHT' => 28.08,
+                    'PURCHASING_PRICE' => 10,
+                    'MARKUP' => 1.3,
+                    'MEASURE' => 'SHEET',
+                ],
+            ],
+        ]);
 
-                if ($variantId) {
-                    $this->created[] = 'Вариант: ' . $variant['NAME'] . ' (ID: ' . $variantId . ')';
-                }
-            }
-        }
+        // Плёнка
+        $filmSection = $this->getOrCreateSection($materialsIblockId, 'Плёнка', 0);
+        
+        // Плёнка → Ламинационная
+        $laminationSection = $this->getOrCreateSection($materialsIblockId, 'Ламинационная', $filmSection);
+        
+        // Плёнка → Ламинационная → Рулонная
+        $rollSection = $this->getOrCreateSection($materialsIblockId, 'Рулонная', $laminationSection);
+        
+        // Плёнка → Ламинационная → Рулонная → Матовая
+        $matteFilmSection = $this->getOrCreateSection($materialsIblockId, 'Матовая', $rollSection);
+        
+        $this->createMaterialProduct($materialsIblockId, $variantsIblockId, $matteFilmSection, [
+            'PRODUCT_NAME' => '30мкм',
+            'PRODUCT_CODE' => 'film_lamination_matte_30',
+            'VARIANTS' => [
+                [
+                    'NAME' => '305мм',
+                    'CODE' => 'film_lamination_matte_30_305',
+                    'WIDTH' => 305,
+                    'LENGTH' => 300000,
+                    'HEIGHT' => 0.03,
+                    'WEIGHT' => 2000,
+                    'PURCHASING_PRICE' => 1504,
+                    'MARKUP' => 1.3,
+                    'MEASURE' => 'ROLE',
+                ],
+                [
+                    'NAME' => '457мм',
+                    'CODE' => 'film_lamination_matte_30_457',
+                    'WIDTH' => 457,
+                    'LENGTH' => 300000,
+                    'HEIGHT' => 0.03,
+                    'WEIGHT' => 3000,
+                    'PURCHASING_PRICE' => 2588,
+                    'MARKUP' => 1.3,
+                    'MEASURE' => 'ROLE',
+                ],
+            ],
+        ]);
+
+        // Плёнка → Ламинационная → Рулонная → Глянцевая
+        $glossyFilmSection = $this->getOrCreateSection($materialsIblockId, 'Глянцевая', $rollSection);
+        
+        $this->createMaterialProduct($materialsIblockId, $variantsIblockId, $glossyFilmSection, [
+            'PRODUCT_NAME' => '30мкм',
+            'PRODUCT_CODE' => 'film_lamination_gloss_30',
+            'VARIANTS' => [
+                [
+                    'NAME' => '305мм',
+                    'CODE' => 'film_lamination_gloss_30_305',
+                    'WIDTH' => 305,
+                    'LENGTH' => 300000,
+                    'HEIGHT' => 0.03,
+                    'WEIGHT' => 2000,
+                    'PURCHASING_PRICE' => 1204,
+                    'MARKUP' => 1.3,
+                    'MEASURE' => 'ROLE',
+                ],
+                [
+                    'NAME' => '457мм',
+                    'CODE' => 'film_lamination_gloss_30_457',
+                    'WIDTH' => 457,
+                    'LENGTH' => 300000,
+                    'HEIGHT' => 0.03,
+                    'WEIGHT' => 3000,
+                    'PURCHASING_PRICE' => 2188,
+                    'MARKUP' => 1.3,
+                    'MEASURE' => 'ROLE',
+                ],
+            ],
+        ]);
     }
 
     /**
-     * Создаёт работы.
+     * Создаёт операции (бывшие работы).
      *
      * @param array $iblockIds ID инфоблоков.
      */
-    protected function createWorks(array $iblockIds): void
+    protected function createOperations(array $iblockIds): void
     {
-        $worksIblockId = $iblockIds['CALC_WORKS'] ?? 0;
+        $operationsIblockId = $iblockIds['CALC_WORKS'] ?? 0;
         $variantsIblockId = $iblockIds['CALC_WORKS_VARIANTS'] ?? 0;
 
-        if ($worksIblockId <= 0 || $variantsIblockId <= 0) {
+        if ($operationsIblockId <= 0 || $variantsIblockId <= 0) {
             return;
         }
 
-        // Цифровая печать
-        $printId = $this->createElement($worksIblockId, [
-            'NAME' => 'Цифровая печать',
-            'CODE' => 'digital_print',
-        ]);
+        // Регистрируем инфоблоки как каталоги
+        $this->ensureCatalog($operationsIblockId);
+        $this->ensureCatalog($variantsIblockId);
 
-        if ($printId) {
-            $this->created[] = 'Работа: Цифровая печать (ID: ' . $printId . ')';
-
-            $variants = [
-                ['NAME' => 'Цифровая печать 4+0'],
-                ['NAME' => 'Цифровая печать 4+4'],
-            ];
-
-            foreach ($variants as $variant) {
-                $variantId = $this->createElement($variantsIblockId, [
-                    'NAME' => $variant['NAME'],
-                    'PROPERTY_VALUES' => [
-                        'CML2_LINK' => $printId,
-                    ],
-                ]);
-
-                if ($variantId) {
-                    $this->created[] = 'Вариант: ' . $variant['NAME'] . ' (ID: ' . $variantId . ')';
-                }
-            }
+        // Печать
+        $printSection = $this->getOrCreateSection($operationsIblockId, 'Печать', 0);
+        
+        // Печать → Цифровая
+        $digitalSection = $this->getOrCreateSection($operationsIblockId, 'Цифровая', $printSection);
+        
+        // Печать → Цифровая → Лазерная
+        $laserSection = $this->getOrCreateSection($operationsIblockId, 'Лазерная', $digitalSection);
+        
+        // Получаем ID оборудования для привязки
+        $equipment2060L = $this->elementCache['2060L'] ?? 0;
+        $equipment3070L = $this->elementCache['3070L'] ?? 0;
+        
+        // Проверяем наличие оборудования
+        $printEquipment = [];
+        if ($equipment2060L > 0) {
+            $printEquipment[] = $equipment2060L;
         }
-
-        // Ламинирование
-        $lamId = $this->createElement($worksIblockId, [
-            'NAME' => 'Ламинирование',
-            'CODE' => 'lamination',
-        ]);
-
-        if ($lamId) {
-            $this->created[] = 'Работа: Ламинирование (ID: ' . $lamId . ')';
-
-            $variants = [
-                ['NAME' => 'Ламинирование одностороннее'],
-                ['NAME' => 'Ламинирование двухстороннее'],
-            ];
-
-            foreach ($variants as $variant) {
-                $variantId = $this->createElement($variantsIblockId, [
-                    'NAME' => $variant['NAME'],
-                    'PROPERTY_VALUES' => [
-                        'CML2_LINK' => $lamId,
-                    ],
-                ]);
-
-                if ($variantId) {
-                    $this->created[] = 'Вариант: ' . $variant['NAME'] . ' (ID: ' . $variantId . ')';
-                }
-            }
+        if ($equipment3070L > 0) {
+            $printEquipment[] = $equipment3070L;
         }
-    }
-
-    /**
-     * Создаёт оборудование.
-     *
-     * @param array $iblockIds ID инфоблоков.
-     */
-    protected function createEquipment(array $iblockIds): void
-    {
-        $equipmentIblockId = $iblockIds['CALC_EQUIPMENT'] ?? 0;
-
-        if ($equipmentIblockId <= 0) {
-            return;
+        
+        if (empty($printEquipment)) {
+            $this->errors[] = 'Оборудование для печати не создано, операции будут созданы без привязки';
         }
-
-        $equipment = [
-            [
-                'NAME' => 'Xerox Versant 180',
-                'CODE' => 'xerox_versant_180',
-                'PROPERTIES' => [
-                    'MAX_WIDTH' => 330,
-                    'MAX_LENGTH' => 488,
-                    'START_COST' => 500,
-                    'FIELDS' => '3,3,3,3',
+        
+        $this->createOperationProduct($operationsIblockId, $variantsIblockId, $laserSection, [
+            'PRODUCT_NAME' => '4+0',
+            'PRODUCT_CODE' => 'print_digital_laser_4_0',
+            'EQUIPMENT' => $printEquipment,
+            'VARIANTS' => [
+                [
+                    'NAME' => '320x470мм',
+                    'CODE' => 'print_digital_laser_4_0_320x470',
+                    'WIDTH' => 320,
+                    'LENGTH' => 470,
+                    'HEIGHT' => 0.45,
+                    'PURCHASING_PRICE' => 10,
+                    'MARKUP' => 3.0,
+                    'MEASURE' => 'RUN',
                 ],
             ],
-            [
-                'NAME' => 'GBC Titan 110',
-                'CODE' => 'gbc_titan_110',
-                'PROPERTIES' => [
-                    'MAX_WIDTH' => 1100,
-                    'MAX_LENGTH' => 0,
-                    'START_COST' => 200,
+        ]);
+
+        $this->createOperationProduct($operationsIblockId, $variantsIblockId, $laserSection, [
+            'PRODUCT_NAME' => '4+4',
+            'PRODUCT_CODE' => 'print_digital_laser_4_4',
+            'EQUIPMENT' => $printEquipment,
+            'VARIANTS' => [
+                [
+                    'NAME' => '320x470мм',
+                    'CODE' => 'print_digital_laser_4_4_320x470',
+                    'WIDTH' => 320,
+                    'LENGTH' => 470,
+                    'HEIGHT' => 0.45,
+                    'PURCHASING_PRICE' => 18,
+                    'MARKUP' => 3.0,
+                    'MEASURE' => 'RUN',
                 ],
             ],
-        ];
+        ]);
 
-        foreach ($equipment as $item) {
-            $id = $this->createElement($equipmentIblockId, [
-                'NAME' => $item['NAME'],
-                'CODE' => $item['CODE'],
-                'PROPERTY_VALUES' => $item['PROPERTIES'],
-            ]);
+        $this->createOperationProduct($operationsIblockId, $variantsIblockId, $laserSection, [
+            'PRODUCT_NAME' => '1+0',
+            'PRODUCT_CODE' => 'print_digital_laser_1_0',
+            'EQUIPMENT' => $printEquipment,
+            'VARIANTS' => [
+                [
+                    'NAME' => '320x470мм',
+                    'CODE' => 'print_digital_laser_1_0_320x470',
+                    'WIDTH' => 320,
+                    'LENGTH' => 470,
+                    'HEIGHT' => 0.45,
+                    'PURCHASING_PRICE' => 3,
+                    'MARKUP' => 3.0,
+                    'MEASURE' => 'RUN',
+                ],
+            ],
+        ]);
 
-            if ($id) {
-                $this->created[] = 'Оборудование: ' . $item['NAME'] . ' (ID: ' . $id . ')';
-            }
+        $this->createOperationProduct($operationsIblockId, $variantsIblockId, $laserSection, [
+            'PRODUCT_NAME' => '1+1',
+            'PRODUCT_CODE' => 'print_digital_laser_1_1',
+            'EQUIPMENT' => $printEquipment,
+            'VARIANTS' => [
+                [
+                    'NAME' => '320x470мм',
+                    'CODE' => 'print_digital_laser_1_1_320x470',
+                    'WIDTH' => 320,
+                    'LENGTH' => 470,
+                    'HEIGHT' => 0.45,
+                    'PURCHASING_PRICE' => 6,
+                    'MARKUP' => 3.0,
+                    'MEASURE' => 'RUN',
+                ],
+            ],
+        ]);
+
+        // Постпечать
+        $postPrintSection = $this->getOrCreateSection($operationsIblockId, 'Постпечать', 0);
+        
+        // Постпечать → Ламинирование
+        $laminationSection = $this->getOrCreateSection($operationsIblockId, 'Ламинирование', $postPrintSection);
+        
+        // Постпечать → Ламинирование → Рулонное
+        $rollLaminationSection = $this->getOrCreateSection($operationsIblockId, 'Рулонное', $laminationSection);
+        
+        // Получаем ID оборудования для ламинатора
+        $equipmentPD480C = $this->elementCache['pd480c'] ?? 0;
+        
+        // Проверяем наличие оборудования
+        $laminationEquipment = [];
+        if ($equipmentPD480C > 0) {
+            $laminationEquipment[] = $equipmentPD480C;
+        } else {
+            $this->errors[] = 'Оборудование для ламинирования не создано, операции будут созданы без привязки';
         }
+        
+        $this->createOperationProduct($operationsIblockId, $variantsIblockId, $rollLaminationSection, [
+            'PRODUCT_NAME' => 'A3+',
+            'PRODUCT_CODE' => 'post_lamination_a3plus',
+            'EQUIPMENT' => $laminationEquipment,
+            'VARIANTS' => [
+                [
+                    'NAME' => 'A3+',
+                    'CODE' => 'post_lamination_a3plus_variant',
+                    'WIDTH' => 320,
+                    'LENGTH' => 470,
+                    'HEIGHT' => 0.45,
+                    'PURCHASING_PRICE' => 4,
+                    'MARKUP' => 2.0,
+                    'MEASURE' => 'SQM',
+                ],
+            ],
+        ]);
     }
 
     /**
-     * Создаёт детали.
-     *
-     * @param array $iblockIds ID инфоблоков.
+     * Создаёт товар материала со всеми SKU.
      */
-    protected function createDetails(array $iblockIds): void
+    protected function createMaterialProduct(int $productIblockId, int $variantsIblockId, int $sectionId, array $data): void
     {
-        $detailsIblockId = $iblockIds['CALC_DETAILS'] ?? 0;
-        $variantsIblockId = $iblockIds['CALC_DETAILS_VARIANTS'] ?? 0;
+        $productId = $this->createOrUpdateProduct(
+            $productIblockId,
+            $data['PRODUCT_CODE'],
+            $data['PRODUCT_NAME'],
+            $sectionId
+        );
 
-        if ($detailsIblockId <= 0 || $variantsIblockId <= 0) {
+        if (!$productId) {
             return;
         }
 
-        $details = [
-            [
-                'NAME' => 'Листовка А4',
-                'CODE' => 'leaflet_a4',
-                'WIDTH' => 210,
-                'LENGTH' => 297,
-            ],
-            [
-                'NAME' => 'Листовка А5',
-                'CODE' => 'leaflet_a5',
-                'WIDTH' => 148,
-                'LENGTH' => 210,
-            ],
-            [
-                'NAME' => 'Визитка 90x50',
-                'CODE' => 'business_card',
-                'WIDTH' => 90,
-                'LENGTH' => 50,
-            ],
-        ];
+        $this->created[] = "Материал: {$data['PRODUCT_NAME']} (ID: {$productId}, CODE: {$data['PRODUCT_CODE']})";
 
-        foreach ($details as $detail) {
-            $detailId = $this->createElement($detailsIblockId, [
-                'NAME' => $detail['NAME'],
-                'CODE' => $detail['CODE'],
-            ]);
-
-            if ($detailId) {
-                $this->created[] = 'Деталь: ' . $detail['NAME'] . ' (ID: ' . $detailId . ')';
-
-                // Вариант
-                $variantId = $this->createElement($variantsIblockId, [
-                    'NAME' => $detail['NAME'],
-                    'PROPERTY_VALUES' => [
-                        'CML2_LINK' => $detailId,
-                        'WIDTH' => $detail['WIDTH'],
-                        'LENGTH' => $detail['LENGTH'],
-                    ],
-                ]);
-
-                if ($variantId) {
-                    $this->created[] = 'Вариант детали: ' . $detail['NAME'] . ' (ID: ' . $variantId . ')';
-                }
+        // Создаём варианты (SKU)
+        foreach ($data['VARIANTS'] as $variant) {
+            $measureId = $this->getMeasureId($variant['MEASURE']);
+            
+            // Пропускаем вариант, если единица измерения не найдена
+            if ($measureId === 0) {
+                $this->errors[] = "Пропуск SKU '{$variant['NAME']}': единица измерения '{$variant['MEASURE']}' не найдена";
+                continue;
             }
-        }
-    }
-
-    /**
-     * Создаёт элемент инфоблока.
-     *
-     * @param int   $iblockId ID инфоблока.
-     * @param array $data     Данные элемента.
-     *
-     * @return int ID элемента или 0.
-     */
-    protected function createElement(int $iblockId, array $data): int
-    {
-        // Проверяем, не существует ли элемент
-        if (!empty($data['CODE'])) {
-            $rsElement = \CIBlockElement::GetList(
-                [],
-                ['IBLOCK_ID' => $iblockId, 'CODE' => $data['CODE']],
-                false,
-                ['nTopCount' => 1],
-                ['ID']
+            
+            $variantId = $this->createOrUpdateOffer(
+                $variantsIblockId,
+                $variant['CODE'],
+                $variant['NAME'],
+                $productId,
+                [
+                    'WIDTH' => $variant['WIDTH'],
+                    'LENGTH' => $variant['LENGTH'],
+                    'HEIGHT' => $variant['HEIGHT'],
+                    'WEIGHT' => $variant['WEIGHT'],
+                    'MEASURE' => $measureId,
+                ],
+                [
+                    'PURCHASING_PRICE' => $variant['PURCHASING_PRICE'],
+                    'BASE_PRICE' => $variant['PURCHASING_PRICE'] * $variant['MARKUP'],
+                ],
+                $variant['WIDTH'],
+                $variant['LENGTH'],
+                $variant['WEIGHT']
             );
 
-            if ($arElement = $rsElement->Fetch()) {
-                return (int)$arElement['ID'];
+            if ($variantId) {
+                $this->created[] = "  → SKU: {$variant['NAME']} (ID: {$variantId}, CODE: {$variant['CODE']})";
             }
         }
+    }
 
-        $fields = [
-            'IBLOCK_ID' => $iblockId,
-            'NAME' => $data['NAME'],
-            'CODE' => $data['CODE'] ?? '',
-            'ACTIVE' => 'Y',
-        ];
+    /**
+     * Создаёт товар операции со всеми SKU.
+     */
+    protected function createOperationProduct(int $productIblockId, int $variantsIblockId, int $sectionId, array $data): void
+    {
+        $productId = $this->createOrUpdateProduct(
+            $productIblockId,
+            $data['PRODUCT_CODE'],
+            $data['PRODUCT_NAME'],
+            $sectionId,
+            ['EQUIPMENTS' => $data['EQUIPMENT']]
+        );
 
-        if (isset($data['PROPERTY_VALUES'])) {
-            $fields['PROPERTY_VALUES'] = $data['PROPERTY_VALUES'];
+        if (!$productId) {
+            return;
         }
+
+        $this->created[] = "Операция: {$data['PRODUCT_NAME']} (ID: {$productId}, CODE: {$data['PRODUCT_CODE']})";
+
+        // Создаём варианты (SKU)
+        foreach ($data['VARIANTS'] as $variant) {
+            $measureId = $this->getMeasureId($variant['MEASURE']);
+            
+            // Пропускаем вариант, если единица измерения не найдена
+            if ($measureId === 0) {
+                $this->errors[] = "Пропуск SKU '{$variant['NAME']}': единица измерения '{$variant['MEASURE']}' не найдена";
+                continue;
+            }
+            
+            $variantId = $this->createOrUpdateOffer(
+                $variantsIblockId,
+                $variant['CODE'],
+                $variant['NAME'],
+                $productId,
+                [
+                    'WIDTH' => $variant['WIDTH'],
+                    'LENGTH' => $variant['LENGTH'],
+                    'HEIGHT' => $variant['HEIGHT'],
+                    'WEIGHT' => 0, // Операции не имеют веса
+                    'MEASURE' => $measureId,
+                ],
+                [
+                    'PURCHASING_PRICE' => $variant['PURCHASING_PRICE'],
+                    'BASE_PRICE' => $variant['PURCHASING_PRICE'] * $variant['MARKUP'],
+                ],
+                0, // width - не используется для расчёта плотности операций
+                0, // length - не используется для расчёта плотности операций
+                0  // weight - операции не имеют веса
+            );
+
+            if ($variantId) {
+                $this->created[] = "  → SKU: {$variant['NAME']} (ID: {$variantId}, CODE: {$variant['CODE']})";
+            }
+        }
+    }
+
+    /**
+     * Создаёт или обновляет раздел инфоблока.
+     */
+    protected function getOrCreateSection(int $iblockId, string $name, int $parentId): int
+    {
+        $cacheKey = "{$iblockId}_{$parentId}_{$name}";
+        
+        if (isset($this->sectionCache[$cacheKey])) {
+            return $this->sectionCache[$cacheKey];
+        }
+
+        $rsSection = \CIBlockSection::GetList(
+            [],
+            [
+                'IBLOCK_ID' => $iblockId,
+                'NAME' => $name,
+                'SECTION_ID' => $parentId > 0 ? $parentId : false,
+            ],
+            false,
+            ['ID']
+        );
+
+        if ($section = $rsSection->Fetch()) {
+            $sectionId = (int)$section['ID'];
+            $this->sectionCache[$cacheKey] = $sectionId;
+            return $sectionId;
+        }
+
+        $bs = new \CIBlockSection();
+        $sectionId = $bs->Add([
+            'IBLOCK_ID' => $iblockId,
+            'NAME' => $name,
+            'ACTIVE' => 'Y',
+            'IBLOCK_SECTION_ID' => $parentId > 0 ? $parentId : false,
+        ]);
+
+        if ($sectionId) {
+            $this->sectionCache[$cacheKey] = (int)$sectionId;
+            return (int)$sectionId;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Создаёт или обновляет товар (продукт).
+     */
+    protected function createOrUpdateProduct(
+        int $iblockId,
+        string $code,
+        string $name,
+        int $sectionId,
+        array $properties = [],
+        array $catalogFields = []
+    ): int {
+        // Ищем существующий элемент
+        $rsElement = \CIBlockElement::GetList(
+            [],
+            ['IBLOCK_ID' => $iblockId, 'CODE' => $code],
+            false,
+            ['nTopCount' => 1],
+            ['ID']
+        );
 
         $el = new \CIBlockElement();
-        $id = $el->Add($fields);
 
-        if (!$id) {
-            $this->errors[] = 'Не удалось создать элемент "' . $data['NAME'] . '": ' . $el->LAST_ERROR;
-            return 0;
+        if ($arElement = $rsElement->Fetch()) {
+            // Обновляем существующий
+            $elementId = (int)$arElement['ID'];
+            
+            $fields = [
+                'NAME' => $name,
+                'IBLOCK_SECTION_ID' => $sectionId,
+                'ACTIVE' => 'Y',
+            ];
+
+            if (!empty($properties)) {
+                $fields['PROPERTY_VALUES'] = $properties;
+            }
+
+            $el->Update($elementId, $fields);
+        } else {
+            // Создаём новый
+            $fields = [
+                'IBLOCK_ID' => $iblockId,
+                'NAME' => $name,
+                'CODE' => $code,
+                'IBLOCK_SECTION_ID' => $sectionId,
+                'ACTIVE' => 'Y',
+            ];
+
+            if (!empty($properties)) {
+                $fields['PROPERTY_VALUES'] = $properties;
+            }
+
+            $elementId = $el->Add($fields);
+            
+            if (!$elementId) {
+                $this->errors[] = "Ошибка создания товара '{$name}': " . $el->LAST_ERROR;
+                return 0;
+            }
+
+            $elementId = (int)$elementId;
         }
 
-        return (int)$id;
+        // Регистрируем в каталоге
+        $arProduct = \CCatalogProduct::GetByID($elementId);
+        
+        $productFields = [
+            'ID' => $elementId,
+        ];
+        
+        if (!empty($catalogFields)) {
+            $productFields = array_merge($productFields, $catalogFields);
+        }
+
+        if ($arProduct) {
+            \CCatalogProduct::Update($elementId, $productFields);
+        } else {
+            \CCatalogProduct::Add($productFields);
+        }
+
+        return $elementId;
+    }
+
+    /**
+     * Создаёт или обновляет торговое предложение (SKU).
+     */
+    protected function createOrUpdateOffer(
+        int $iblockId,
+        string $code,
+        string $name,
+        int $productId,
+        array $catalogFields,
+        array $prices,
+        float $width,
+        float $length,
+        float $weight
+    ): int {
+        // Ищем существующее торговое предложение
+        $rsElement = \CIBlockElement::GetList(
+            [],
+            ['IBLOCK_ID' => $iblockId, 'CODE' => $code],
+            false,
+            ['nTopCount' => 1],
+            ['ID']
+        );
+
+        $el = new \CIBlockElement();
+
+        // Вычисляем плотность (только для материалов с весом)
+        $density = 0;
+        if ($weight > 0 && $width > self::MIN_DIMENSION_VALUE && $length > self::MIN_DIMENSION_VALUE) {
+            $density = round($weight * self::DENSITY_CONVERSION_FACTOR / ($width * $length), 2);
+        }
+
+        $properties = [
+            'CML2_LINK' => $productId,
+        ];
+        
+        if ($density > 0) {
+            $properties['DENSITY'] = $density;
+        }
+
+        if ($arElement = $rsElement->Fetch()) {
+            // Обновляем существующий
+            $elementId = (int)$arElement['ID'];
+            
+            $fields = [
+                'NAME' => $name,
+                'ACTIVE' => 'Y',
+                'PROPERTY_VALUES' => $properties,
+            ];
+
+            $el->Update($elementId, $fields);
+        } else {
+            // Создаём новый
+            $fields = [
+                'IBLOCK_ID' => $iblockId,
+                'NAME' => $name,
+                'CODE' => $code,
+                'ACTIVE' => 'Y',
+                'PROPERTY_VALUES' => $properties,
+            ];
+
+            $elementId = $el->Add($fields);
+            
+            if (!$elementId) {
+                $this->errors[] = "Ошибка создания SKU '{$name}': " . $el->LAST_ERROR;
+                return 0;
+            }
+
+            $elementId = (int)$elementId;
+        }
+
+        // Обновляем каталожные поля
+        $arProduct = \CCatalogProduct::GetByID($elementId);
+        
+        $productFields = array_merge([
+            'ID' => $elementId,
+        ], $catalogFields);
+
+        if ($arProduct) {
+            \CCatalogProduct::Update($elementId, $productFields);
+        } else {
+            \CCatalogProduct::Add($productFields);
+        }
+
+        // Устанавливаем цены
+        if (!empty($prices)) {
+            $this->setPrice($elementId, $prices['PURCHASING_PRICE'], $prices['BASE_PRICE']);
+        }
+
+        return $elementId;
+    }
+
+    /**
+     * Устанавливает цены для элемента.
+     */
+    protected function setPrice(int $productId, float $purchasingPrice, float $basePrice): void
+    {
+        // Базовая цена (используется константа BASE_PRICE_GROUP_ID = 1)
+        \CPrice::SetBasePrice($productId, $basePrice, self::CURRENCY_CODE);
+        
+        // Можно также установить закупочную цену, если есть соответствующий тип цены
+        // В Bitrix нет стандартного типа для закупочной цены, используем дополнительные поля каталога
+    }
+
+    /**
+     * Проверяет и регистрирует инфоблок как каталог.
+     */
+    protected function ensureCatalog(int $iblockId): void
+    {
+        $catalog = \CCatalog::GetByID($iblockId);
+        if (!$catalog) {
+            \CCatalog::Add(['IBLOCK_ID' => $iblockId]);
+        }
     }
 
     /**
