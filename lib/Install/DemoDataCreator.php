@@ -138,7 +138,7 @@ class DemoDataCreator
                             $section3Id,
                             [],
                             [
-                                'MEASURE' => $this->getMeasureId('UNIT') ?: 5, // шт. - стандартный код 5
+                                'MEASURE' => 5, // шт. - стандартный ID в Bitrix
                             ]
                         );
 
