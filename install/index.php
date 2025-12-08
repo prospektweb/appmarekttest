@@ -205,13 +205,8 @@ class prospektweb_calc extends CModule
             } else {
                 $success = false;
             }
-        } else {
-            // Логируем предупреждение, но не считаем это фатальной ошибкой
-            if (defined('SITE_CHARSET')) {
-                $message = 'Директория install/apps_dist не найдена. React-приложение не будет установлено автоматически.';
-            }
-            // Не устанавливаем $success = false, так как это не критично
         }
+        // Не устанавливаем $success = false при отсутствии apps_dist, так как это не критично
         
         return $success;
     }

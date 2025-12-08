@@ -313,10 +313,9 @@ switch ($currentStep) {
             'DENSITY' => ['NAME' => 'Плотность', 'TYPE' => 'N'],
         ];
         
-        $operationsProps = [
+        $operationsProps = array_merge($catalogProps, [
             'EQUIPMENTS' => ['NAME' => 'Оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'DENSITY' => ['NAME' => 'Плотность', 'TYPE' => 'N'],
-        ];
+        ]);
         
         $equipmentProps = [
             'FIELDS' => ['NAME' => 'Поля печатной машины', 'TYPE' => 'S'],
