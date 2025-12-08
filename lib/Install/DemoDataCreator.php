@@ -10,6 +10,12 @@ use Bitrix\Main\Loader;
  */
 class DemoDataCreator
 {
+    /** @var int Коэффициент конвертации для расчёта плотности */
+    private const DENSITY_CONVERSION_FACTOR = 1000000;
+
+    /** @var string Код валюты */
+    private const CURRENCY_CODE = 'RUB';
+
     /** @var array Созданные элементы */
     protected array $created = [];
 
@@ -76,7 +82,13 @@ class DemoDataCreator
      */
     protected function getMeasureId(string $code): int
     {
-        return $this->measureCache[$code] ?? 0;
+        $measureId = $this->measureCache[$code] ?? 0;
+        
+        if ($measureId === 0) {
+            $this->errors[] = "Единица измерения с кодом '{$code}' не найдена";
+        }
+        
+        return $measureId;
     }
 
     /**
@@ -384,10 +396,23 @@ class DemoDataCreator
         $equipment2060L = $this->elementCache['2060L'] ?? 0;
         $equipment3070L = $this->elementCache['3070L'] ?? 0;
         
+        // Проверяем наличие оборудования
+        $printEquipment = [];
+        if ($equipment2060L > 0) {
+            $printEquipment[] = $equipment2060L;
+        }
+        if ($equipment3070L > 0) {
+            $printEquipment[] = $equipment3070L;
+        }
+        
+        if (empty($printEquipment)) {
+            $this->errors[] = 'Оборудование для печати не создано, операции будут созданы без привязки';
+        }
+        
         $this->createOperationProduct($operationsIblockId, $variantsIblockId, $laserSection, [
             'PRODUCT_NAME' => '4+0',
             'PRODUCT_CODE' => 'print_digital_laser_4_0',
-            'EQUIPMENT' => [$equipment2060L, $equipment3070L],
+            'EQUIPMENT' => $printEquipment,
             'VARIANTS' => [
                 [
                     'NAME' => '320x470мм',
@@ -405,7 +430,7 @@ class DemoDataCreator
         $this->createOperationProduct($operationsIblockId, $variantsIblockId, $laserSection, [
             'PRODUCT_NAME' => '4+4',
             'PRODUCT_CODE' => 'print_digital_laser_4_4',
-            'EQUIPMENT' => [$equipment2060L, $equipment3070L],
+            'EQUIPMENT' => $printEquipment,
             'VARIANTS' => [
                 [
                     'NAME' => '320x470мм',
@@ -423,7 +448,7 @@ class DemoDataCreator
         $this->createOperationProduct($operationsIblockId, $variantsIblockId, $laserSection, [
             'PRODUCT_NAME' => '1+0',
             'PRODUCT_CODE' => 'print_digital_laser_1_0',
-            'EQUIPMENT' => [$equipment2060L, $equipment3070L],
+            'EQUIPMENT' => $printEquipment,
             'VARIANTS' => [
                 [
                     'NAME' => '320x470мм',
@@ -441,7 +466,7 @@ class DemoDataCreator
         $this->createOperationProduct($operationsIblockId, $variantsIblockId, $laserSection, [
             'PRODUCT_NAME' => '1+1',
             'PRODUCT_CODE' => 'print_digital_laser_1_1',
-            'EQUIPMENT' => [$equipment2060L, $equipment3070L],
+            'EQUIPMENT' => $printEquipment,
             'VARIANTS' => [
                 [
                     'NAME' => '320x470мм',
@@ -468,10 +493,18 @@ class DemoDataCreator
         // Получаем ID оборудования для ламинатора
         $equipmentPD480C = $this->elementCache['pd480c'] ?? 0;
         
+        // Проверяем наличие оборудования
+        $laminationEquipment = [];
+        if ($equipmentPD480C > 0) {
+            $laminationEquipment[] = $equipmentPD480C;
+        } else {
+            $this->errors[] = 'Оборудование для ламинирования не создано, операции будут созданы без привязки';
+        }
+        
         $this->createOperationProduct($operationsIblockId, $variantsIblockId, $rollLaminationSection, [
             'PRODUCT_NAME' => 'A3+',
             'PRODUCT_CODE' => 'post_lamination_a3plus',
-            'EQUIPMENT' => [$equipmentPD480C],
+            'EQUIPMENT' => $laminationEquipment,
             'VARIANTS' => [
                 [
                     'NAME' => 'A3+',
@@ -507,6 +540,14 @@ class DemoDataCreator
 
         // Создаём варианты (SKU)
         foreach ($data['VARIANTS'] as $variant) {
+            $measureId = $this->getMeasureId($variant['MEASURE']);
+            
+            // Пропускаем вариант, если единица измерения не найдена
+            if ($measureId === 0) {
+                $this->errors[] = "Пропуск SKU '{$variant['NAME']}': единица измерения '{$variant['MEASURE']}' не найдена";
+                continue;
+            }
+            
             $variantId = $this->createOrUpdateOffer(
                 $variantsIblockId,
                 $variant['CODE'],
@@ -517,7 +558,7 @@ class DemoDataCreator
                     'LENGTH' => $variant['LENGTH'],
                     'HEIGHT' => $variant['HEIGHT'],
                     'WEIGHT' => $variant['WEIGHT'],
-                    'MEASURE' => $this->getMeasureId($variant['MEASURE']),
+                    'MEASURE' => $measureId,
                 ],
                 [
                     'PURCHASING_PRICE' => $variant['PURCHASING_PRICE'],
@@ -555,6 +596,14 @@ class DemoDataCreator
 
         // Создаём варианты (SKU)
         foreach ($data['VARIANTS'] as $variant) {
+            $measureId = $this->getMeasureId($variant['MEASURE']);
+            
+            // Пропускаем вариант, если единица измерения не найдена
+            if ($measureId === 0) {
+                $this->errors[] = "Пропуск SKU '{$variant['NAME']}': единица измерения '{$variant['MEASURE']}' не найдена";
+                continue;
+            }
+            
             $variantId = $this->createOrUpdateOffer(
                 $variantsIblockId,
                 $variant['CODE'],
@@ -565,7 +614,7 @@ class DemoDataCreator
                     'LENGTH' => $variant['LENGTH'],
                     'HEIGHT' => $variant['HEIGHT'],
                     'WEIGHT' => 0, // Операции не имеют веса
-                    'MEASURE' => $this->getMeasureId($variant['MEASURE']),
+                    'MEASURE' => $measureId,
                 ],
                 [
                     'PURCHASING_PRICE' => $variant['PURCHASING_PRICE'],
@@ -735,7 +784,7 @@ class DemoDataCreator
         // Вычисляем плотность (только для материалов с весом)
         $density = 0;
         if ($weight > 0 && $width > 0 && $length > 0) {
-            $density = round($weight * 1000000 / ($width * $length), 2);
+            $density = round($weight * self::DENSITY_CONVERSION_FACTOR / ($width * $length), 2);
         }
 
         $properties = [
@@ -804,7 +853,7 @@ class DemoDataCreator
     protected function setPrice(int $productId, float $purchasingPrice, float $basePrice): void
     {
         // Базовая цена (ID = 1)
-        \CPrice::SetBasePrice($productId, $basePrice, 'RUB');
+        \CPrice::SetBasePrice($productId, $basePrice, self::CURRENCY_CODE);
         
         // Можно также установить закупочную цену, если есть соответствующий тип цены
         // В Bitrix нет стандартного типа для закупочной цены, используем дополнительные поля каталога
