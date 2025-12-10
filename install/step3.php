@@ -6,6 +6,7 @@
 
 use Bitrix\Main\Loader;
 use Bitrix\Main\Config\Option;
+use Bitrix\Catalog\MeasureTable;
 
 if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
     die();
@@ -243,26 +244,29 @@ function createMeasuresWithLog(): bool
     $createdCount = 0;
     foreach ($measures as $measureData) {
         // Проверяем, существует ли уже единица измерения с таким кодом
-        $rsExisting = \CCatalogMeasure::getList(
-            [],
-            ['CODE' => $measureData['CODE']],
-            false,
-            ['nTopCount' => 1],
-            ['ID', 'CODE']
-        );
+        $existing = MeasureTable::getList([
+            'filter' => ['=CODE' => $measureData['CODE']],
+            'select' => ['ID', 'CODE', 'MEASURE_TITLE'],
+            'limit' => 1,
+        ])->fetch();
 
-        if ($existing = $rsExisting->Fetch()) {
+        if ($existing) {
             installLog("  → Единица измерения '{$measureData['MEASURE_TITLE']}' уже существует (ID: {$existing['ID']})", 'warning');
             continue;
         }
 
-        $result = \CCatalogMeasure::add($measureData);
-        
-        if ($result) {
+        $result = MeasureTable::add($measureData);
+
+        if ($result->isSuccess()) {
             installLog("  → Создана: {$measureData['MEASURE_TITLE']} ({$measureData['SYMBOL_RUS']})", 'success');
             $createdCount++;
         } else {
-            installLog("  → Ошибка создания: {$measureData['MEASURE_TITLE']}", 'error');
+            $errors = implode('; ', $result->getErrorMessages());
+            if ($errors === '') {
+                $errors = getBitrixError();
+            }
+
+            installLog("  → Ошибка создания: {$measureData['MEASURE_TITLE']} ({$errors})", 'error');
         }
     }
 
