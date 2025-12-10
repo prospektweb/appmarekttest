@@ -243,15 +243,22 @@ function createMeasuresWithLog(): bool
 
     $createdCount = 0;
     foreach ($measures as $measureData) {
-        // Проверяем, существует ли уже единица измерения с таким кодом
+        // Проверяем, существует ли уже единица измерения с таким кодом или международным обозначением
         $existing = MeasureTable::getList([
-            'filter' => ['=CODE' => $measureData['CODE']],
-            'select' => ['ID', 'CODE', 'MEASURE_TITLE'],
+            'filter' => [
+                [
+                    'LOGIC' => 'OR',
+                    '=CODE' => $measureData['CODE'],
+                    '=SYMBOL_INTL' => $measureData['SYMBOL_INTL'],
+                ],
+            ],
+            'select' => ['ID', 'CODE', 'MEASURE_TITLE', 'SYMBOL_INTL'],
             'limit' => 1,
         ])->fetch();
 
         if ($existing) {
-            installLog("  → Единица измерения '{$measureData['MEASURE_TITLE']}' уже существует (ID: {$existing['ID']})", 'warning');
+            $code = $existing['CODE'] !== '' ? $existing['CODE'] : $existing['SYMBOL_INTL'];
+            installLog("  → Единица измерения '{$measureData['MEASURE_TITLE']}' уже существует (ID: {$existing['ID']}, ключ: {$code})", 'warning');
             continue;
         }
 
@@ -270,7 +277,7 @@ function createMeasuresWithLog(): bool
         }
     }
 
-    installLog("Создано единиц измерения: {$createdCount}/" . count($measures), $createdCount > 0 ? 'success' : 'warning');
+    installLog("Создано единиц измерения: {$createdCount}/" . count($measures), $createdCount === count($measures) ? 'success' : 'warning');
     return true;
 }
 
