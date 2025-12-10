@@ -273,7 +273,7 @@ function createMeasuresWithLog(): bool
         if ($existingBySymbol) {
             // Единица существует, но без нашего CODE или с пустым CODE - обновляем CODE
             $existingCode = $existingBySymbol['CODE'] ?? '';
-            if ($existingCode === '' || $existingCode === null) {
+            if ($existingCode === '') {
                 $updateResult = MeasureTable::update($existingBySymbol['ID'], ['CODE' => $measureData['CODE']]);
                 
                 if ($updateResult->isSuccess()) {
