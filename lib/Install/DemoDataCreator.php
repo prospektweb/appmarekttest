@@ -115,6 +115,7 @@ class DemoDataCreator
             'PACK' => 'PACK',
             'ROLL' => 'ROLL',
             'CIRCULATION' => 'TIR',
+            'TIR' => 'TIR',
         ];
         
         foreach ($aliases as $alias => $symbolIntl) {
@@ -133,17 +134,20 @@ class DemoDataCreator
         $measureId = $this->measureCache[$key] ?? 0;
         
         if ($measureId === 0) {
-            // Пробуем найти напрямую в базе по SYMBOL_INTL
+            // Пробуем найти напрямую в базе по SYMBOL_INTL (без учёта регистра)
             $rsMeasure = \CCatalogMeasure::getList(
                 [],
-                ['SYMBOL_INTL' => strtolower($code)],
+                ['SYMBOL_INTL' => $code], // используем код как есть, без изменения регистра
                 false,
                 false,
-                ['ID']
+                ['ID', 'SYMBOL_INTL']
             );
             if ($measure = $rsMeasure->Fetch()) {
                 $measureId = (int)$measure['ID'];
+                // Кэшируем с ключом в верхнем регистре для консистентности
                 $this->measureCache[$key] = $measureId;
+                // Также кэшируем с ключом SYMBOL_INTL в верхнем регистре
+                $this->measureCache[strtoupper($measure['SYMBOL_INTL'])] = $measureId;
             }
         }
         
