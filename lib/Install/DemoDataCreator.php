@@ -79,7 +79,24 @@ class DemoDataCreator
     {
         $rsMeasures = \CCatalogMeasure::getList();
         while ($measure = $rsMeasures->Fetch()) {
-            $this->measureCache[$measure['CODE']] = (int)$measure['ID'];
+            $id = (int)$measure['ID'];
+            $codeKeys = [];
+
+            if (! empty($measure['CODE'])) {
+                $codeKeys[] = strtoupper((string)$measure['CODE']);
+            }
+            if (! empty($measure['SYMBOL_INTL'])) {
+                $codeKeys[] = strtoupper((string)$measure['SYMBOL_INTL']);
+            }
+            if (! empty($measure['SYMBOL_RUS'])) {
+                $codeKeys[] = strtoupper((string)$measure['SYMBOL_RUS']);
+            }
+
+            foreach ($codeKeys as $key) {
+                if (! isset($this->measureCache[$key])) {
+                    $this->measureCache[$key] = $id;
+                }
+            }
         }
     }
 
@@ -88,7 +105,8 @@ class DemoDataCreator
      */
     protected function getMeasureId(string $code): int
     {
-        $measureId = $this->measureCache[$code] ?? 0;
+        $key = strtoupper($code);
+        $measureId = $this->measureCache[$key] ?? 0;
         
         if ($measureId === 0) {
             $this->errors[] = "Единица измерения с кодом '{$code}' не найдена";
