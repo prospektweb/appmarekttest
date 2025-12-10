@@ -6,7 +6,6 @@
 
 use Bitrix\Main\Loader;
 use Bitrix\Main\Config\Option;
-use Bitrix\Catalog\MeasureTable;
 
 if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
     die();
@@ -229,18 +228,81 @@ function createMeasuresWithLog(): bool
 
     installLog("Создание единиц измерения...", 'header');
 
-    // ВАЖНО: Поле CODE имеет тип INTEGER! Используем числовые коды 778-790 (пользовательские)
+    // ВАЖНО: Используем CCatalogMeasure вместо MeasureTable, 
+    // потому что ORM не поддерживает поле SYMBOL_RUS
     $measures = [
-        ['CODE' => 778, 'MEASURE_TITLE' => 'Лист', 'SYMBOL_INTL' => 'sheet', 'SYMBOL_LETTER_INTL' => 'SHT', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 779, 'MEASURE_TITLE' => 'Упаковка', 'SYMBOL_INTL' => 'pack', 'SYMBOL_LETTER_INTL' => 'PCK', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 780, 'MEASURE_TITLE' => 'Рулон', 'SYMBOL_INTL' => 'roll', 'SYMBOL_LETTER_INTL' => 'ROL', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 781, 'MEASURE_TITLE' => 'Роль', 'SYMBOL_INTL' => 'role', 'SYMBOL_LETTER_INTL' => 'RLE', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 782, 'MEASURE_TITLE' => 'Квадратный сантиметр', 'SYMBOL_INTL' => 'cm2', 'SYMBOL_LETTER_INTL' => 'CMK', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 783, 'MEASURE_TITLE' => 'Квадратный дециметр', 'SYMBOL_INTL' => 'dm2', 'SYMBOL_LETTER_INTL' => 'DMK', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 784, 'MEASURE_TITLE' => 'Прогон', 'SYMBOL_INTL' => 'run', 'SYMBOL_LETTER_INTL' => 'RUN', 'IS_DEFAULT' => 'N'],
-        // Стандартные единицы ОКЕИ - проверяем/обновляем если нужно
-        ['CODE' => 55, 'MEASURE_TITLE' => 'Квадратный метр', 'SYMBOL_INTL' => 'm2', 'SYMBOL_LETTER_INTL' => 'MTK', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 999, 'MEASURE_TITLE' => 'Тираж', 'SYMBOL_INTL' => 'tir', 'SYMBOL_LETTER_INTL' => 'CIR', 'IS_DEFAULT' => 'N'],
+        [
+            'CODE' => 778,
+            'MEASURE_TITLE' => 'Лист',
+            'SYMBOL_RUS' => 'л.',
+            'SYMBOL_INTL' => 'sheet',
+            'SYMBOL_LETTER_INTL' => 'SHT',
+            'IS_DEFAULT' => 'N',
+        ],
+        [
+            'CODE' => 779,
+            'MEASURE_TITLE' => 'Упаковка',
+            'SYMBOL_RUS' => 'уп.',
+            'SYMBOL_INTL' => 'pack',
+            'SYMBOL_LETTER_INTL' => 'PCK',
+            'IS_DEFAULT' => 'N',
+        ],
+        [
+            'CODE' => 780,
+            'MEASURE_TITLE' => 'Рулон',
+            'SYMBOL_RUS' => 'рул.',
+            'SYMBOL_INTL' => 'roll',
+            'SYMBOL_LETTER_INTL' => 'ROL',
+            'IS_DEFAULT' => 'N',
+        ],
+        [
+            'CODE' => 781,
+            'MEASURE_TITLE' => 'Роль',
+            'SYMBOL_RUS' => 'роль',
+            'SYMBOL_INTL' => 'role',
+            'SYMBOL_LETTER_INTL' => 'RLE',
+            'IS_DEFAULT' => 'N',
+        ],
+        [
+            'CODE' => 55,
+            'MEASURE_TITLE' => 'Квадратный метр',
+            'SYMBOL_RUS' => 'м2',
+            'SYMBOL_INTL' => 'm2',
+            'SYMBOL_LETTER_INTL' => 'MTK',
+            'IS_DEFAULT' => 'N',
+        ],
+        [
+            'CODE' => 782,
+            'MEASURE_TITLE' => 'Квадратный сантиметр',
+            'SYMBOL_RUS' => 'см2',
+            'SYMBOL_INTL' => 'cm2',
+            'SYMBOL_LETTER_INTL' => 'CMK',
+            'IS_DEFAULT' => 'N',
+        ],
+        [
+            'CODE' => 783,
+            'MEASURE_TITLE' => 'Квадратный дециметр',
+            'SYMBOL_RUS' => 'дм2',
+            'SYMBOL_INTL' => 'dm2',
+            'SYMBOL_LETTER_INTL' => 'DMK',
+            'IS_DEFAULT' => 'N',
+        ],
+        [
+            'CODE' => 999,
+            'MEASURE_TITLE' => 'Тираж',
+            'SYMBOL_RUS' => 'тираж',
+            'SYMBOL_INTL' => 'tir',
+            'SYMBOL_LETTER_INTL' => 'CIR',
+            'IS_DEFAULT' => 'N',
+        ],
+        [
+            'CODE' => 784,
+            'MEASURE_TITLE' => 'Прогон',
+            'SYMBOL_RUS' => 'прогон',
+            'SYMBOL_INTL' => 'run',
+            'SYMBOL_LETTER_INTL' => 'RUN',
+            'IS_DEFAULT' => 'N',
+        ],
     ];
 
     $createdCount = 0;
@@ -248,82 +310,102 @@ function createMeasuresWithLog(): bool
     $skippedCount = 0;
     
     foreach ($measures as $measureData) {
-        // Шаг 1: Ищем по SYMBOL_INTL - это уникальный строковый идентификатор
-        $existingBySymbol = MeasureTable::getList([
-            'filter' => ['=SYMBOL_INTL' => $measureData['SYMBOL_INTL']],
-            'select' => ['ID', 'CODE', 'MEASURE_TITLE', 'SYMBOL_INTL'],
-            'limit' => 1,
-        ])->fetch();
-
-        if ($existingBySymbol) {
-            $existingCode = (int)$existingBySymbol['CODE'];
-            $needCode = (int)$measureData['CODE'];
+        $symbolIntl = $measureData['SYMBOL_INTL'];
+        $measureTitle = $measureData['MEASURE_TITLE'];
+        $needCode = (int)$measureData['CODE'];
+        
+        // Ищем существующую единицу по SYMBOL_INTL
+        $rsMeasure = \CCatalogMeasure::getList(
+            [],
+            ['SYMBOL_INTL' => $symbolIntl],
+            false,
+            false,
+            ['ID', 'CODE', 'MEASURE_TITLE', 'SYMBOL_RUS', 'SYMBOL_INTL']
+        );
+        
+        if ($existing = $rsMeasure->Fetch()) {
+            $existingId = (int)$existing['ID'];
+            $existingCode = (int)$existing['CODE'];
+            $existingSymbolRus = $existing['SYMBOL_RUS'] ?? '';
             
-            // Если CODE = 0 или отличается от нужного - обновляем
+            // Проверяем, нужно ли обновить
+            $needUpdate = false;
+            $updateFields = [];
+            
             if ($existingCode === 0 || $existingCode !== $needCode) {
-                $updateResult = MeasureTable::update($existingBySymbol['ID'], ['CODE' => $needCode]);
-                
-                if ($updateResult->isSuccess()) {
-                    installLog("  → Обновлён CODE для '{$measureData['MEASURE_TITLE']}': {$existingCode} → {$needCode} (ID: {$existingBySymbol['ID']})", 'success');
+                $updateFields['CODE'] = $needCode;
+                $needUpdate = true;
+            }
+            
+            if ($existingSymbolRus !== $measureData['SYMBOL_RUS']) {
+                $updateFields['SYMBOL_RUS'] = $measureData['SYMBOL_RUS'];
+                $needUpdate = true;
+            }
+            
+            if ($needUpdate) {
+                $updateResult = \CCatalogMeasure::update($existingId, $updateFields);
+                if ($updateResult) {
+                    $updatedFields = implode(', ', array_keys($updateFields));
+                    installLog("  → Обновлена: '{$measureTitle}' (ID: {$existingId}, поля: {$updatedFields})", 'success');
                     $updatedCount++;
                 } else {
-                    installLog("  → Ошибка обновления '{$measureData['MEASURE_TITLE']}': " . implode('; ', $updateResult->getErrorMessages()), 'error');
+                    installLog("  → Ошибка обновления: '{$measureTitle}'", 'error');
                 }
             } else {
-                installLog("  → '{$measureData['MEASURE_TITLE']}' уже существует (ID: {$existingBySymbol['ID']}, CODE: {$existingCode})", 'warning');
+                installLog("  → Существует: '{$measureTitle}' (ID: {$existingId})", 'warning');
                 $skippedCount++;
             }
             continue;
         }
-
-        // Шаг 2: Ищем по числовому CODE (для стандартных единиц ОКЕИ)
-        if ((int)$measureData['CODE'] > 0) {
-            $existingByCode = MeasureTable::getList([
-                'filter' => ['=CODE' => (int)$measureData['CODE']],
-                'select' => ['ID', 'CODE', 'MEASURE_TITLE', 'SYMBOL_INTL'],
-                'limit' => 1,
-            ])->fetch();
-
-            if ($existingByCode) {
-                // Единица с таким кодом существует - обновляем SYMBOL_INTL если нужно
-                if (empty($existingByCode['SYMBOL_INTL']) || $existingByCode['SYMBOL_INTL'] !== $measureData['SYMBOL_INTL']) {
-                    $updateResult = MeasureTable::update($existingByCode['ID'], [
-                        'SYMBOL_INTL' => $measureData['SYMBOL_INTL'],
-                        'SYMBOL_LETTER_INTL' => $measureData['SYMBOL_LETTER_INTL'],
-                    ]);
-                    
-                    if ($updateResult->isSuccess()) {
-                        installLog("  → Обновлён SYMBOL_INTL для '{$existingByCode['MEASURE_TITLE']}' (ID: {$existingByCode['ID']})", 'success');
-                        $updatedCount++;
-                    }
+        
+        // Ищем по числовому CODE
+        if ($needCode > 0) {
+            $rsByCode = \CCatalogMeasure::getList(
+                [],
+                ['CODE' => $needCode],
+                false,
+                false,
+                ['ID', 'CODE', 'MEASURE_TITLE', 'SYMBOL_RUS', 'SYMBOL_INTL']
+            );
+            
+            if ($existingByCode = $rsByCode->Fetch()) {
+                $existingId = (int)$existingByCode['ID'];
+                
+                // Обновляем SYMBOL_INTL и SYMBOL_RUS
+                $updateFields = [
+                    'SYMBOL_INTL' => $measureData['SYMBOL_INTL'],
+                    'SYMBOL_RUS' => $measureData['SYMBOL_RUS'],
+                    'SYMBOL_LETTER_INTL' => $measureData['SYMBOL_LETTER_INTL'],
+                ];
+                
+                $updateResult = \CCatalogMeasure::update($existingId, $updateFields);
+                if ($updateResult) {
+                    installLog("  → Обновлена по CODE: '{$measureTitle}' (ID: {$existingId})", 'success');
+                    $updatedCount++;
                 } else {
-                    installLog("  → '{$measureData['MEASURE_TITLE']}' уже существует с CODE={$measureData['CODE']} (ID: {$existingByCode['ID']})", 'warning');
-                    $skippedCount++;
+                    installLog("  → Ошибка обновления по CODE: '{$measureTitle}'", 'error');
                 }
                 continue;
             }
         }
-
-        // Шаг 3: Единицы нет - создаём новую
-        $result = MeasureTable::add($measureData);
-
-        if ($result->isSuccess()) {
-            $newId = $result->getId();
-            installLog("  → Создана: {$measureData['MEASURE_TITLE']} (ID: {$newId}, CODE: {$measureData['CODE']}, SYMBOL: {$measureData['SYMBOL_INTL']})", 'success');
+        
+        // Создаём новую единицу измерения
+        $newId = \CCatalogMeasure::add($measureData);
+        
+        if ($newId) {
+            installLog("  → Создана: '{$measureTitle}' (ID: {$newId}, CODE: {$needCode}, RUS: {$measureData['SYMBOL_RUS']})", 'success');
             $createdCount++;
         } else {
-            $errors = implode('; ', $result->getErrorMessages());
-            if ($errors === '') {
-                $errors = getBitrixError();
-            }
-            installLog("  → Ошибка создания '{$measureData['MEASURE_TITLE']}': {$errors}", 'error');
+            global $APPLICATION;
+            $error = $APPLICATION->GetException() ? $APPLICATION->GetException()->GetString() : 'Неизвестная ошибка';
+            installLog("  → Ошибка создания '{$measureTitle}': {$error}", 'error');
         }
     }
 
     $total = count($measures);
-    $processed = $createdCount + $updatedCount + $skippedCount;
     installLog("Итого: создано {$createdCount}, обновлено {$updatedCount}, пропущено {$skippedCount} из {$total}", 
-        $processed === $total ? 'success' : 'warning');
+        ($createdCount + $updatedCount + $skippedCount) === $total ? 'success' : 'warning');
+    
     return true;
 }
 
