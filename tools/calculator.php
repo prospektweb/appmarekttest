@@ -55,6 +55,7 @@ $config = [
     'siteUrl' => (CMain::IsHTTPS() ? 'https://' : 'http://') . SITE_SERVER_NAME,
     'adminUrl' => '/bitrix/admin/',
     'apiEndpoint' => $apiEndpoint,
+    'languageId' => LANGUAGE_ID,
 ];
 ?>
 <!DOCTYPE html>
@@ -193,7 +194,7 @@ $config = [
                                 name: variantName,
                                 editUrl: '/bitrix/admin/iblock_element_edit.php?IBLOCK_ID=' + 
                                     self.config.skuIblockId + '&type=catalog&ID=' + variantId + 
-                                    '&lang=' + '<?= LANGUAGE_ID ?>'
+                                    '&lang=' + self.config.languageId
                             });
                             
                             // Отправить обновлённый список в iframe

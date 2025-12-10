@@ -11,6 +11,11 @@ require_once($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_be
 
 header('Content-Type: application/json; charset=UTF-8');
 
+// Определяем LANGUAGE_ID если не определено
+if (!defined('LANGUAGE_ID')) {
+    define('LANGUAGE_ID', 'ru');
+}
+
 \Bitrix\Main\Loader::includeModule('prospektweb.calc');
 \Bitrix\Main\Loader::includeModule('iblock');
 
