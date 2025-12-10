@@ -35,7 +35,15 @@ switch ($action) {
         
     case 'get_variants':
         // Загрузить данные вариантов по ID
-        $ids = array_map('intval', explode(',', $_REQUEST['ids'] ?? ''));
+        $idsParam = $_REQUEST['ids'] ?? '';
+        
+        // Валидация: проверяем, что ids содержит только числа и запятые
+        if (!empty($idsParam) && !preg_match('/^[\d,]+$/', $idsParam)) {
+            echo json_encode(['success' => false, 'error' => 'Invalid ids parameter']);
+            break;
+        }
+        
+        $ids = !empty($idsParam) ? array_map('intval', explode(',', $idsParam)) : [];
         $skuIblockId = $configManager->getSkuIblockId();
         
         $variants = [];
@@ -61,7 +69,20 @@ switch ($action) {
         
     case 'save_state':
         // Сохранить состояние калькулятора
-        $state = json_decode(file_get_contents('php://input'), true);
+        $jsonInput = file_get_contents('php://input');
+        $state = json_decode($jsonInput, true);
+        
+        // Валидация JSON
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            echo json_encode(['success' => false, 'error' => 'Invalid JSON: ' . json_last_error_msg()]);
+            break;
+        }
+        
+        if (!is_array($state)) {
+            echo json_encode(['success' => false, 'error' => 'State must be an array']);
+            break;
+        }
+        
         $_SESSION['CALCULATOR_STATE'] = $state;
         echo json_encode(['success' => true]);
         break;

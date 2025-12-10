@@ -45,12 +45,16 @@ if (!empty($variantIds) && $skuIblockId > 0) {
 // Путь к бандлу React-приложения
 $calculatorBundlePath = '/local/apps/prospektweb.calc/index.html';
 
+// Путь к API endpoint
+$apiEndpoint = '/local/tools/prospektweb.calc/calculator_api.php';
+
 // Конфигурация для передачи в калькулятор
 $config = [
     'skuIblockId' => $skuIblockId,
     'productIblockId' => $productIblockId,
     'siteUrl' => (CMain::IsHTTPS() ? 'https://' : 'http://') . SITE_SERVER_NAME,
     'adminUrl' => '/bitrix/admin/',
+    'apiEndpoint' => $apiEndpoint,
 ];
 ?>
 <!DOCTYPE html>
@@ -155,7 +159,7 @@ $config = [
             
             if (!window.BX || !BX.UI || !BX.UI.EntitySelector) {
                 console.error('BX.UI.EntitySelector не загружен');
-                alert('Компонент выбора элементов не загружен. Обновите страницу.');
+                alert('Не удалось загрузить компонент выбора элементов.\n\nПожалуйста, обновите страницу. Если проблема сохраняется, обратитесь к администратору.');
                 return;
             }
             
@@ -240,7 +244,7 @@ $config = [
          */
         onStateUpdate(state) {
             // Сохранить состояние через AJAX
-            fetch('/local/tools/prospektweb.calc/calculator_api.php?action=save_state', {
+            fetch(this.config.apiEndpoint + '?action=save_state', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(state)
@@ -266,7 +270,7 @@ $config = [
             window.history.replaceState({}, '', url);
             
             // Сохранить в сессию через AJAX
-            fetch('/local/tools/prospektweb.calc/calculator_api.php?action=save_state', {
+            fetch(this.config.apiEndpoint + '?action=save_state', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ variants: this.variants })
