@@ -150,23 +150,69 @@ var ProspekwebCalc = {
     },
 
     /**
+     * Получение полной информации о выбранных торговых предложениях
+     */
+    getSelectedOffers: function() {
+        var checkboxes = document.querySelectorAll('input[name="SUB_ID[]"]:checked');
+        var offers = [];
+        var productId = this.getProductId();
+        var iblockId = this.getIblockId();
+        
+        for (var i = 0; i < checkboxes.length; i++) {
+            var checkbox = checkboxes[i];
+            var id = parseInt(checkbox.value, 10);
+            
+            if (isNaN(id) || id <= 0) {
+                continue;
+            }
+            
+            // Находим строку таблицы для получения названия
+            var row = checkbox.closest('tr');
+            var name = 'ТП #' + id; // Значение по умолчанию
+            
+            if (row) {
+                // Ищем ячейку с названием (обычно это вторая или третья колонка после чекбокса)
+                var cells = row.querySelectorAll('td');
+                for (var j = 0; j < cells.length; j++) {
+                    var cell = cells[j];
+                    // Пропускаем ячейку с чекбоксом и ячейки с кнопками/иконками
+                    if (!cell.querySelector('input[type="checkbox"]') && 
+                        !cell.querySelector('a.adm-btn-delete') &&
+                        cell.textContent.trim().length > 0) {
+                        name = cell.textContent.trim();
+                        break;
+                    }
+                }
+            }
+            
+            // Формируем URL для редактирования ТП
+            var editUrl = '/bitrix/admin/cat_product_edit.php?IBLOCK_ID=' + iblockId + 
+                         '&type=catalog&ID=' + productId + 
+                         '&WF=Y&find_section_section=-1&SUB_ID=' + id;
+            
+            offers.push({
+                id: id,
+                name: name,
+                editUrl: editUrl,
+                productId: productId,
+                iblockId: iblockId
+            });
+        }
+        
+        return offers;
+    },
+
+    /**
      * Открытие диалога с iframe
      */
     openCalculatorDialog: function() {
         this.loadCss(this.cssPath);
         var self = this;
 
-        // Получаем выбранные ТП
-        var checkboxes = document.querySelectorAll('input[name="SUB_ID[]"]:checked');
-        var offerIds = [];
-        for (var i = 0; i < checkboxes.length; i++) {
-            var id = parseInt(checkboxes[i].value, 10);
-            if (!isNaN(id) && id > 0) {
-                offerIds.push(id);
-            }
-        }
+        // Получаем выбранные ТП с полной информацией
+        var offers = this.getSelectedOffers();
 
-        if (offerIds.length === 0) {
+        if (offers.length === 0) {
             alert('Не выбраны торговые предложения');
             return;
         }
@@ -211,10 +257,11 @@ var ProspekwebCalc = {
             self.sendToIframe({
                 type: 'BITRIX_INIT',
                 payload: {
-                    offerIds: offerIds,
+                    offers: offers,
                     apiBase: self.apiBase,
                     productId: self.getProductId(),
-                    iblockId: self.getIblockId()
+                    iblockId: self.getIblockId(),
+                    sessid: BX.bitrix_sessid()
                 }
             });
         };
@@ -255,6 +302,21 @@ var ProspekwebCalc = {
                 
             case 'CALC_CLOSE':
                 this.closeDialog();
+                break;
+                
+            case 'CALC_OPEN_OFFER':
+                // Открываем ТП в новой вкладке браузера
+                if (data.payload && data.payload.editUrl) {
+                    window.open(data.payload.editUrl, '_blank');
+                    console.log('Opening offer in new tab:', data.payload.id);
+                }
+                break;
+                
+            case 'CALC_REMOVE_OFFER':
+                // Логирование удаления ТП из списка
+                if (data.payload && data.payload.id) {
+                    console.log('Offer removed from list:', data.payload.id);
+                }
                 break;
                 
             case 'CALC_RESULT':
