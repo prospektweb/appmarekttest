@@ -153,14 +153,8 @@ class DemoDataCreator
             return $this->measureCache[$key];
         }
         
-        // Пробуем найти по SYMBOL_INTL в нижнем регистре
-        $lowerKey = strtolower($key);
-        $upperLowerKey = strtoupper($lowerKey);
-        if (isset($this->measureCache[$upperLowerKey])) {
-            return $this->measureCache[$upperLowerKey];
-        }
-        
-        // Пробуем найти напрямую в базе
+        // Пробуем найти напрямую в базе по SYMBOL_INTL
+        $lowerKey = strtolower($code);
         $rsMeasure = \CCatalogMeasure::getList(
             [],
             ['SYMBOL_INTL' => $lowerKey],

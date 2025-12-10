@@ -267,7 +267,7 @@ function createMeasuresWithLog(): bool
                 ]);
                 
                 if ($updateResult->isSuccess()) {
-                    installLog("  → Обновлена: '{$measureData['MEASURE_TITLE']}' (ID: {$existingBySymbol['ID']}, CODE: 0 → {$needCode})", 'success');
+                    installLog("  → Обновлена: '{$measureData['MEASURE_TITLE']}' (ID: {$existingBySymbol['ID']}, CODE: {$existingCode} → {$needCode})", 'success');
                     $updatedCount++;
                 } else {
                     installLog("  → Ошибка обновления '{$measureData['MEASURE_TITLE']}': " . implode('; ', $updateResult->getErrorMessages()), 'error');
