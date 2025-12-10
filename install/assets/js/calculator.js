@@ -32,10 +32,14 @@ var ProspekwebCalc = {
         'save_result.php'
     ],
     
+    // Константы
+    DOM_STABILIZATION_DELAY: 50, // Задержка в мс для стабилизации DOM после AJAX-обновлений
+    
     // Состояние
     dialog: null,
     iframe: null,
     messageHandler: null,
+    observer: null,
 
     /**
      * Инициализация кнопки в админке
@@ -44,6 +48,7 @@ var ProspekwebCalc = {
         this.loadCss(this.cssPath);
         if (!containerId) {
             this.initAdminButton();
+            this.startObserver();
         }
     },
 
@@ -79,6 +84,68 @@ var ProspekwebCalc = {
             toolbar.insertBefore(calcBtn, genBtn.nextSibling);
         } else {
             toolbar.appendChild(calcBtn);
+        }
+    },
+
+    /**
+     * Запуск наблюдателя за изменениями DOM
+     */
+    startObserver: function() {
+        var self = this;
+        
+        // Если уже запущен - не запускаем повторно
+        if (this.observer) {
+            return;
+        }
+        
+        // Ищем контейнер таблицы ТП (tab_sub_list или adm-detail-content-wrap)
+        var targetNode = document.getElementById('tab_sub_list') || 
+                         document.querySelector('.adm-detail-content-wrap');
+        
+        if (!targetNode) {
+            // Fallback: наблюдаем за body
+            targetNode = document.body;
+        }
+        
+        this.observer = new MutationObserver(function(mutations) {
+            // Оптимизация: проверяем, есть ли изменения в добавленных/удалённых узлах
+            var hasRelevantChanges = false;
+            for (var i = 0; i < mutations.length; i++) {
+                if (mutations[i].addedNodes.length > 0 || mutations[i].removedNodes.length > 0) {
+                    hasRelevantChanges = true;
+                    break;
+                }
+            }
+            
+            if (!hasRelevantChanges) {
+                return;
+            }
+            
+            // Проверяем, существует ли кнопка генерации и отсутствует ли наша кнопка
+            var genBtn = document.getElementById('btn_sub_gen');
+            var calcBtn = document.getElementById('btn_prospektweb_calc');
+            
+            if (genBtn && !calcBtn) {
+                // Небольшая задержка, чтобы DOM успел стабилизироваться
+                setTimeout(function() {
+                    self.initAdminButton();
+                }, self.DOM_STABILIZATION_DELAY);
+            }
+        });
+        
+        this.observer.observe(targetNode, {
+            childList: true,
+            subtree: true
+        });
+    },
+
+    /**
+     * Остановка наблюдателя за изменениями DOM
+     */
+    stopObserver: function() {
+        if (this.observer) {
+            this.observer.disconnect();
+            this.observer = null;
         }
     },
 
