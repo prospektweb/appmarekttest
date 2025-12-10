@@ -267,7 +267,7 @@ function createMeasuresWithLog(): bool
                     installLog("  → Обновлён CODE для '{$measureData['MEASURE_TITLE']}': {$existingCode} → {$needCode} (ID: {$existingBySymbol['ID']})", 'success');
                     $updatedCount++;
                 } else {
-                    installLog("  → Ошибка обновления CODE для '{$measureData['MEASURE_TITLE']}': " . implode('; ', $updateResult->getErrorMessages()), 'error');
+                    installLog("  → Ошибка обновления '{$measureData['MEASURE_TITLE']}': " . implode('; ', $updateResult->getErrorMessages()), 'error');
                 }
             } else {
                 installLog("  → '{$measureData['MEASURE_TITLE']}' уже существует (ID: {$existingBySymbol['ID']}, CODE: {$existingCode})", 'warning');

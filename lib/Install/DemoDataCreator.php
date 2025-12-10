@@ -77,6 +77,8 @@ class DemoDataCreator
      */
     protected function loadMeasures(): void
     {
+        $this->measureCache = [];
+        
         $rsMeasures = \CCatalogMeasure::getList();
         while ($measure = $rsMeasures->Fetch()) {
             $id = (int)$measure['ID'];
@@ -84,7 +86,10 @@ class DemoDataCreator
 
             // Числовой CODE (если не 0)
             if (!empty($measure['CODE']) && (int)$measure['CODE'] > 0) {
-                $codeKeys[] = (string)$measure['CODE'];
+                $codeKey = (string)$measure['CODE'];
+                if (!isset($this->measureCache[$codeKey])) {
+                    $this->measureCache[$codeKey] = $id;
+                }
             }
             
             // SYMBOL_INTL - международный символ (основной ключ)
@@ -93,7 +98,7 @@ class DemoDataCreator
                 $codeKeys[] = $symbolIntl;
             }
             
-            // SYMBOL_LETTER_INTL - международный буквенный код
+            // Добавляем по SYMBOL_LETTER_INTL
             if (!empty($measure['SYMBOL_LETTER_INTL'])) {
                 $codeKeys[] = strtoupper(trim((string)$measure['SYMBOL_LETTER_INTL']));
             }
@@ -129,6 +134,9 @@ class DemoDataCreator
 
     /**
      * Получает ID единицы измерения по коду.
+     *
+     * @param string $code Код единицы измерения (например, 'SHEET', 'ROLE', 'RUN')
+     * @return int ID единицы измерения или 0, если не найдена
      */
     protected function getMeasureId(string $code): int
     {
