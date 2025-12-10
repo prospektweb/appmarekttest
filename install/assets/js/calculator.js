@@ -32,6 +32,9 @@ var ProspekwebCalc = {
         'save_result.php'
     ],
     
+    // Константы
+    DOM_STABILIZATION_DELAY: 50, // Задержка в мс для стабилизации DOM после AJAX-обновлений
+    
     // Состояние
     dialog: null,
     iframe: null,
@@ -105,6 +108,19 @@ var ProspekwebCalc = {
         }
         
         this.observer = new MutationObserver(function(mutations) {
+            // Оптимизация: проверяем, есть ли изменения в добавленных/удалённых узлах
+            var hasRelevantChanges = false;
+            for (var i = 0; i < mutations.length; i++) {
+                if (mutations[i].addedNodes.length > 0 || mutations[i].removedNodes.length > 0) {
+                    hasRelevantChanges = true;
+                    break;
+                }
+            }
+            
+            if (!hasRelevantChanges) {
+                return;
+            }
+            
             // Проверяем, существует ли кнопка генерации и отсутствует ли наша кнопка
             var genBtn = document.getElementById('btn_sub_gen');
             var calcBtn = document.getElementById('btn_prospektweb_calc');
@@ -113,7 +129,7 @@ var ProspekwebCalc = {
                 // Небольшая задержка, чтобы DOM успел стабилизироваться
                 setTimeout(function() {
                     self.initAdminButton();
-                }, 50);
+                }, self.DOM_STABILIZATION_DELAY);
             }
         });
         
