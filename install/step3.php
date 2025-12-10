@@ -248,7 +248,7 @@ function createMeasuresWithLog(): bool
         // Сначала ищем по нашему CODE
         $existingByCode = MeasureTable::getList([
             'filter' => ['=CODE' => $measureData['CODE']],
-            'select' => ['ID', 'CODE', 'MEASURE_TITLE', 'SYMBOL_INTL'],
+            'select' => ['ID', 'CODE', 'MEASURE_TITLE', 'SYMBOL_INTL', 'SYMBOL_RUS'],
             'limit' => 1,
         ])->fetch();
 
