@@ -99,7 +99,7 @@ class DemoDataCreator
             }
 
             foreach ($codeKeys as $key) {
-                if ($key !== '' && !isset($this->measureCache[$key])) {
+                if (!empty($key) && !isset($this->measureCache[$key])) {
                     $this->measureCache[$key] = $id;
                 }
             }
@@ -109,7 +109,7 @@ class DemoDataCreator
         // Формат: 'КОД_В_ДЕМО_ДАННЫХ' => 'SYMBOL_INTL_В_БАЗЕ'
         $aliases = [
             'SHEET' => 'SHEET',    // Лист
-            'ROLE' => 'ROLE',      // Роль  
+            'ROLE' => 'ROLE',      // Роль
             'RUN' => 'RUN',        // Прогон
             'ROLL' => 'ROLL',      // Рулон
             'PACK' => 'PACK',      // Упаковка

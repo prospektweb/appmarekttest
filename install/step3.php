@@ -260,7 +260,7 @@ function createMeasuresWithLog(): bool
             $needCode = (int)$measureData['CODE'];
             
             // Если CODE = 0 или отличается от нужного - обновляем
-            if ($existingCode === 0 || ($existingCode !== $needCode && $needCode > 0)) {
+            if ($existingCode === 0 || $existingCode !== $needCode) {
                 $updateResult = MeasureTable::update($existingBySymbol['ID'], ['CODE' => $needCode]);
                 
                 if ($updateResult->isSuccess()) {
