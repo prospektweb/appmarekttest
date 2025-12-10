@@ -82,45 +82,47 @@ class DemoDataCreator
             $id = (int)$measure['ID'];
             $codeKeys = [];
 
-            // Числовой CODE
+            // Числовой CODE (если не 0)
             if (!empty($measure['CODE']) && (int)$measure['CODE'] > 0) {
                 $codeKeys[] = (string)$measure['CODE'];
             }
             
-            // SYMBOL_INTL - международный символ (основной ключ для поиска)
+            // SYMBOL_INTL - международный символ (основной ключ)
             if (!empty($measure['SYMBOL_INTL'])) {
-                $codeKeys[] = strtoupper((string)$measure['SYMBOL_INTL']);
+                $symbolIntl = strtoupper(trim((string)$measure['SYMBOL_INTL']));
+                $codeKeys[] = $symbolIntl;
             }
             
             // SYMBOL_LETTER_INTL - международный буквенный код
             if (!empty($measure['SYMBOL_LETTER_INTL'])) {
-                $codeKeys[] = strtoupper((string)$measure['SYMBOL_LETTER_INTL']);
+                $codeKeys[] = strtoupper(trim((string)$measure['SYMBOL_LETTER_INTL']));
             }
 
             foreach ($codeKeys as $key) {
-                if (!isset($this->measureCache[$key])) {
+                if ($key !== '' && !isset($this->measureCache[$key])) {
                     $this->measureCache[$key] = $id;
                 }
             }
         }
         
-        // Добавляем алиасы для удобства использования в демо-данных
+        // Добавляем алиасы для кодов, используемых в демо-данных
+        // Формат: 'КОД_В_ДЕМО_ДАННЫХ' => 'SYMBOL_INTL_В_БАЗЕ'
         $aliases = [
-            'SHEET' => 'SHEET',
-            'ROLE' => 'ROLE',
-            'RUN' => 'RUN',
-            'SQM' => 'M2',
-            'SQCM' => 'CM2',
-            'SQDM' => 'DM2',
-            'PACK' => 'PACK',
-            'ROLL' => 'ROLL',
-            'CIRCULATION' => 'TIR',
-            'TIR' => 'TIR',
+            'SHEET' => 'SHEET',    // Лист
+            'ROLE' => 'ROLE',      // Роль  
+            'RUN' => 'RUN',        // Прогон
+            'ROLL' => 'ROLL',      // Рулон
+            'PACK' => 'PACK',      // Упаковка
+            'PACKAGE' => 'PACK',   // Упаковка (альтернативное имя)
+            'SQM' => 'M2',         // Квадратный метр
+            'SQCM' => 'CM2',       // Квадратный сантиметр
+            'SQDM' => 'DM2',       // Квадратный дециметр
+            'CIRCULATION' => 'TIR', // Тираж
         ];
         
-        foreach ($aliases as $alias => $symbolIntl) {
-            if (!isset($this->measureCache[$alias]) && isset($this->measureCache[$symbolIntl])) {
-                $this->measureCache[$alias] = $this->measureCache[$symbolIntl];
+        foreach ($aliases as $alias => $target) {
+            if (!isset($this->measureCache[$alias]) && isset($this->measureCache[$target])) {
+                $this->measureCache[$alias] = $this->measureCache[$target];
             }
         }
     }
@@ -130,32 +132,31 @@ class DemoDataCreator
      */
     protected function getMeasureId(string $code): int
     {
-        $key = strtoupper($code);
-        $measureId = $this->measureCache[$key] ?? 0;
+        $key = strtoupper(trim($code));
         
-        if ($measureId === 0) {
-            // Пробуем найти напрямую в базе по SYMBOL_INTL (без учёта регистра)
-            $rsMeasure = \CCatalogMeasure::getList(
-                [],
-                ['SYMBOL_INTL' => $code], // используем код как есть, без изменения регистра
-                false,
-                false,
-                ['ID', 'SYMBOL_INTL']
-            );
-            if ($measure = $rsMeasure->Fetch()) {
-                $measureId = (int)$measure['ID'];
-                // Кэшируем с ключом в верхнем регистре для консистентности
-                $this->measureCache[$key] = $measureId;
-                // Также кэшируем с ключом SYMBOL_INTL в верхнем регистре
-                $this->measureCache[strtoupper($measure['SYMBOL_INTL'])] = $measureId;
-            }
+        // Сначала ищем в кэше
+        if (isset($this->measureCache[$key])) {
+            return $this->measureCache[$key];
         }
         
-        if ($measureId === 0) {
-            $this->errors[] = "Единица измерения с кодом '{$code}' не найдена. Доступные ключи: " . implode(', ', array_keys($this->measureCache));
+        // Пробуем найти напрямую в базе по SYMBOL_INTL (регистронезависимо)
+        $rsMeasure = \CCatalogMeasure::getList(
+            [],
+            ['SYMBOL_INTL' => strtolower($code)],
+            false,
+            false,
+            ['ID', 'SYMBOL_INTL']
+        );
+        if ($measure = $rsMeasure->Fetch()) {
+            $measureId = (int)$measure['ID'];
+            $this->measureCache[$key] = $measureId;
+            return $measureId;
         }
         
-        return $measureId;
+        // Не нашли - логируем ошибку с доступными ключами
+        $this->errors[] = "Единица измерения с кодом '{$code}' не найдена. Доступные ключи: " . implode(', ', array_keys($this->measureCache));
+        
+        return 0;
     }
 
     /**
