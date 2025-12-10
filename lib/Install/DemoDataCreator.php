@@ -82,8 +82,9 @@ class DemoDataCreator
         $rsMeasures = \CCatalogMeasure::getList();
         while ($measure = $rsMeasures->Fetch()) {
             $id = (int)$measure['ID'];
-            
-            // Добавляем по числовому CODE (если не 0)
+            $codeKeys = [];
+
+            // Числовой CODE (если не 0)
             if (!empty($measure['CODE']) && (int)$measure['CODE'] > 0) {
                 $codeKey = (string)$measure['CODE'];
                 if (!isset($this->measureCache[$codeKey])) {
@@ -91,49 +92,42 @@ class DemoDataCreator
                 }
             }
             
-            // Добавляем по SYMBOL_INTL (основной ключ)
+            // SYMBOL_INTL - международный символ (основной ключ)
             if (!empty($measure['SYMBOL_INTL'])) {
-                $symbolKey = strtoupper(trim($measure['SYMBOL_INTL']));
-                if (!isset($this->measureCache[$symbolKey])) {
-                    $this->measureCache[$symbolKey] = $id;
-                }
+                $symbolIntl = strtoupper(trim((string)$measure['SYMBOL_INTL']));
+                $codeKeys[] = $symbolIntl;
             }
             
             // Добавляем по SYMBOL_LETTER_INTL
             if (!empty($measure['SYMBOL_LETTER_INTL'])) {
-                $letterKey = strtoupper(trim($measure['SYMBOL_LETTER_INTL']));
-                if (!isset($this->measureCache[$letterKey])) {
-                    $this->measureCache[$letterKey] = $id;
-                }
+                $codeKeys[] = strtoupper(trim((string)$measure['SYMBOL_LETTER_INTL']));
             }
-            
-            // Добавляем по MEASURE_TITLE для поиска по названию
-            if (!empty($measure['MEASURE_TITLE'])) {
-                $titleKey = mb_strtoupper(trim($measure['MEASURE_TITLE']), 'UTF-8');
-                if (!isset($this->measureCache[$titleKey])) {
-                    $this->measureCache[$titleKey] = $id;
+
+            foreach ($codeKeys as $key) {
+                if (!empty($key) && !isset($this->measureCache[$key])) {
+                    $this->measureCache[$key] = $id;
                 }
             }
         }
         
-        // Алиасы для совместимости с кодами в демо-данных
-        // Формат: 'КОД_В_ДЕМО_ДАННЫХ' => 'КЛЮЧ_В_КЭШЕ'
+        // Добавляем алиасы для кодов, используемых в демо-данных
+        // Формат: 'КОД_В_ДЕМО_ДАННЫХ' => 'SYMBOL_INTL_В_БАЗЕ'
         $aliases = [
-            // Основные алиасы (из DemoDataCreator используются эти коды)
-            'SHEET' => 'SHEET',      // Лист
-            'ROLE' => 'ROLE',        // Роль  
-            'RUN' => 'RUN',          // Прогон
-            'SQM' => 'M2',           // Квадратный метр
-            'PACK' => 'PACK',        // Упаковка
-            'ROLL' => 'ROLL',        // Рулон
-            'SQCM' => 'CM2',         // Квадратный сантиметр
-            'SQDM' => 'DM2',         // Квадратный дециметр
-            'CIRCULATION' => 'TIR',  // Тираж
+            'SHEET' => 'SHEET',    // Лист
+            'ROLE' => 'ROLE',      // Роль
+            'RUN' => 'RUN',        // Прогон
+            'ROLL' => 'ROLL',      // Рулон
+            'PACK' => 'PACK',      // Упаковка
+            'PACKAGE' => 'PACK',   // Упаковка (альтернативное имя)
+            'SQM' => 'M2',         // Квадратный метр
+            'SQCM' => 'CM2',       // Квадратный сантиметр
+            'SQDM' => 'DM2',       // Квадратный дециметр
+            'CIRCULATION' => 'TIR', // Тираж
         ];
         
-        foreach ($aliases as $aliasKey => $cacheKey) {
-            if (!isset($this->measureCache[$aliasKey]) && isset($this->measureCache[$cacheKey])) {
-                $this->measureCache[$aliasKey] = $this->measureCache[$cacheKey];
+        foreach ($aliases as $alias => $target) {
+            if (!isset($this->measureCache[$alias]) && isset($this->measureCache[$target])) {
+                $this->measureCache[$alias] = $this->measureCache[$target];
             }
         }
     }
@@ -148,31 +142,27 @@ class DemoDataCreator
     {
         $key = strtoupper(trim($code));
         
-        // Прямой поиск в кэше
+        // Сначала ищем в кэше
         if (isset($this->measureCache[$key])) {
             return $this->measureCache[$key];
         }
         
-        // Пробуем найти напрямую в базе по SYMBOL_INTL
-        $lowerKey = strtolower($code);
+        // Пробуем найти напрямую в базе по SYMBOL_INTL (регистронезависимо)
         $rsMeasure = \CCatalogMeasure::getList(
             [],
-            ['SYMBOL_INTL' => $lowerKey],
+            ['SYMBOL_INTL' => strtolower($code)],
             false,
             false,
             ['ID', 'SYMBOL_INTL']
         );
-        
         if ($measure = $rsMeasure->Fetch()) {
             $measureId = (int)$measure['ID'];
             $this->measureCache[$key] = $measureId;
             return $measureId;
         }
         
-        // Ничего не нашли - логируем ошибку с доступными ключами
-        $availableKeys = array_keys($this->measureCache);
-        sort($availableKeys);
-        $this->errors[] = "Единица измерения с кодом '{$code}' не найдена. Доступные ключи: " . implode(', ', $availableKeys);
+        // Не нашли - логируем ошибку с доступными ключами
+        $this->errors[] = "Единица измерения с кодом '{$code}' не найдена. Доступные ключи: " . implode(', ', array_keys($this->measureCache));
         
         return 0;
     }

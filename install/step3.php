@@ -229,18 +229,18 @@ function createMeasuresWithLog(): bool
 
     installLog("Создание единиц измерения...", 'header');
 
-    // ВАЖНО: Поле CODE имеет тип INTEGER!
-    // Используем числовые коды 778-789 для пользовательских единиц
+    // ВАЖНО: Поле CODE имеет тип INTEGER! Используем числовые коды 778-790 (пользовательские)
     $measures = [
         ['CODE' => 778, 'MEASURE_TITLE' => 'Лист', 'SYMBOL_INTL' => 'sheet', 'SYMBOL_LETTER_INTL' => 'SHT', 'IS_DEFAULT' => 'N'],
         ['CODE' => 779, 'MEASURE_TITLE' => 'Упаковка', 'SYMBOL_INTL' => 'pack', 'SYMBOL_LETTER_INTL' => 'PCK', 'IS_DEFAULT' => 'N'],
         ['CODE' => 780, 'MEASURE_TITLE' => 'Рулон', 'SYMBOL_INTL' => 'roll', 'SYMBOL_LETTER_INTL' => 'ROL', 'IS_DEFAULT' => 'N'],
         ['CODE' => 781, 'MEASURE_TITLE' => 'Роль', 'SYMBOL_INTL' => 'role', 'SYMBOL_LETTER_INTL' => 'RLE', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 55, 'MEASURE_TITLE' => 'Квадратный метр', 'SYMBOL_INTL' => 'm2', 'SYMBOL_LETTER_INTL' => 'MTK', 'IS_DEFAULT' => 'N'],
         ['CODE' => 782, 'MEASURE_TITLE' => 'Квадратный сантиметр', 'SYMBOL_INTL' => 'cm2', 'SYMBOL_LETTER_INTL' => 'CMK', 'IS_DEFAULT' => 'N'],
         ['CODE' => 783, 'MEASURE_TITLE' => 'Квадратный дециметр', 'SYMBOL_INTL' => 'dm2', 'SYMBOL_LETTER_INTL' => 'DMK', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 999, 'MEASURE_TITLE' => 'Тираж', 'SYMBOL_INTL' => 'tir', 'SYMBOL_LETTER_INTL' => 'CIR', 'IS_DEFAULT' => 'N'],
         ['CODE' => 784, 'MEASURE_TITLE' => 'Прогон', 'SYMBOL_INTL' => 'run', 'SYMBOL_LETTER_INTL' => 'RUN', 'IS_DEFAULT' => 'N'],
+        // Стандартные единицы ОКЕИ - проверяем/обновляем если нужно
+        ['CODE' => 55, 'MEASURE_TITLE' => 'Квадратный метр', 'SYMBOL_INTL' => 'm2', 'SYMBOL_LETTER_INTL' => 'MTK', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 999, 'MEASURE_TITLE' => 'Тираж', 'SYMBOL_INTL' => 'tir', 'SYMBOL_LETTER_INTL' => 'CIR', 'IS_DEFAULT' => 'N'],
     ];
 
     $createdCount = 0;
@@ -248,7 +248,7 @@ function createMeasuresWithLog(): bool
     $skippedCount = 0;
     
     foreach ($measures as $measureData) {
-        // Ищем существующую единицу по SYMBOL_INTL (уникальный строковый идентификатор)
+        // Шаг 1: Ищем по SYMBOL_INTL - это уникальный строковый идентификатор
         $existingBySymbol = MeasureTable::getList([
             'filter' => ['=SYMBOL_INTL' => $measureData['SYMBOL_INTL']],
             'select' => ['ID', 'CODE', 'MEASURE_TITLE', 'SYMBOL_INTL'],
@@ -260,26 +260,23 @@ function createMeasuresWithLog(): bool
             $needCode = (int)$measureData['CODE'];
             
             // Если CODE = 0 или отличается от нужного - обновляем
-            if ($existingCode === 0 || ($existingCode !== $needCode && $needCode > 0)) {
-                $updateResult = MeasureTable::update($existingBySymbol['ID'], [
-                    'CODE' => $needCode,
-                    'SYMBOL_LETTER_INTL' => $measureData['SYMBOL_LETTER_INTL'],
-                ]);
+            if ($existingCode === 0 || $existingCode !== $needCode) {
+                $updateResult = MeasureTable::update($existingBySymbol['ID'], ['CODE' => $needCode]);
                 
                 if ($updateResult->isSuccess()) {
-                    installLog("  → Обновлена: '{$measureData['MEASURE_TITLE']}' (ID: {$existingBySymbol['ID']}, CODE: {$existingCode} → {$needCode})", 'success');
+                    installLog("  → Обновлён CODE для '{$measureData['MEASURE_TITLE']}': {$existingCode} → {$needCode} (ID: {$existingBySymbol['ID']})", 'success');
                     $updatedCount++;
                 } else {
                     installLog("  → Ошибка обновления '{$measureData['MEASURE_TITLE']}': " . implode('; ', $updateResult->getErrorMessages()), 'error');
                 }
             } else {
-                installLog("  → Существует: '{$measureData['MEASURE_TITLE']}' (ID: {$existingBySymbol['ID']}, CODE: {$existingCode})", 'warning');
+                installLog("  → '{$measureData['MEASURE_TITLE']}' уже существует (ID: {$existingBySymbol['ID']}, CODE: {$existingCode})", 'warning');
                 $skippedCount++;
             }
             continue;
         }
 
-        // Проверяем, нет ли единицы с таким же числовым CODE (для стандартных ОКЕИ: 55, 999)
+        // Шаг 2: Ищем по числовому CODE (для стандартных единиц ОКЕИ)
         if ((int)$measureData['CODE'] > 0) {
             $existingByCode = MeasureTable::getList([
                 'filter' => ['=CODE' => (int)$measureData['CODE']],
@@ -288,30 +285,31 @@ function createMeasuresWithLog(): bool
             ])->fetch();
 
             if ($existingByCode) {
-                // Единица с таким CODE есть, но с другим SYMBOL_INTL - обновляем SYMBOL_INTL
-                if ($existingByCode['SYMBOL_INTL'] !== $measureData['SYMBOL_INTL']) {
+                // Единица с таким кодом существует - обновляем SYMBOL_INTL если нужно
+                if (empty($existingByCode['SYMBOL_INTL']) || $existingByCode['SYMBOL_INTL'] !== $measureData['SYMBOL_INTL']) {
                     $updateResult = MeasureTable::update($existingByCode['ID'], [
                         'SYMBOL_INTL' => $measureData['SYMBOL_INTL'],
                         'SYMBOL_LETTER_INTL' => $measureData['SYMBOL_LETTER_INTL'],
                     ]);
+                    
                     if ($updateResult->isSuccess()) {
-                        installLog("  → Обновлён SYMBOL для CODE={$measureData['CODE']}: '{$existingByCode['MEASURE_TITLE']}' (ID: {$existingByCode['ID']})", 'success');
+                        installLog("  → Обновлён SYMBOL_INTL для '{$existingByCode['MEASURE_TITLE']}' (ID: {$existingByCode['ID']})", 'success');
                         $updatedCount++;
                     }
                 } else {
-                    installLog("  → Существует с CODE={$measureData['CODE']}: '{$existingByCode['MEASURE_TITLE']}' (ID: {$existingByCode['ID']})", 'warning');
+                    installLog("  → '{$measureData['MEASURE_TITLE']}' уже существует с CODE={$measureData['CODE']} (ID: {$existingByCode['ID']})", 'warning');
                     $skippedCount++;
                 }
                 continue;
             }
         }
 
-        // Единицы нет - создаём новую
+        // Шаг 3: Единицы нет - создаём новую
         $result = MeasureTable::add($measureData);
 
         if ($result->isSuccess()) {
             $newId = $result->getId();
-            installLog("  → Создана: '{$measureData['MEASURE_TITLE']}' (ID: {$newId}, CODE: {$measureData['CODE']}, SYMBOL: {$measureData['SYMBOL_INTL']})", 'success');
+            installLog("  → Создана: {$measureData['MEASURE_TITLE']} (ID: {$newId}, CODE: {$measureData['CODE']}, SYMBOL: {$measureData['SYMBOL_INTL']})", 'success');
             $createdCount++;
         } else {
             $errors = implode('; ', $result->getErrorMessages());
@@ -323,9 +321,9 @@ function createMeasuresWithLog(): bool
     }
 
     $total = count($measures);
-    $processedOk = $createdCount + $updatedCount + $skippedCount;
-    installLog("Итого: создано {$createdCount}, обновлено {$updatedCount}, существовало {$skippedCount} из {$total}", 
-        $processedOk === $total ? 'success' : 'warning');
+    $processed = $createdCount + $updatedCount + $skippedCount;
+    installLog("Итого: создано {$createdCount}, обновлено {$updatedCount}, пропущено {$skippedCount} из {$total}", 
+        $processed === $total ? 'success' : 'warning');
     return true;
 }
 
