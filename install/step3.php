@@ -266,19 +266,24 @@ function createMeasuresWithLog(): bool
                     '=SYMBOL_RUS' => $measureData['SYMBOL_RUS'],
                 ],
             ],
-            'select' => ['ID', 'CODE', 'MEASURE_TITLE', 'SYMBOL_INTL'],
+            'select' => ['ID', 'CODE', 'MEASURE_TITLE', 'SYMBOL_INTL', 'SYMBOL_RUS'],
             'limit' => 1,
         ])->fetch();
 
         if ($existingBySymbol) {
-            // Единица существует, но без нашего CODE - обновляем CODE
-            $updateResult = MeasureTable::update($existingBySymbol['ID'], ['CODE' => $measureData['CODE']]);
-            
-            if ($updateResult->isSuccess()) {
-                installLog("  → Обновлён CODE для '{$measureData['MEASURE_TITLE']}' (ID: {$existingBySymbol['ID']}, CODE: {$measureData['CODE']})", 'success');
-                $updatedCount++;
+            // Единица существует, но без нашего CODE или с пустым CODE - обновляем CODE
+            $existingCode = $existingBySymbol['CODE'] ?? '';
+            if ($existingCode === '' || $existingCode === null) {
+                $updateResult = MeasureTable::update($existingBySymbol['ID'], ['CODE' => $measureData['CODE']]);
+                
+                if ($updateResult->isSuccess()) {
+                    installLog("  → Обновлён CODE для '{$measureData['MEASURE_TITLE']}' (ID: {$existingBySymbol['ID']}, CODE: {$measureData['CODE']})", 'success');
+                    $updatedCount++;
+                } else {
+                    installLog("  → Ошибка обновления CODE для '{$measureData['MEASURE_TITLE']}': " . implode('; ', $updateResult->getErrorMessages()), 'error');
+                }
             } else {
-                installLog("  → Ошибка обновления CODE для '{$measureData['MEASURE_TITLE']}': " . implode('; ', $updateResult->getErrorMessages()), 'error');
+                installLog("  → Единица измерения '{$measureData['MEASURE_TITLE']}' существует с другим CODE (ID: {$existingBySymbol['ID']}, CODE: {$existingCode})", 'warning');
             }
             continue;
         }
