@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Калькулятор себестоимости</title>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; background: #f5f5f5; }
@@ -43,7 +42,7 @@
     </div>
 
     <script>
-    $(function() {
+    (function() {
         var state = {
             offers: [],
             apiBase: '',
@@ -55,28 +54,34 @@
         // Отправка сообщения родителю
         function sendToParent(type, payload) {
             if (window.parent !== window) {
-                window.parent.postMessage({ type: type, payload: payload }, '*');
+                window.parent.postMessage({ type: type, payload: payload }, window.location.origin);
             }
         }
 
         // Рендер списка ТП
         function renderOffers() {
-            var $list = $('#offers-list');
-            $list.empty();
+            var list = document.getElementById('offers-list');
+            list.innerHTML = '';
 
             if (state.offers.length === 0) {
-                $('#content').hide();
-                $('#empty').show();
+                document.getElementById('content').style.display = 'none';
+                document.getElementById('empty').style.display = 'block';
                 return;
             }
 
-            $('#offers-count').text(state.offers.length);
-            $('#content').show();
-            $('#empty').hide();
+            document.getElementById('offers-count').textContent = state.offers.length;
+            document.getElementById('content').style.display = 'block';
+            document.getElementById('empty').style.display = 'none';
 
             state.offers.forEach(function(offer) {
-                var $row = $('<div class="offer-row" data-id="' + offer.id + '">' +
-                    '<div class="offer-id">#' + offer.id + '</div>' +
+                // Validate offer.id is a safe integer
+                var offerId = parseInt(offer.id, 10);
+                if (isNaN(offerId) || offerId < 0) return;
+                
+                var row = document.createElement('div');
+                row.className = 'offer-row';
+                
+                row.innerHTML = '<div class="offer-id">#' + offerId + '</div>' +
                     '<div class="offer-name">' + escapeHtml(offer.name) + '</div>' +
                     '<div class="offer-actions">' +
                         '<button class="btn-icon btn-open" title="Открыть в новой вкладке">' +
@@ -85,18 +90,19 @@
                         '<button class="btn-icon btn-delete delete" title="Удалить из списка">' +
                             '<svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg>' +
                         '</button>' +
-                    '</div>' +
-                '</div>');
+                    '</div>';
 
-                $row.find('.btn-open').on('click', function() {
+                var btnOpen = row.querySelector('.btn-open');
+                btnOpen.addEventListener('click', function() {
                     sendToParent('CALC_OPEN_OFFER', { id: offer.id, editUrl: offer.editUrl });
                 });
 
-                $row.find('.btn-delete').on('click', function() {
+                var btnDelete = row.querySelector('.btn-delete');
+                btnDelete.addEventListener('click', function() {
                     removeOffer(offer.id);
                 });
 
-                $list.append($row);
+                list.appendChild(row);
             });
         }
 
@@ -115,15 +121,17 @@
         }
 
         // Обработка сообщений от родителя
-        $(window).on('message', function(e) {
-            var event = e.originalEvent;
-            var data = event.data;
+        window.addEventListener('message', function(e) {
+            // Validate origin for security
+            if (e.origin !== window.location.origin) return;
+            
+            var data = e.data;
 
             if (!data || !data.type) return;
 
             switch (data.type) {
                 case 'BITRIX_INIT':
-                    $('#loading').hide();
+                    document.getElementById('loading').style.display = 'none';
                     state.offers = data.payload.offers || [];
                     state.apiBase = data.payload.apiBase || '';
                     state.productId = data.payload.productId;
@@ -136,10 +144,10 @@
         });
 
         // Кнопка закрыть
-        $('#btn-close').on('click', function() {
+        document.getElementById('btn-close').addEventListener('click', function() {
             sendToParent('CALC_CLOSE');
         });
-    });
+    })();
     </script>
 </body>
 </html>
