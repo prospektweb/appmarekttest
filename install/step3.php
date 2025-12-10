@@ -272,8 +272,7 @@ function createMeasuresWithLog(): bool
 
         if ($existingBySymbol) {
             // Единица существует, но без нашего CODE или с пустым CODE - обновляем CODE
-            $existingCode = $existingBySymbol['CODE'] ?? '';
-            if ($existingCode === '') {
+            if (empty($existingBySymbol['CODE'])) {
                 $updateResult = MeasureTable::update($existingBySymbol['ID'], ['CODE' => $measureData['CODE']]);
                 
                 if ($updateResult->isSuccess()) {
@@ -283,7 +282,7 @@ function createMeasuresWithLog(): bool
                     installLog("  → Ошибка обновления CODE для '{$measureData['MEASURE_TITLE']}': " . implode('; ', $updateResult->getErrorMessages()), 'error');
                 }
             } else {
-                installLog("  → Единица измерения '{$measureData['MEASURE_TITLE']}' существует с другим CODE (ID: {$existingBySymbol['ID']}, CODE: {$existingCode})", 'warning');
+                installLog("  → Единица измерения '{$measureData['MEASURE_TITLE']}' существует с другим CODE (ID: {$existingBySymbol['ID']}, CODE: {$existingBySymbol['CODE']})", 'warning');
             }
             continue;
         }
@@ -299,6 +298,7 @@ function createMeasuresWithLog(): bool
             if ($errors === '') {
                 $errors = getBitrixError();
             }
+
             installLog("  → Ошибка создания: {$measureData['MEASURE_TITLE']} ({$errors})", 'error');
         }
     }
