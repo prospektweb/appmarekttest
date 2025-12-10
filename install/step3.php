@@ -229,16 +229,18 @@ function createMeasuresWithLog(): bool
 
     installLog("Создание единиц измерения...", 'header');
 
+    // ВАЖНО: Поле SYMBOL_RUS не существует в ORM MeasureTable!
+    // Используем только CODE, MEASURE_TITLE, SYMBOL_INTL, SYMBOL_LETTER_INTL, IS_DEFAULT
     $measures = [
-        ['CODE' => 'SHEET', 'MEASURE_TITLE' => 'Лист', 'SYMBOL_RUS' => 'л.', 'SYMBOL_INTL' => 'sheet', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 'PACKAGE', 'MEASURE_TITLE' => 'Упаковка', 'SYMBOL_RUS' => 'уп.', 'SYMBOL_INTL' => 'pack', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 'ROLL', 'MEASURE_TITLE' => 'Рулон', 'SYMBOL_RUS' => 'рул.', 'SYMBOL_INTL' => 'roll', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 'ROLE', 'MEASURE_TITLE' => 'Роль', 'SYMBOL_RUS' => 'роль', 'SYMBOL_INTL' => 'role', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 'SQM', 'MEASURE_TITLE' => 'Квадратный метр', 'SYMBOL_RUS' => 'м²', 'SYMBOL_INTL' => 'm²', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 'SQCM', 'MEASURE_TITLE' => 'Квадратный сантиметр', 'SYMBOL_RUS' => 'см²', 'SYMBOL_INTL' => 'cm²', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 'SQDM', 'MEASURE_TITLE' => 'Квадратный дециметр', 'SYMBOL_RUS' => 'дм²', 'SYMBOL_INTL' => 'dm²', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 'CIRCULATION', 'MEASURE_TITLE' => 'Тираж', 'SYMBOL_RUS' => 'тираж', 'SYMBOL_INTL' => 'circulation', 'IS_DEFAULT' => 'N'],
-        ['CODE' => 'RUN', 'MEASURE_TITLE' => 'Прогон', 'SYMBOL_RUS' => 'прогон', 'SYMBOL_INTL' => 'run', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'SHEET', 'MEASURE_TITLE' => 'Лист', 'SYMBOL_INTL' => 'sheet', 'SYMBOL_LETTER_INTL' => 'SHT', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'PACKAGE', 'MEASURE_TITLE' => 'Упаковка', 'SYMBOL_INTL' => 'pack', 'SYMBOL_LETTER_INTL' => 'PCK', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'ROLL', 'MEASURE_TITLE' => 'Рулон', 'SYMBOL_INTL' => 'roll', 'SYMBOL_LETTER_INTL' => 'ROL', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'ROLE', 'MEASURE_TITLE' => 'Роль', 'SYMBOL_INTL' => 'role', 'SYMBOL_LETTER_INTL' => 'RLE', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'SQM', 'MEASURE_TITLE' => 'Квадратный метр', 'SYMBOL_INTL' => 'm2', 'SYMBOL_LETTER_INTL' => 'MTK', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'SQCM', 'MEASURE_TITLE' => 'Квадратный сантиметр', 'SYMBOL_INTL' => 'cm2', 'SYMBOL_LETTER_INTL' => 'CMK', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'SQDM', 'MEASURE_TITLE' => 'Квадратный дециметр', 'SYMBOL_INTL' => 'dm2', 'SYMBOL_LETTER_INTL' => 'DMK', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'CIRCULATION', 'MEASURE_TITLE' => 'Тираж', 'SYMBOL_INTL' => 'circulation', 'SYMBOL_LETTER_INTL' => 'CIR', 'IS_DEFAULT' => 'N'],
+        ['CODE' => 'RUN', 'MEASURE_TITLE' => 'Прогон', 'SYMBOL_INTL' => 'run', 'SYMBOL_LETTER_INTL' => 'RUN', 'IS_DEFAULT' => 'N'],
     ];
 
     $createdCount = 0;
@@ -248,7 +250,7 @@ function createMeasuresWithLog(): bool
         // Сначала ищем по нашему CODE
         $existingByCode = MeasureTable::getList([
             'filter' => ['=CODE' => $measureData['CODE']],
-            'select' => ['ID', 'CODE', 'MEASURE_TITLE', 'SYMBOL_INTL', 'SYMBOL_RUS'],
+            'select' => ['ID', 'CODE', 'MEASURE_TITLE', 'SYMBOL_INTL'],
             'limit' => 1,
         ])->fetch();
 
@@ -257,32 +259,22 @@ function createMeasuresWithLog(): bool
             continue;
         }
 
-        // Ищем по SYMBOL_INTL или SYMBOL_RUS (могла быть создана стандартная единица без нашего CODE)
+        // Ищем по SYMBOL_INTL (могла быть создана стандартная единица без нашего CODE)
         $existingBySymbol = MeasureTable::getList([
-            'filter' => [
-                [
-                    'LOGIC' => 'OR',
-                    '=SYMBOL_INTL' => $measureData['SYMBOL_INTL'],
-                    '=SYMBOL_RUS' => $measureData['SYMBOL_RUS'],
-                ],
-            ],
-            'select' => ['ID', 'CODE', 'MEASURE_TITLE', 'SYMBOL_INTL', 'SYMBOL_RUS'],
+            'filter' => ['=SYMBOL_INTL' => $measureData['SYMBOL_INTL']],
+            'select' => ['ID', 'CODE', 'MEASURE_TITLE', 'SYMBOL_INTL'],
             'limit' => 1,
         ])->fetch();
 
         if ($existingBySymbol) {
-            // Единица существует, но без нашего CODE или с пустым CODE - обновляем CODE
-            if (empty($existingBySymbol['CODE'])) {
-                $updateResult = MeasureTable::update($existingBySymbol['ID'], ['CODE' => $measureData['CODE']]);
-                
-                if ($updateResult->isSuccess()) {
-                    installLog("  → Обновлён CODE для '{$measureData['MEASURE_TITLE']}' (ID: {$existingBySymbol['ID']}, CODE: {$measureData['CODE']})", 'success');
-                    $updatedCount++;
-                } else {
-                    installLog("  → Ошибка обновления CODE для '{$measureData['MEASURE_TITLE']}': " . implode('; ', $updateResult->getErrorMessages()), 'error');
-                }
+            // Единица существует, но без нашего CODE - обновляем CODE
+            $updateResult = MeasureTable::update($existingBySymbol['ID'], ['CODE' => $measureData['CODE']]);
+            
+            if ($updateResult->isSuccess()) {
+                installLog("  → Обновлён CODE для '{$measureData['MEASURE_TITLE']}' (ID: {$existingBySymbol['ID']}, CODE: {$measureData['CODE']})", 'success');
+                $updatedCount++;
             } else {
-                installLog("  → Единица измерения '{$measureData['MEASURE_TITLE']}' существует с другим CODE (ID: {$existingBySymbol['ID']}, CODE: {$existingBySymbol['CODE']})", 'warning');
+                installLog("  → Ошибка обновления CODE для '{$measureData['MEASURE_TITLE']}': " . implode('; ', $updateResult->getErrorMessages()), 'error');
             }
             continue;
         }
@@ -291,14 +283,13 @@ function createMeasuresWithLog(): bool
         $result = MeasureTable::add($measureData);
 
         if ($result->isSuccess()) {
-            installLog("  → Создана: {$measureData['MEASURE_TITLE']} ({$measureData['SYMBOL_RUS']})", 'success');
+            installLog("  → Создана: {$measureData['MEASURE_TITLE']} ({$measureData['SYMBOL_INTL']})", 'success');
             $createdCount++;
         } else {
             $errors = implode('; ', $result->getErrorMessages());
             if ($errors === '') {
                 $errors = getBitrixError();
             }
-
             installLog("  → Ошибка создания: {$measureData['MEASURE_TITLE']} ({$errors})", 'error');
         }
     }
