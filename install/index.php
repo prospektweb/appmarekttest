@@ -143,7 +143,7 @@ class prospektweb_calc extends CModule
         $sourceTools = dirname(__DIR__) . '/tools';
         
         // НОВОЕ: Путь к React-билду (относительно install директории)
-        $sourceApps = __DIR__ . '/apps_dist';
+        $sourceApps = __DIR__ . '/assets/app_dist';
         
         $targetJs = $docRoot . '/local/js/prospektweb.calc';
         $targetCss = $docRoot . '/local/css/prospektweb.calc';
@@ -198,7 +198,7 @@ class prospektweb_calc extends CModule
             $success = false;
         }
         
-        // НОВОЕ: Копируем React-приложение из install/apps_dist
+        // НОВОЕ: Копируем React-приложение из install/assets/app_dist
         if (is_dir($sourceApps)) {
             if (is_dir($targetApps)) {
                 CopyDirFiles($sourceApps, $targetApps, true, true);
