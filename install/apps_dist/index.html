@@ -1,21 +1,145 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="ru">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Калькулятор</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
-
-  <script type="module" crossorigin src="./assets/index-DL47zZhO.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-DEVcCPNM.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Калькулятор себестоимости</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { font-size: 24px; margin-bottom: 20px; }
+        .offers-list { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .offer-row { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee; }
+        .offer-row:last-child { border-bottom: none; }
+        .offer-id { width: 80px; color: #666; font-size: 14px; }
+        .offer-name { flex: 1; font-size: 14px; }
+        .offer-actions { display: flex; gap: 8px; }
+        .btn-icon { width: 28px; height: 28px; border: none; background: transparent; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+        .btn-icon:hover { background: #f0f0f0; }
+        .btn-icon.delete:hover { background: #fee; color: #c00; }
+        .btn-close { margin-top: 20px; padding: 10px 20px; background: #1a73e8; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-close:hover { background: #1557b0; }
+        .empty-state { padding: 40px; text-align: center; color: #666; }
+        .loading { padding: 40px; text-align: center; color: #666; }
+    </style>
 </head>
-
 <body>
-    <div id="root"></div>
+    <div class="container">
+        <h1>Калькуляция себестоимости</h1>
+        
+        <div id="loading" class="loading">Загрузка...</div>
+        
+        <div id="content" style="display: none;">
+            <h2 style="font-size: 16px; margin-bottom: 12px;">Выбранные торговые предложения (<span id="offers-count">0</span>)</h2>
+            <div id="offers-list" class="offers-list"></div>
+            <button id="btn-close" class="btn-close">Закрыть</button>
+        </div>
+        
+        <div id="empty" class="empty-state" style="display: none;">
+            Нет выбранных торговых предложений
+        </div>
+    </div>
 
+    <script>
+    $(function() {
+        var state = {
+            offers: [],
+            apiBase: '',
+            productId: null,
+            iblockId: null,
+            sessid: ''
+        };
+
+        // Отправка сообщения родителю
+        function sendToParent(type, payload) {
+            if (window.parent !== window) {
+                window.parent.postMessage({ type: type, payload: payload }, '*');
+            }
+        }
+
+        // Рендер списка ТП
+        function renderOffers() {
+            var $list = $('#offers-list');
+            $list.empty();
+
+            if (state.offers.length === 0) {
+                $('#content').hide();
+                $('#empty').show();
+                return;
+            }
+
+            $('#offers-count').text(state.offers.length);
+            $('#content').show();
+            $('#empty').hide();
+
+            state.offers.forEach(function(offer) {
+                var $row = $('<div class="offer-row" data-id="' + offer.id + '">' +
+                    '<div class="offer-id">#' + offer.id + '</div>' +
+                    '<div class="offer-name">' + escapeHtml(offer.name) + '</div>' +
+                    '<div class="offer-actions">' +
+                        '<button class="btn-icon btn-open" title="Открыть в новой вкладке">' +
+                            '<svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z"/></svg>' +
+                        '</button>' +
+                        '<button class="btn-icon btn-delete delete" title="Удалить из списка">' +
+                            '<svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg>' +
+                        '</button>' +
+                    '</div>' +
+                '</div>');
+
+                $row.find('.btn-open').on('click', function() {
+                    sendToParent('CALC_OPEN_OFFER', { id: offer.id, editUrl: offer.editUrl });
+                });
+
+                $row.find('.btn-delete').on('click', function() {
+                    removeOffer(offer.id);
+                });
+
+                $list.append($row);
+            });
+        }
+
+        // Удаление ТП из списка
+        function removeOffer(id) {
+            state.offers = state.offers.filter(function(o) { return o.id !== id; });
+            sendToParent('CALC_REMOVE_OFFER', { id: id });
+            renderOffers();
+        }
+
+        // Экранирование HTML
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Обработка сообщений от родителя
+        $(window).on('message', function(e) {
+            var event = e.originalEvent;
+            var data = event.data;
+
+            if (!data || !data.type) return;
+
+            switch (data.type) {
+                case 'BITRIX_INIT':
+                    $('#loading').hide();
+                    state.offers = data.payload.offers || [];
+                    state.apiBase = data.payload.apiBase || '';
+                    state.productId = data.payload.productId;
+                    state.iblockId = data.payload.iblockId;
+                    state.sessid = data.payload.sessid || '';
+                    renderOffers();
+                    sendToParent('CALC_READY');
+                    break;
+            }
+        });
+
+        // Кнопка закрыть
+        $('#btn-close').on('click', function() {
+            sendToParent('CALC_CLOSE');
+        });
+    });
+    </script>
 </body>
-
 </html>
