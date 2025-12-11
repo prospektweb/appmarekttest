@@ -8,6 +8,8 @@ Loader::registerAutoloadClasses('prospektweb.calc', [
     'Prospektweb\\Calc\\Calculator\\Calculators\\RollLamination' => 'lib/Calculator/Calculators/RollLamination.php',
     'Prospektweb\\Calc\\Calculator\\Calculators\\DimensionsWeight' => 'lib/Calculator/Calculators/DimensionsWeight.php',
     'Prospektweb\\Calc\\Calculator\\Calculators\\PriceSettings' => 'lib/Calculator/Calculators/PriceSettings.php',
+    'Prospektweb\\Calc\\Calculator\\InitPayloadService' => 'lib/Calculator/InitPayloadService.php',
+    'Prospektweb\\Calc\\Calculator\\SaveHandler' => 'lib/Calculator/SaveHandler.php',
     'Prospektweb\\Calc\\Config\\ConfigManager' => 'lib/Config/ConfigManager.php',
     'Prospektweb\\Calc\\Config\\SettingsManager' => 'lib/Config/SettingsManager.php',
     'Prospektweb\\Calc\\Install\\Installer' => 'lib/Install/Installer.php',
