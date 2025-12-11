@@ -142,17 +142,24 @@ class prospektweb_calc extends CModule
         // НОВОЕ: Путь к tools (относительно корня модуля)
         $sourceTools = dirname(__DIR__) . '/tools';
         
+        // НОВОЕ: Путь к admin (относительно корня модуля)
+        $sourceAdmin = dirname(__DIR__) . '/admin';
+        
         // НОВОЕ: Путь к React-билду (относительно install директории)
         $sourceApps = __DIR__ . '/apps_dist';
         
-        $targetJs = $docRoot . '/local/js/prospektweb.calc';
-        $targetCss = $docRoot . '/local/css/prospektweb.calc';
+        // Целевые директории в Bitrix
+        $targetJs = $docRoot . '/bitrix/js/prospektweb.calc';
+        $targetCss = $docRoot . '/bitrix/css/prospektweb.calc';
         
-        // НОВОЕ: Публичная директория для API
-        $targetTools = $docRoot . '/local/tools/prospektweb.calc';
+        // НОВОЕ: Публичная директория для API в /bitrix/tools
+        $targetTools = $docRoot . '/bitrix/tools/prospektweb.calc';
         
         // НОВОЕ: Директория для React-приложения
         $targetApps = $docRoot . '/local/apps/prospektweb.calc';
+        
+        // НОВОЕ: Директория для админских файлов
+        $targetAdmin = $docRoot . '/bitrix/admin';
         
         $success = true;
         
@@ -187,7 +194,7 @@ class prospektweb_calc extends CModule
             $success = false;
         }
         
-        // НОВОЕ: Копируем Tools (API endpoints)
+        // НОВОЕ: Копируем Tools (API endpoints) в /bitrix/tools
         if (is_dir($sourceTools)) {
             if (is_dir($targetTools)) {
                 CopyDirFiles($sourceTools, $targetTools, true, true);
@@ -196,6 +203,14 @@ class prospektweb_calc extends CModule
             }
         } else {
             $success = false;
+        }
+        
+        // НОВОЕ: Копируем админский файл калькулятора
+        if (is_dir($sourceAdmin)) {
+            $adminCalcFile = $sourceAdmin . '/calculator.php';
+            if (file_exists($adminCalcFile)) {
+                copy($adminCalcFile, $targetAdmin . '/prospektweb_calc_calculator.php');
+            }
         }
         
         // НОВОЕ: Копируем React-приложение из install/apps_dist
@@ -213,24 +228,29 @@ class prospektweb_calc extends CModule
 
     public function uninstallFiles(): void
     {
-        $jsDir = Application::getDocumentRoot() . '/local/js/prospektweb.calc';
-        $cssDir = Application::getDocumentRoot() . '/local/css/prospektweb.calc';
-        $toolsDir = Application::getDocumentRoot() . '/local/tools/prospektweb.calc';
+        $jsDir = Application::getDocumentRoot() . '/bitrix/js/prospektweb.calc';
+        $cssDir = Application::getDocumentRoot() . '/bitrix/css/prospektweb.calc';
+        $toolsDir = Application::getDocumentRoot() . '/bitrix/tools/prospektweb.calc';
         $appsDir = Application::getDocumentRoot() . '/local/apps/prospektweb.calc';
+        $adminFile = Application::getDocumentRoot() . '/bitrix/admin/prospektweb_calc_calculator.php';
 
         if (is_dir($jsDir)) {
-            DeleteDirFilesEx('/local/js/prospektweb.calc');
+            DeleteDirFilesEx('/bitrix/js/prospektweb.calc');
         }
         if (is_dir($cssDir)) {
-            DeleteDirFilesEx('/local/css/prospektweb.calc');
+            DeleteDirFilesEx('/bitrix/css/prospektweb.calc');
         }
         // НОВОЕ: Удаляем tools
         if (is_dir($toolsDir)) {
-            DeleteDirFilesEx('/local/tools/prospektweb.calc');
+            DeleteDirFilesEx('/bitrix/tools/prospektweb.calc');
         }
         // НОВОЕ: Удаляем apps
         if (is_dir($appsDir)) {
             DeleteDirFilesEx('/local/apps/prospektweb.calc');
+        }
+        // НОВОЕ: Удаляем админский файл
+        if (file_exists($adminFile)) {
+            unlink($adminFile);
         }
     }
 
@@ -396,10 +416,11 @@ class prospektweb_calc extends CModule
 
         // Проверяем наличие файлов
         $docRoot = Application::getDocumentRoot();
-        $jsDir = $docRoot . '/local/js/prospektweb.calc';
-        $cssDir = $docRoot . '/local/css/prospektweb.calc';
-        $toolsDir = $docRoot . '/local/tools/prospektweb.calc';
+        $jsDir = $docRoot . '/bitrix/js/prospektweb.calc';
+        $cssDir = $docRoot . '/bitrix/css/prospektweb.calc';
+        $toolsDir = $docRoot . '/bitrix/tools/prospektweb.calc';
         $appsDir = $docRoot . '/local/apps/prospektweb.calc';
+        $adminFile = $docRoot . '/bitrix/admin/prospektweb_calc_calculator.php';
 
         if (!is_dir($jsDir)) {
             $result['warnings'][] = 'Директория JS не найдена';
@@ -412,6 +433,9 @@ class prospektweb_calc extends CModule
         }
         if (!is_dir($appsDir)) {
             $result['warnings'][] = 'Директория Apps не найдена';
+        }
+        if (!file_exists($adminFile)) {
+            $result['warnings'][] = 'Админский файл калькулятора не найден';
         }
 
         return $result;

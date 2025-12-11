@@ -41,7 +41,7 @@ $APPLICATION->SetTitle('Калькулятор');
 use Bitrix\Main\Page\Asset;
 
 // Подключаем JS интеграции
-Asset::getInstance()->addJs('/local/js/prospektweb.calc/integration.js');
+Asset::getInstance()->addJs('/bitrix/js/prospektweb.calc/integration.js');
 
 // ID торговых предложений для калькуляции
 $offerIds = [123, 456, 789]; // Получите из запроса или контекста
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Инициализация интеграции
     const integration = new ProspektwebCalcIntegration({
         iframeSelector: '#calc-iframe',
-        ajaxEndpoint: '/local/tools/prospektweb.calc/calculator_ajax.php',
+        ajaxEndpoint: '/bitrix/tools/prospektweb.calc/calculator_ajax.php',
         offerIds: <?= json_encode($offerIds) ?>,
         siteId: '<?= SITE_ID ?>',
         sessid: '<?= bitrix_sessid() ?>',
@@ -99,7 +99,7 @@ function openCalcPopup(offerIds) {
                 setTimeout(function() {
                     const integration = new ProspektwebCalcIntegration({
                         iframeSelector: '#calc-iframe',
-                        ajaxEndpoint: '/local/tools/prospektweb.calc/calculator_ajax.php',
+                        ajaxEndpoint: '/bitrix/tools/prospektweb.calc/calculator_ajax.php',
                         offerIds: offerIds,
                         siteId: BX.message('SITE_ID'),
                         sessid: BX.bitrix_sessid(),
@@ -156,7 +156,7 @@ interface PwrtMessage {
 ### Получение данных инициализации
 
 ```
-GET /local/tools/prospektweb.calc/calculator_ajax.php?action=getInitData&offerIds=123,456&siteId=s1&sessid=xxx
+GET /bitrix/tools/prospektweb.calc/calculator_ajax.php?action=getInitData&offerIds=123,456&siteId=s1&sessid=xxx
 ```
 
 Ответ:
@@ -198,7 +198,7 @@ GET /local/tools/prospektweb.calc/calculator_ajax.php?action=getInitData&offerId
 ### Сохранение данных
 
 ```
-POST /local/tools/prospektweb.calc/calculator_ajax.php
+POST /bitrix/tools/prospektweb.calc/calculator_ajax.php
 action=save&sessid=xxx&payload={"mode":"NEW_CONFIG","configuration":{...},"offerUpdates":[...]}
 ```
 
