@@ -26,7 +26,7 @@
         constructor(config) {
             this.config = {
                 iframeSelector: config.iframeSelector || '#calc-iframe',
-                ajaxEndpoint: config.ajaxEndpoint || '/local/tools/prospektweb.calc/calculator_ajax.php',
+                ajaxEndpoint: config.ajaxEndpoint || '/bitrix/tools/prospektweb.calc/calculator_ajax.php',
                 offerIds: config.offerIds || [],
                 siteId: config.siteId || '',
                 sessid: config.sessid || '',
