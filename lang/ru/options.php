@@ -22,3 +22,14 @@ $MESS['PROSPEKTWEB_CALC_IBLOCK_EQUIPMENT'] = 'Оборудование';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_DETAILS'] = 'Детали';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_DETAILS_VARIANTS'] = 'Варианты деталей';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_NOT_CREATED'] = 'Не создан';
+
+// Настройки интеграции с React-калькулятором
+$MESS['PROSPEKTWEB_CALC_TAB_INTEGRATION'] = 'Интеграция';
+$MESS['PROSPEKTWEB_CALC_TAB_INTEGRATION_TITLE'] = 'Настройки интеграции с React-калькулятором';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_MATERIALS_INTEGRATION'] = 'ID инфоблока материалов (для интеграции)';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_OPERATIONS_INTEGRATION'] = 'ID инфоблока операций (для интеграции)';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_EQUIPMENT_INTEGRATION'] = 'ID инфоблока оборудования (для интеграции)';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_DETAILS_INTEGRATION'] = 'ID инфоблока деталей (для интеграции)';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_CALCULATORS_INTEGRATION'] = 'ID инфоблока калькуляторов (для интеграции)';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_CONFIGURATIONS_INTEGRATION'] = 'ID инфоблока конфигураций (для интеграции)';
+$MESS['PROSPEKTWEB_CALC_PROPERTY_CONFIG_ID'] = 'Код свойства для привязки конфигурации';
