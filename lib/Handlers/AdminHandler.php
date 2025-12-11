@@ -42,19 +42,19 @@ class AdminHandler
         $asset = Asset::getInstance();
 
         // Добавляем CSS
-        $cssPath = '/local/css/prospektweb.calc/calculator.css';
+        $cssPath = '/bitrix/css/prospektweb.calc/calculator.css';
         if (file_exists(Application::getDocumentRoot() . $cssPath)) {
             $asset->addCss($cssPath);
         }
 
         // Добавляем integration.js перед calculator.js (для поддержки нового протокола postMessage)
-        $jsIntegrationPath = '/local/js/prospektweb.calc/integration.js';
+        $jsIntegrationPath = '/bitrix/js/prospektweb.calc/integration.js';
         if (file_exists(Application::getDocumentRoot() . $jsIntegrationPath)) {
             $asset->addJs($jsIntegrationPath);
         }
 
         // Добавляем JS
-        $jsPath = '/local/js/prospektweb.calc/calculator.js';
+        $jsPath = '/bitrix/js/prospektweb.calc/calculator.js';
         if (file_exists(Application::getDocumentRoot() . $jsPath)) {
             $asset->addJs($jsPath);
         }
