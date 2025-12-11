@@ -41,7 +41,9 @@ class AdminHandler
     {
         $asset = Asset::getInstance();
         
-        $asset->addString('<script>BX.message({ SITE_ID: "' . SITE_ID . '" });</script>', 
+        // Безопасное экранирование SITE_ID для JavaScript
+        $siteIdEscaped = \CUtil::JSEscape(SITE_ID);
+        $asset->addString('<script>BX.message({ SITE_ID: "' . $siteIdEscaped . '" });</script>', 
             false, \Bitrix\Main\Page\AssetLocation::AFTER_JS_KERNEL);
         
         // Добавляем CSS
