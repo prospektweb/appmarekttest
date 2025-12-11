@@ -41,8 +41,8 @@ class AdminHandler
     {
         $asset = Asset::getInstance();
         
-        $asset->addString('<script>var SITE_ID = "' . SITE_ID . '";</script>', 
-            false, \Bitrix\Main\Page\AssetLocation:: BEFORE_CSS);
+        $asset->addString('<script>BX.message({ SITE_ID: "' . SITE_ID . '" });</script>', 
+            false, \Bitrix\Main\Page\AssetLocation::AFTER_JS_KERNEL);
         
         // Добавляем CSS
         $cssPath = '/bitrix/css/prospektweb.calc/calculator.css';

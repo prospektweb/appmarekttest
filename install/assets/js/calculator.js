@@ -260,7 +260,7 @@ var ProspekwebCalc = {
                 iframe: iframe,
                 ajaxEndpoint: '/bitrix/tools/prospektweb.calc/calculator_ajax.php',
                 offerIds: offers.map(function(o) { return o.id; }),
-                siteId: BX.message('SITE_ID') || 's1',
+                siteId: BX.message('SITE_ID') || (typeof SITE_ID !== 'undefined' ? SITE_ID : 's1'),
                 sessid: BX.bitrix_sessid(),
                 onClose: function() {
                     self.closeDialog();
