@@ -8,7 +8,7 @@ var ProspekwebCalc = {
     // Пути
     appUrl: '/local/apps/prospektweb.calc/index.html',
     apiBase: '/local/tools/prospektweb.calc/',
-    cssPath: '/local/css/prospektweb.calc/calculator.css',
+    cssPath: '/bitrix/css/prospektweb.calc/calculator.css',
 
     loadCss: function(href) {
         if (document.querySelector('link[href="' + href + '"]')) {
@@ -246,22 +246,28 @@ var ProspekwebCalc = {
 
         this.dialog = dialog;
 
-        // Обработчик сообщений от iframe
-        this.messageHandler = function(event) {
-            self.handleMessage(event);
-        };
-        window.addEventListener('message', this.messageHandler);
-
-        // Когда iframe загрузится, отправляем инициализационные данные
+        // Используем ProspektwebCalcIntegration для обработки postMessage
         iframe.onload = function() {
-            self.sendToIframe({
-                type: 'BITRIX_INIT',
-                payload: {
-                    offers: offers,
-                    apiBase: self.apiBase,
-                    productId: self.getProductId(),
-                    iblockId: self.getIblockId(),
-                    sessid: BX.bitrix_sessid()
+            // Проверяем доступность ProspektwebCalcIntegration
+            if (typeof window.ProspektwebCalcIntegration === 'undefined') {
+                console.error('[ProspekwebCalc] ProspektwebCalcIntegration not loaded');
+                alert('Ошибка загрузки модуля интеграции');
+                return;
+            }
+
+            // Создаём интеграцию с передачей iframe напрямую
+            self.integration = new window.ProspektwebCalcIntegration({
+                iframe: iframe,
+                ajaxEndpoint: '/bitrix/tools/prospektweb.calc/calculator_ajax.php',
+                offerIds: offers.map(function(o) { return o.id; }),
+                siteId: BX.message('SITE_ID') || 's1',
+                sessid: BX.bitrix_sessid(),
+                onClose: function() {
+                    self.closeDialog();
+                },
+                onError: function(error) {
+                    console.error('[ProspekwebCalc] Calc error:', error);
+                    alert('Ошибка калькулятора: ' + (error.message || 'Неизвестная ошибка'));
                 }
             });
         };
@@ -271,6 +277,7 @@ var ProspekwebCalc = {
 
     /**
      * Отправка сообщения в iframe
+     * @deprecated Используется ProspektwebCalcIntegration
      */
     sendToIframe: function(message) {
         if (this.iframe && this.iframe.contentWindow) {
@@ -282,6 +289,7 @@ var ProspekwebCalc = {
 
     /**
      * Обработка сообщений от iframe
+     * @deprecated Используется ProspektwebCalcIntegration
      */
     handleMessage: function(event) {
         // Проверяем origin - принимаем только сообщения с того же домена
@@ -341,6 +349,13 @@ var ProspekwebCalc = {
      * Закрытие диалога
      */
     closeDialog: function() {
+        // Уничтожаем интеграцию если она существует
+        if (this.integration && typeof this.integration.destroy === 'function') {
+            this.integration.destroy();
+            this.integration = null;
+        }
+        
+        // Удаляем старый обработчик сообщений (для обратной совместимости)
         if (this.messageHandler) {
             window.removeEventListener('message', this.messageHandler);
             this.messageHandler = null;
@@ -356,6 +371,7 @@ var ProspekwebCalc = {
 
     /**
      * Обработка результата калькуляции
+     * @deprecated Используется ProspektwebCalcIntegration
      */
     handleCalculationResult: function(result) {
         var self = this;
@@ -400,6 +416,7 @@ var ProspekwebCalc = {
 
     /**
      * Сохранение конфигурации
+     * @deprecated Используется ProspektwebCalcIntegration
      */
     saveConfiguration: function(config) {
         var self = this;
@@ -437,6 +454,7 @@ var ProspekwebCalc = {
 
     /**
      * Проксирование API запросов
+     * @deprecated Используется ProspektwebCalcIntegration
      */
     proxyApiRequest: function(request) {
         var self = this;
