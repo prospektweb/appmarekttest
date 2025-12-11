@@ -25,6 +25,7 @@
     class CalcIntegration {
         constructor(config) {
             this.config = {
+                iframe: config.iframe || null,
                 iframeSelector: config.iframeSelector || '#calc-iframe',
                 ajaxEndpoint: config.ajaxEndpoint || '/bitrix/tools/prospektweb.calc/calculator_ajax.php',
                 offerIds: config.offerIds || [],
@@ -49,7 +50,13 @@
          * Инициализация
          */
         init() {
-            this.iframe = document.querySelector(this.config.iframeSelector);
+            // Поддержка передачи iframe напрямую или через селектор
+            if (this.config.iframe) {
+                this.iframe = this.config.iframe;
+            } else {
+                this.iframe = document.querySelector(this.config.iframeSelector);
+            }
+            
             if (!this.iframe) {
                 console.error('[CalcIntegration] Iframe not found:', this.config.iframeSelector);
                 return;
