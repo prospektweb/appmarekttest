@@ -40,7 +40,10 @@ class AdminHandler
     protected static function addCalculatorButton(): void
     {
         $asset = Asset::getInstance();
-
+        
+        $asset->addString('<script>var SITE_ID = "' . SITE_ID . '";</script>', 
+            false, \Bitrix\Main\Page\AssetLocation:: BEFORE_CSS);
+        
         // Добавляем CSS
         $cssPath = '/bitrix/css/prospektweb.calc/calculator.css';
         if (file_exists(Application::getDocumentRoot() . $cssPath)) {
