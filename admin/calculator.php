@@ -16,11 +16,13 @@ Loc::loadMessages(__FILE__);
 global $USER, $APPLICATION;
 if (!$USER->IsAuthorized()) {
     $APPLICATION->AuthForm(Loc::getMessage('PROSPEKTWEB_CALC_NOT_AUTHORIZED'));
+    exit;
 }
 
 // Проверка прав доступа к каталогу
 if (!$USER->CanDoOperation('edit_catalog')) {
     $APPLICATION->AuthForm(Loc::getMessage('PROSPEKTWEB_CALC_ACCESS_DENIED'));
+    exit;
 }
 
 // Загрузка модуля
@@ -53,13 +55,12 @@ require($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_admin_a
 
 <style>
 /* Стили для полноэкранного отображения iframe */
-body {
+.prospektweb-calc-page {
     margin: 0;
     padding: 0;
-    overflow: hidden;
 }
 
-#calc-container {
+.prospektweb-calc-page #calc-container {
     position: fixed;
     top: 90px; /* Отступ для административного меню Bitrix */
     left: 0;
@@ -70,7 +71,7 @@ body {
     background: #f5f5f5;
 }
 
-#calc-iframe {
+.prospektweb-calc-page #calc-iframe {
     width: 100%;
     height: 100%;
     border: none;
@@ -78,11 +79,12 @@ body {
 }
 
 /* Скрываем стандартные элементы админки для чистого вида */
-.adm-workarea {
+.prospektweb-calc-page .adm-workarea {
     padding: 0 !important;
 }
 </style>
 
+<div class="prospektweb-calc-page">
 <!-- HTML с iframe -->
 <div id="calc-container">
     <iframe 
@@ -90,6 +92,7 @@ body {
         src="/local/apps/prospektweb.calc/index.html"
         title="<?= Loc::getMessage('PROSPEKTWEB_CALC_IFRAME_TITLE') ?>">
     </iframe>
+</div>
 </div>
 
 <script>

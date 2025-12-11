@@ -209,7 +209,9 @@ class prospektweb_calc extends CModule
         if (is_dir($sourceAdmin)) {
             $adminCalcFile = $sourceAdmin . '/calculator.php';
             if (file_exists($adminCalcFile)) {
-                copy($adminCalcFile, $targetAdmin . '/prospektweb_calc_calculator.php');
+                if (!copy($adminCalcFile, $targetAdmin . '/prospektweb_calc_calculator.php')) {
+                    $success = false;
+                }
             }
         }
         
