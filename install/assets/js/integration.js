@@ -38,6 +38,9 @@
             this.iframeWindow = null;
             this.isInitialized = false;
             this.hasUnsavedChanges = false;
+            
+            // Сохраняем ссылку на обработчик для корректного removeEventListener
+            this.boundHandleMessage = this.handleMessage.bind(this);
 
             this.init();
         }
@@ -60,7 +63,7 @@
          * Настройка обработчика postMessage
          */
         setupMessageListener() {
-            window.addEventListener('message', this.handleMessage.bind(this));
+            window.addEventListener('message', this.boundHandleMessage);
         }
 
         /**
@@ -340,7 +343,7 @@
          * Уничтожение интеграции
          */
         destroy() {
-            window.removeEventListener('message', this.handleMessage.bind(this));
+            window.removeEventListener('message', this.boundHandleMessage);
         }
     }
 

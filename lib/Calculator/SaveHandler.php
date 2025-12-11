@@ -14,6 +14,17 @@ class SaveHandler
     /** @var string ID модуля */
     private const MODULE_ID = 'prospektweb.calc';
 
+    /** @var string Путь к лог-файлу */
+    private const LOG_FILE = '/local/logs/prospektweb.calc.log';
+
+    /** @var bool Кэш состояния логирования */
+    private bool $loggingEnabled;
+
+    public function __construct()
+    {
+        $this->loggingEnabled = Option::get(self::MODULE_ID, 'LOGGING_ENABLED', 'N') === 'Y';
+    }
+
     /**
      * Обработать запрос на сохранение
      *
@@ -252,18 +263,27 @@ class SaveHandler
     }
 
     /**
+     * Получить путь к лог-файлу
+     *
+     * @return string
+     */
+    private function getLogFilePath(): string
+    {
+        return $_SERVER['DOCUMENT_ROOT'] . self::LOG_FILE;
+    }
+
+    /**
      * Логирование информации
      *
      * @param string $message
      */
     private function logInfo(string $message): void
     {
-        $loggingEnabled = Option::get(self::MODULE_ID, 'LOGGING_ENABLED', 'N') === 'Y';
-        if (!$loggingEnabled) {
+        if (!$this->loggingEnabled) {
             return;
         }
 
-        $logFile = $_SERVER['DOCUMENT_ROOT'] . '/local/logs/prospektweb.calc.log';
+        $logFile = $this->getLogFilePath();
         $logDir = dirname($logFile);
         if (!is_dir($logDir)) {
             mkdir($logDir, 0755, true);
@@ -280,12 +300,11 @@ class SaveHandler
      */
     private function logError(string $message): void
     {
-        $loggingEnabled = Option::get(self::MODULE_ID, 'LOGGING_ENABLED', 'N') === 'Y';
-        if (!$loggingEnabled) {
+        if (!$this->loggingEnabled) {
             return;
         }
 
-        $logFile = $_SERVER['DOCUMENT_ROOT'] . '/local/logs/prospektweb.calc.log';
+        $logFile = $this->getLogFilePath();
         $logDir = dirname($logFile);
         if (!is_dir($logDir)) {
             mkdir($logDir, 0755, true);

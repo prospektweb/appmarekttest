@@ -14,6 +14,9 @@ use Bitrix\Main\Config\Option;
 use Prospektweb\Calc\Calculator\InitPayloadService;
 use Prospektweb\Calc\Calculator\SaveHandler;
 
+// Constants
+const LOG_FILE = '/local/logs/prospektweb.calc.ajax.log';
+
 // Проверка авторизации
 global $USER;
 if (!$USER->IsAuthorized()) {
@@ -141,6 +144,14 @@ function sendJsonResponse(array $data, int $statusCode = 200): void
 }
 
 /**
+ * Получить путь к лог-файлу
+ */
+function getLogFilePath(): string
+{
+    return $_SERVER['DOCUMENT_ROOT'] . LOG_FILE;
+}
+
+/**
  * Логирование запроса
  */
 function logRequest(string $action, array $data): void
@@ -150,7 +161,7 @@ function logRequest(string $action, array $data): void
         return;
     }
 
-    $logFile = $_SERVER['DOCUMENT_ROOT'] . '/local/logs/prospektweb.calc.ajax.log';
+    $logFile = getLogFilePath();
     $logDir = dirname($logFile);
     if (!is_dir($logDir)) {
         mkdir($logDir, 0755, true);
@@ -171,7 +182,7 @@ function logInfo(string $message): void
         return;
     }
 
-    $logFile = $_SERVER['DOCUMENT_ROOT'] . '/local/logs/prospektweb.calc.ajax.log';
+    $logFile = getLogFilePath();
     $logDir = dirname($logFile);
     if (!is_dir($logDir)) {
         mkdir($logDir, 0755, true);
@@ -191,7 +202,7 @@ function logError(string $message): void
         return;
     }
 
-    $logFile = $_SERVER['DOCUMENT_ROOT'] . '/local/logs/prospektweb.calc.ajax.log';
+    $logFile = getLogFilePath();
     $logDir = dirname($logFile);
     if (!is_dir($logDir)) {
         mkdir($logDir, 0755, true);
