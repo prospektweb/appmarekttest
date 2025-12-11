@@ -146,7 +146,7 @@ class prospektweb_calc extends CModule
         $sourceAdmin = dirname(__DIR__) . '/admin';
         
         // НОВОЕ: Путь к React-билду (относительно install директории)
-        $sourceApps = __DIR__ . '/apps_dist';
+        $sourceApps = __DIR__ . '/assets/apps_dist';
         
         // Целевые директории в Bitrix
         $targetJs = $docRoot . '/bitrix/js/prospektweb.calc';
