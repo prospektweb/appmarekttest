@@ -41,8 +41,10 @@ class AdminHandler
     {
         $asset = Asset::getInstance();
         
-        $asset->addString('<script>var SITE_ID = "' . SITE_ID . '";</script>', 
-            false, \Bitrix\Main\Page\AssetLocation:: BEFORE_CSS);
+        // Безопасное экранирование SITE_ID для JavaScript через JSON
+        $siteId = json_encode(SITE_ID, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $asset->addString('<script>BX.message({ SITE_ID: ' . $siteId . ' });</script>', 
+            false, \Bitrix\Main\Page\AssetLocation::AFTER_JS_KERNEL);
         
         // Добавляем CSS
         $cssPath = '/bitrix/css/prospektweb.calc/calculator.css';

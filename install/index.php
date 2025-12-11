@@ -146,7 +146,7 @@ class prospektweb_calc extends CModule
         $sourceAdmin = dirname(__DIR__) . '/admin';
         
         // НОВОЕ: Путь к React-билду (относительно install директории)
-        $sourceApps = __DIR__ . '/apps_dist';
+        $sourceApps = __DIR__ . '/assets/apps_dist';
         
         // Целевые директории в Bitrix
         $targetJs = $docRoot . '/bitrix/js/prospektweb.calc';
@@ -162,11 +162,13 @@ class prospektweb_calc extends CModule
         $targetAdmin = $docRoot . '/bitrix/admin';
         
         $success = true;
+        $errors = [];
         
         // Создаём директории если не существуют
         foreach ([$targetJs, $targetCss, $targetTools, $targetApps] as $dir) {
             if (!is_dir($dir)) {
                 if (!mkdir($dir, 0755, true) && !is_dir($dir)) {
+                    $errors[] = "Не удалось создать директорию: {$dir}";
                     $success = false;
                 }
             }
@@ -177,9 +179,11 @@ class prospektweb_calc extends CModule
             if (is_dir($targetJs)) {
                 CopyDirFiles($sourceJs, $targetJs, true, true);
             } else {
+                $errors[] = "Целевая директория JS не существует: {$targetJs}";
                 $success = false;
             }
         } else {
+            $errors[] = "Исходная директория JS не найдена: {$sourceJs}";
             $success = false;
         }
         
@@ -188,9 +192,11 @@ class prospektweb_calc extends CModule
             if (is_dir($targetCss)) {
                 CopyDirFiles($sourceCss, $targetCss, true, true);
             } else {
+                $errors[] = "Целевая директория CSS не существует: {$targetCss}";
                 $success = false;
             }
         } else {
+            $errors[] = "Исходная директория CSS не найдена: {$sourceCss}";
             $success = false;
         }
         
@@ -199,9 +205,11 @@ class prospektweb_calc extends CModule
             if (is_dir($targetTools)) {
                 CopyDirFiles($sourceTools, $targetTools, true, true);
             } else {
+                $errors[] = "Целевая директория Tools не существует: {$targetTools}";
                 $success = false;
             }
         } else {
+            $errors[] = "Исходная директория Tools не найдена: {$sourceTools}";
             $success = false;
         }
         
@@ -210,6 +218,7 @@ class prospektweb_calc extends CModule
             $adminCalcFile = $sourceAdmin . '/calculator.php';
             if (file_exists($adminCalcFile)) {
                 if (!copy($adminCalcFile, $targetAdmin . '/prospektweb_calc_calculator.php')) {
+                    $errors[] = "Не удалось скопировать админский файл калькулятора";
                     $success = false;
                 }
             }
@@ -220,10 +229,18 @@ class prospektweb_calc extends CModule
             if (is_dir($targetApps)) {
                 CopyDirFiles($sourceApps, $targetApps, true, true);
             } else {
+                $errors[] = "Целевая директория Apps не существует: {$targetApps}";
                 $success = false;
             }
         }
         // Не устанавливаем $success = false при отсутствии apps_dist, так как это не критично
+        
+        // Логирование ошибок
+        if (!empty($errors)) {
+            foreach ($errors as $error) {
+                error_log("[prospektweb.calc] installFiles error: {$error}");
+            }
+        }
         
         return $success;
     }
