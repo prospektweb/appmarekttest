@@ -2,9 +2,10 @@
 
 namespace Prospektweb\Calc\Calculator;
 
+use Bitrix\Main\Application;
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\Loader;
-use Bitrix\Main\Application;
+use Prospektweb\Calc\Config\ConfigManager;
 
 /**
  * Сервис подготовки INIT payload для React-калькулятора
@@ -78,39 +79,150 @@ class InitPayloadService
                 continue;
             }
 
-            $element = \CIBlockElement::GetByID($offerId)->Fetch();
-            if (!$element) {
+            $elementObject = \CIBlockElement::GetList(
+                [],
+                ['ID' => $offerId],
+                false,
+                false,
+                ['ID', 'IBLOCK_ID', 'NAME', 'PROPERTY_*']
+            )->GetNextElement();
+
+            if (!$elementObject) {
                 continue;
             }
 
-            // Получаем свойства элемента
+            $element = $elementObject->GetFields();
+            $propertiesRaw = $elementObject->GetProperties();
+
             $properties = [];
-            $dbProperties = \CIBlockElement::GetProperty(
-                $element['IBLOCK_ID'],
-                $offerId,
-                ['sort' => 'asc'],
-                ['CODE' => $propertyConfigId]
-            );
-            while ($prop = $dbProperties->Fetch()) {
-                $properties[$prop['CODE']] = $prop['VALUE'];
+            $configIdValue = null;
+
+            foreach ($propertiesRaw as $prop) {
+                $code = $prop['CODE'] ?: (string)$prop['ID'];
+                $value = $prop['MULTIPLE'] === 'Y' ? (array)$prop['VALUE'] : $prop['VALUE'];
+
+                if ($code === $propertyConfigId && $configIdValue === null) {
+                    $configIdValue = is_array($value) ? (int)reset($value) : (int)$value;
+                }
+
+                $properties[$code] = $value;
             }
 
+            $productData = \CCatalogProduct::GetByID($offerId) ?: [];
+            $measureInfo = $this->getMeasureInfo((int)($productData['MEASURE'] ?? 0));
+            $measureRatio = $this->getMeasureRatio($offerId);
+            $prices = $this->getPrices($offerId);
+
+            $productId = (int)($element['PROPERTY_CML2_LINK_VALUE'] ?? 0);
+            if ($productId <= 0) {
+                $skuParent = \CCatalogSku::GetProductInfo($offerId);
+                if (!empty($skuParent['ID'])) {
+                    $productId = (int)$skuParent['ID'];
+                }
+            }
+
+            // Получаем свойства элемента
             $offer = [
                 'id' => $offerId,
-                'productId' => (int)($element['PROPERTY_CML2_LINK_VALUE'] ?? 0),
+                'productId' => $productId,
                 'name' => $element['NAME'] ?? '',
-                'fields' => [],
+                'fields' => [
+                    'width' => isset($productData['WIDTH']) ? (float)$productData['WIDTH'] : null,
+                    'height' => isset($productData['HEIGHT']) ? (float)$productData['HEIGHT'] : null,
+                    'length' => isset($productData['LENGTH']) ? (float)$productData['LENGTH'] : null,
+                    'weight' => isset($productData['WEIGHT']) ? (float)$productData['WEIGHT'] : null,
+                ],
+                'measure' => $measureInfo,
+                'measureRatio' => $measureRatio,
+                'prices' => $prices,
+                'properties' => $properties,
             ];
 
             // Добавляем configId если есть
-            if (!empty($properties[$propertyConfigId])) {
-                $offer['configId'] = (int)$properties[$propertyConfigId];
+            if (!empty($configIdValue)) {
+                $offer['configId'] = $configIdValue;
             }
 
             $offers[] = $offer;
         }
 
         return $offers;
+    }
+
+    /**
+     * Получить коэффициент единицы измерения для товара
+     */
+    private function getMeasureRatio(int $productId): float
+    {
+        if ($productId <= 0) {
+            return 1.0;
+        }
+
+        $ratioIterator = \CCatalogMeasureRatio::getList(
+            [],
+            ['PRODUCT_ID' => $productId]
+        );
+
+        if ($ratio = $ratioIterator->Fetch()) {
+            return (float)($ratio['RATIO'] ?? 1);
+        }
+
+        return 1.0;
+    }
+
+    /**
+     * Получить информацию о единице измерения
+     */
+    private function getMeasureInfo(int $measureId): ?array
+    {
+        if ($measureId <= 0) {
+            return null;
+        }
+
+        $measureIterator = \CCatalogMeasure::getList(
+            ['ID' => 'ASC'],
+            ['=ID' => $measureId]
+        );
+
+        if ($measure = $measureIterator->Fetch()) {
+            return [
+                'id' => (int)$measure['ID'],
+                'code' => $measure['CODE'] ?? null,
+                'symbol' => $measure['SYMBOL'] ?? null,
+                'symbolInt' => $measure['SYMBOL_INTL'] ?? null,
+                'title' => $measure['MEASURE_TITLE'] ?? null,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Получить цены для торгового предложения
+     */
+    private function getPrices(int $productId): array
+    {
+        if ($productId <= 0) {
+            return [];
+        }
+
+        $prices = [];
+        $priceIterator = \CPrice::GetList(
+            [],
+            ['PRODUCT_ID' => $productId]
+        );
+
+        while ($price = $priceIterator->Fetch()) {
+            $prices[] = [
+                'typeId' => (int)$price['CATALOG_GROUP_ID'],
+                'price' => (float)$price['PRICE'],
+                'currency' => $price['CURRENCY'] ?? null,
+                'quantityFrom' => isset($price['QUANTITY_FROM']) ? (int)$price['QUANTITY_FROM'] : null,
+                'quantityTo' => isset($price['QUANTITY_TO']) ? (int)$price['QUANTITY_TO'] : null,
+            ];
+        }
+
+        return $prices;
     }
 
     /**
@@ -153,10 +265,27 @@ class InitPayloadService
     {
         global $USER;
 
+        $context = Application::getInstance()->getContext();
+
+        $resolvedSiteId = $context->getSite() ?: (defined('SITE_ID') ? SITE_ID : null);
+        if (empty($resolvedSiteId)) {
+            $resolvedSiteId = $siteId;
+        }
+
+        $languageId = $context->getLanguage() ?: (defined('LANGUAGE_ID') ? LANGUAGE_ID : 'ru');
+
+        $userId = '0';
+        if (is_object($USER) && method_exists($USER, 'GetID')) {
+            $userIdValue = $USER->GetID();
+            if ($userIdValue !== null) {
+                $userId = (string)$userIdValue;
+            }
+        }
+
         return [
-            'siteId' => $siteId,
-            'userId' => (string)($USER->GetID() ?? '0'),
-            'lang' => LANGUAGE_ID ?? 'ru',
+            'siteId' => (string)$resolvedSiteId,
+            'userId' => $userId,
+            'lang' => $languageId,
             'timestamp' => time(),
         ];
     }
@@ -168,13 +297,27 @@ class InitPayloadService
      */
     private function getIblocks(): array
     {
+        $configManager = new ConfigManager();
+        $moduleIblocks = $configManager->getAllIblockIds();
+
         return [
+            'products' => $configManager->getProductIblockId(),
+            'offers' => $configManager->getSkuIblockId(),
             'materials' => (int)Option::get(self::MODULE_ID, 'IBLOCK_MATERIALS', 0),
             'operations' => (int)Option::get(self::MODULE_ID, 'IBLOCK_OPERATIONS', 0),
             'equipment' => (int)Option::get(self::MODULE_ID, 'IBLOCK_EQUIPMENT', 0),
             'details' => (int)Option::get(self::MODULE_ID, 'IBLOCK_DETAILS', 0),
             'calculators' => (int)Option::get(self::MODULE_ID, 'IBLOCK_CALCULATORS', 0),
             'configurations' => (int)Option::get(self::MODULE_ID, 'IBLOCK_CONFIGURATIONS', 0),
+            'calcConfig' => (int)($moduleIblocks['CALC_CONFIG'] ?? 0),
+            'calcSettings' => (int)($moduleIblocks['CALC_SETTINGS'] ?? 0),
+            'calcMaterials' => (int)($moduleIblocks['CALC_MATERIALS'] ?? 0),
+            'calcMaterialsVariants' => (int)($moduleIblocks['CALC_MATERIALS_VARIANTS'] ?? 0),
+            'calcWorks' => (int)($moduleIblocks['CALC_WORKS'] ?? 0),
+            'calcWorksVariants' => (int)($moduleIblocks['CALC_WORKS_VARIANTS'] ?? 0),
+            'calcEquipment' => (int)($moduleIblocks['CALC_EQUIPMENT'] ?? 0),
+            'calcDetails' => (int)($moduleIblocks['CALC_DETAILS'] ?? 0),
+            'calcDetailsVariants' => (int)($moduleIblocks['CALC_DETAILS_VARIANTS'] ?? 0),
         ];
     }
 
