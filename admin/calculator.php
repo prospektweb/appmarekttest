@@ -48,7 +48,7 @@ if (empty($offerIds)) {
 $APPLICATION->SetTitle(Loc::getMessage('PROSPEKTWEB_CALC_PAGE_TITLE'));
 
 // Подключение JS интеграции
-Asset::getInstance()->addJs('/bitrix/js/prospektweb.calc/integration.js');
+Asset::getInstance()->addJs('/local/js/prospektweb.calc/integration.js');
 
 require($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_admin_after.php');
 ?>
