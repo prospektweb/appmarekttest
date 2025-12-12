@@ -16,6 +16,22 @@ class ConfigManager
     protected static array $iblockCache = [];
 
     /**
+     * Карта кодов инфоблоков модуля и типов, в которых они создаются.
+     * Используется как fallback, если ID не сохранён в настройках.
+     */
+    private const IBLOCK_TYPES = [
+        'CALC_CONFIG' => 'calculator',
+        'CALC_SETTINGS' => 'calculator',
+        'CALC_MATERIALS' => 'calculator_catalog',
+        'CALC_MATERIALS_VARIANTS' => 'calculator_catalog',
+        'CALC_WORKS' => 'calculator_catalog',
+        'CALC_WORKS_VARIANTS' => 'calculator_catalog',
+        'CALC_EQUIPMENT' => 'calculator_catalog',
+        'CALC_DETAILS' => 'calculator_catalog',
+        'CALC_DETAILS_VARIANTS' => 'calculator_catalog',
+    ];
+
+    /**
      * Получает ID инфоблока по коду.
      *
      * @param string $code Код инфоблока.
@@ -28,7 +44,17 @@ class ConfigManager
             return self::$iblockCache[$code];
         }
 
-        $id = (int)Option::get(self::MODULE_ID, 'IBLOCK_' . $code, 0);
+        $optionKey = 'IBLOCK_' . $code;
+        $id = (int)Option::get(self::MODULE_ID, $optionKey, 0);
+
+        if ($id <= 0) {
+            $resolvedId = $this->findIblockId($code);
+            if ($resolvedId > 0) {
+                $id = $resolvedId;
+                Option::set(self::MODULE_ID, $optionKey, $resolvedId);
+            }
+        }
+
         self::$iblockCache[$code] = $id;
 
         return $id;
@@ -97,20 +123,8 @@ class ConfigManager
      */
     public function getAllIblockIds(): array
     {
-        $codes = [
-            'CALC_CONFIG',
-            'CALC_SETTINGS',
-            'CALC_MATERIALS',
-            'CALC_MATERIALS_VARIANTS',
-            'CALC_WORKS',
-            'CALC_WORKS_VARIANTS',
-            'CALC_EQUIPMENT',
-            'CALC_DETAILS',
-            'CALC_DETAILS_VARIANTS',
-        ];
-
         $result = [];
-        foreach ($codes as $code) {
+        foreach (array_keys(self::IBLOCK_TYPES) as $code) {
             $result[$code] = $this->getIblockId($code);
         }
 
@@ -123,5 +137,20 @@ class ConfigManager
     public function clearCache(): void
     {
         self::$iblockCache = [];
+    }
+
+    /**
+     * Пытается определить ID инфоблока по его коду и типу.
+     */
+    private function findIblockId(string $code): int
+    {
+        $type = self::IBLOCK_TYPES[$code] ?? null;
+        if ($type === null || !\Bitrix\Main\Loader::includeModule('iblock')) {
+            return 0;
+        }
+
+        $iblock = \CIBlock::GetList([], ['CODE' => $code, 'TYPE' => $type])->Fetch();
+
+        return $iblock ? (int)$iblock['ID'] : 0;
     }
 }

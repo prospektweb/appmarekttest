@@ -300,7 +300,7 @@ class InitPayloadService
         $configManager = new ConfigManager();
         $moduleIblocks = $configManager->getAllIblockIds();
 
-        return [
+        $iblocks = [
             'products' => $configManager->getProductIblockId(),
             'offers' => $configManager->getSkuIblockId(),
             'materials' => (int)Option::get(self::MODULE_ID, 'IBLOCK_MATERIALS', 0),
@@ -319,6 +319,8 @@ class InitPayloadService
             'calcDetails' => (int)($moduleIblocks['CALC_DETAILS'] ?? 0),
             'calcDetailsVariants' => (int)($moduleIblocks['CALC_DETAILS_VARIANTS'] ?? 0),
         ];
+
+        return array_filter($iblocks, static fn($value) => $value > 0);
     }
 
     /**
