@@ -39,6 +39,7 @@
             this.iframeWindow = null;
             this.isInitialized = false;
             this.hasUnsavedChanges = false;
+            this.debug = Boolean(config.debug);
             
             // Сохраняем ссылку на обработчик для корректного removeEventListener
             this.boundHandleMessage = this.handleMessage.bind(this);
@@ -62,7 +63,13 @@
                 return;
             }
 
+            // Закрываем предыдущий экземпляр, привязанный к этому iframe
+            if (this.iframe.__calcIntegrationInstance && this.iframe.__calcIntegrationInstance !== this) {
+                this.iframe.__calcIntegrationInstance.destroy();
+            }
+
             this.iframeWindow = this.iframe.contentWindow;
+            this.iframe.__calcIntegrationInstance = this;
             this.setupMessageListener();
         }
 
@@ -95,7 +102,7 @@
                 return;
             }
 
-            console.log('[CalcIntegration] Received message:', message.type, message);
+            this.logDebug('[CalcIntegration] Received message:', message.type, message);
 
             // Маршрутизация по типу сообщения
             switch (message.type) {
@@ -169,7 +176,7 @@
                 message.requestId = requestId;
             }
 
-            console.log('[CalcIntegration] Sending message:', type, message);
+            this.logDebug('[CalcIntegration] Sending message:', type, message);
             this.iframeWindow.postMessage(message, '*');
         }
 
@@ -177,7 +184,7 @@
          * Обработка READY
          */
         async handleReady(message) {
-            console.log('[CalcIntegration] Iframe is ready, fetching init data...');
+            this.logDebug('[CalcIntegration] Iframe is ready, fetching init data...');
 
             try {
                 // Получаем данные для инициализации через AJAX
@@ -198,7 +205,7 @@
          * Обработка INIT_DONE
          */
         handleInitDone(message) {
-            console.log('[CalcIntegration] Initialization completed');
+            this.logDebug('[CalcIntegration] Initialization completed');
             this.isInitialized = true;
         }
 
@@ -206,7 +213,7 @@
          * Обработка CALC_PREVIEW
          */
         handleCalcPreview(message) {
-            console.log('[CalcIntegration] Calculation preview received:', message.payload);
+            this.logDebug('[CalcIntegration] Calculation preview received:', message.payload);
             this.hasUnsavedChanges = true;
             // Можно добавить дополнительную логику, например, показать превью
         }
@@ -215,7 +222,7 @@
          * Обработка SAVE_REQUEST
          */
         async handleSaveRequest(message) {
-            console.log('[CalcIntegration] Save request received');
+            this.logDebug('[CalcIntegration] Save request received');
 
             try {
                 // Валидация payload
@@ -245,7 +252,7 @@
          * Обработка CLOSE_REQUEST
          */
         handleCloseRequest(message) {
-            console.log('[CalcIntegration] Close request received');
+            this.logDebug('[CalcIntegration] Close request received');
 
             if (this.hasUnsavedChanges) {
                 const confirmed = confirm('Есть несохранённые изменения. Вы уверены, что хотите закрыть окно?');
@@ -351,6 +358,20 @@
          */
         destroy() {
             window.removeEventListener('message', this.boundHandleMessage);
+
+            if (this.iframe && this.iframe.__calcIntegrationInstance === this) {
+                delete this.iframe.__calcIntegrationInstance;
+            }
+        }
+
+        /**
+         * Логирование отладочной информации
+         * @param  {...any} args
+         */
+        logDebug(...args) {
+            if (this.debug) {
+                console.log(...args);
+            }
         }
     }
 
