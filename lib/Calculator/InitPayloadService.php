@@ -43,11 +43,13 @@ class InitPayloadService
 
         // Собираем ID инфоблоков
         $iblocks = $this->getIblocks();
+        $iblocksTypes = $this->getIblockTypes($iblocks);
 
         $payload = [
             'mode' => $mode,
             'context' => $context,
             'iblocks' => $iblocks,
+            'iblocksTypes' => $iblocksTypes,
             'selectedOffers' => $selectedOffers,
         ];
 
@@ -274,6 +276,8 @@ class InitPayloadService
 
         $languageId = $context->getLanguage() ?: (defined('LANGUAGE_ID') ? LANGUAGE_ID : 'ru');
 
+        $siteUrl = $this->buildSiteUrl($context->getRequest()->getHttpHost());
+
         $userId = '0';
         if (is_object($USER) && method_exists($USER, 'GetID')) {
             $userIdValue = $USER->GetID();
@@ -287,7 +291,23 @@ class InitPayloadService
             'userId' => $userId,
             'lang' => $languageId,
             'timestamp' => time(),
+            'url' => $siteUrl,
         ];
+    }
+
+    private function buildSiteUrl(?string $host): string
+    {
+        if (empty($host)) {
+            $host = (string)Option::get('main', 'server_name', '');
+        }
+
+        $host = trim((string)$host);
+
+        if ($host === '') {
+            return '';
+        }
+
+        return sprintf('https://%s/', $host);
     }
 
     /**
@@ -321,6 +341,58 @@ class InitPayloadService
         ];
 
         return array_filter($iblocks, static fn($value) => $value > 0);
+    }
+
+    /**
+     * Построить карту типов инфоблоков по их ID
+     */
+    private function getIblockTypes(array $iblocks): array
+    {
+        $types = [];
+
+        $desiredOrder = [
+            'calcDetails',
+            'calcDetailsVariants',
+            'calcMaterials',
+            'calcMaterialsVariants',
+            'calcOperations',
+            'calcOperationsVariants',
+            'calcEquipment',
+        ];
+
+        $orderedIds = [];
+
+        foreach ($desiredOrder as $key) {
+            if (!empty($iblocks[$key])) {
+                $orderedIds[] = (int)$iblocks[$key];
+            }
+        }
+
+        foreach ($iblocks as $key => $iblockId) {
+            if (in_array($key, $desiredOrder, true)) {
+                continue;
+            }
+
+            $orderedIds[] = (int)$iblockId;
+        }
+
+        foreach ($orderedIds as $iblockId) {
+            $id = (int)$iblockId;
+            if ($id <= 0) {
+                continue;
+            }
+
+            $iblock = \CIBlock::GetArrayByID($id);
+            $typeId = (string)($iblock['IBLOCK_TYPE_ID'] ?? '');
+
+            if ($typeId === '') {
+                continue;
+            }
+
+            $types[(string)$id] = $typeId;
+        }
+
+        return $types;
     }
 
     /**
