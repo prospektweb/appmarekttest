@@ -235,7 +235,7 @@ class IblockCreator
             'TOTAL_COST' => ['NAME' => 'Итоговая себестоимость', 'TYPE' => 'N'],
             'STRUCTURE' => ['NAME' => 'Структура', 'TYPE' => 'S', 'USER_TYPE' => 'HTML'],
             'USED_MATERIALS' => ['NAME' => 'Использованные материалы', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'USED_WORKS' => ['NAME' => 'Использованные операции', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'USED_OPERATIONS' => ['NAME' => 'Использованные операции', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'USED_EQUIPMENT' => ['NAME' => 'Использованное оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'USED_DETAILS' => ['NAME' => 'Использованные детали', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
         ];
@@ -303,14 +303,14 @@ class IblockCreator
      *
      * @return int
      */
-    public function createWorksIblock(): int
+    public function createOperationsIblock(): int
     {
         $properties = [
             'EQUIPMENTS' => ['NAME' => 'Оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
         ];
 
-        return $this->createIblock('calculator_catalog', 'CALC_WORKS', 'Операции', $properties);
+        return $this->createIblock('calculator_catalog', 'CALC_OPERATIONS', 'Операции', $properties);
     }
 
     /**
@@ -318,14 +318,14 @@ class IblockCreator
      *
      * @return int
      */
-    public function createWorksVariantsIblock(): int
+    public function createOperationsVariantsIblock(): int
     {
         $properties = [
             'EQUIPMENTS' => ['NAME' => 'Оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
         ];
 
-        return $this->createIblock('calculator_catalog', 'CALC_WORKS_VARIANTS', 'Варианты операций', $properties);
+        return $this->createIblock('calculator_catalog', 'CALC_OPERATIONS_VARIANTS', 'Варианты операций', $properties);
     }
 
     /**

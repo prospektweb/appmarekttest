@@ -132,8 +132,8 @@ class Installer
         // Справочники
         $iblocks['CALC_MATERIALS'] = $this->iblockCreator->createMaterialsIblock();
         $iblocks['CALC_MATERIALS_VARIANTS'] = $this->iblockCreator->createMaterialsVariantsIblock();
-        $iblocks['CALC_WORKS'] = $this->iblockCreator->createWorksIblock();
-        $iblocks['CALC_WORKS_VARIANTS'] = $this->iblockCreator->createWorksVariantsIblock();
+        $iblocks['CALC_OPERATIONS'] = $this->iblockCreator->createOperationsIblock();
+        $iblocks['CALC_OPERATIONS_VARIANTS'] = $this->iblockCreator->createOperationsVariantsIblock();
         $iblocks['CALC_EQUIPMENT'] = $this->iblockCreator->createEquipmentIblock();
         $iblocks['CALC_DETAILS'] = $this->iblockCreator->createDetailsIblock();
         $iblocks['CALC_DETAILS_VARIANTS'] = $this->iblockCreator->createDetailsVariantsIblock();
@@ -158,7 +158,7 @@ class Installer
     {
         $relations = [
             ['CALC_MATERIALS', 'CALC_MATERIALS_VARIANTS'],
-            ['CALC_WORKS', 'CALC_WORKS_VARIANTS'],
+            ['CALC_OPERATIONS', 'CALC_OPERATIONS_VARIANTS'],
             ['CALC_DETAILS', 'CALC_DETAILS_VARIANTS'],
         ];
 
@@ -263,8 +263,8 @@ class Installer
             'CALC_SETTINGS',
             'CALC_MATERIALS',
             'CALC_MATERIALS_VARIANTS',
-            'CALC_WORKS',
-            'CALC_WORKS_VARIANTS',
+            'CALC_OPERATIONS',
+            'CALC_OPERATIONS_VARIANTS',
             'CALC_EQUIPMENT',
             'CALC_DETAILS',
             'CALC_DETAILS_VARIANTS',

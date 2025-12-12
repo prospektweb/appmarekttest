@@ -22,7 +22,7 @@ class DependencyTracker
      * Находит все конфигурации, использующие указанный элемент.
      *
      * @param int    $elementId ID элемента.
-     * @param string $type      Тип элемента (material, work, equipment, detail).
+     * @param string $type      Тип элемента (material, operation, equipment, detail).
      *
      * @return int[] ID конфигураций.
      */
@@ -39,7 +39,7 @@ class DependencyTracker
 
         $propertyCode = match ($type) {
             'material' => 'USED_MATERIALS',
-            'work' => 'USED_WORKS',
+            'operation' => 'USED_OPERATIONS',
             'equipment' => 'USED_EQUIPMENT',
             'detail' => 'USED_DETAILS',
             default => null,
@@ -180,8 +180,8 @@ class DependencyTracker
     {
         $materialsId = $this->configManager->getIblockId('CALC_MATERIALS');
         $materialsVariantsId = $this->configManager->getIblockId('CALC_MATERIALS_VARIANTS');
-        $worksId = $this->configManager->getIblockId('CALC_WORKS');
-        $worksVariantsId = $this->configManager->getIblockId('CALC_WORKS_VARIANTS');
+        $operationsId = $this->configManager->getIblockId('CALC_OPERATIONS');
+        $operationsVariantsId = $this->configManager->getIblockId('CALC_OPERATIONS_VARIANTS');
         $equipmentId = $this->configManager->getIblockId('CALC_EQUIPMENT');
         $detailsId = $this->configManager->getIblockId('CALC_DETAILS');
         $detailsVariantsId = $this->configManager->getIblockId('CALC_DETAILS_VARIANTS');
@@ -190,8 +190,8 @@ class DependencyTracker
             return 'material';
         }
 
-        if ($iblockId === $worksId || $iblockId === $worksVariantsId) {
-            return 'work';
+        if ($iblockId === $operationsId || $iblockId === $operationsVariantsId) {
+            return 'operation';
         }
 
         if ($iblockId === $equipmentId) {
@@ -210,13 +210,13 @@ class DependencyTracker
      *
      * @param array $structure Структура расчёта.
      *
-     * @return array [materials => [], works => [], equipment => [], details => []]
-     */
+     * @return array [materials => [], operations => [], equipment => [], details => []]
+    */
     public function extractUsedIdsFromStructure(array $structure): array
     {
         $result = [
             'materials' => [],
-            'works' => [],
+            'operations' => [],
             'equipment' => [],
             'details' => [],
         ];
@@ -242,8 +242,8 @@ class DependencyTracker
         if (isset($node['materialId'])) {
             $result['materials'][] = (int)$node['materialId'];
         }
-        if (isset($node['workId'])) {
-            $result['works'][] = (int)$node['workId'];
+        if (isset($node['operationId'])) {
+            $result['operations'][] = (int)$node['operationId'];
         }
         if (isset($node['equipmentId'])) {
             $result['equipment'][] = (int)$node['equipmentId'];

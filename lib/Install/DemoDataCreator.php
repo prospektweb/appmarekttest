@@ -442,7 +442,7 @@ class DemoDataCreator
     }
 
     /**
-     * Создаёт операции (бывшие работы).
+     * Создаёт операции.
      *
      * @param array $iblockIds ID инфоблоков.
      */

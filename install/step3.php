@@ -429,7 +429,16 @@ switch ($currentStep) {
         installLog("ШАГ 2 из {$totalSteps}: СОЗДАНИЕ ИНФОБЛОКОВ", 'header');
         
         $configProps = [
-            'STATUS' => ['NAME' => 'Статус', 'TYPE' => 'L', 'VALUES' => [['VALUE' => 'draft'], ['VALUE' => 'active'], ['VALUE' => 'recalc']]],
+            'STATUS' => [
+                'NAME' => 'Статус',
+                'TYPE' => 'L',
+                'VALUES' => [
+                    ['VALUE' => 'draft', 'XML_ID' => 'draft'],
+                    ['VALUE' => 'active', 'XML_ID' => 'active'],
+                    ['VALUE' => 'recalc', 'XML_ID' => 'recalc'],
+                ],
+            ],
+            'PRODUCT_ID' => ['NAME' => 'ID товара', 'TYPE' => 'N'],
             'LAST_CALC_DATE' => ['NAME' => 'Дата последнего расчёта', 'TYPE' => 'S', 'USER_TYPE' => 'DateTime'],
             'TOTAL_COST' => ['NAME' => 'Итоговая себестоимость', 'TYPE' => 'N'],
             'STRUCTURE' => ['NAME' => 'Структура', 'TYPE' => 'S', 'USER_TYPE' => 'HTML'],
@@ -448,30 +457,56 @@ switch ($currentStep) {
             'REQUIRES_BEFORE' => ['NAME' => 'Требует перед собой', 'TYPE' => 'S'],
         ];
         
-        $catalogProps = [
-            'DENSITY' => ['NAME' => 'Плотность', 'TYPE' => 'N'],
+        $materialsProps = [
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
         ];
-        
-        $operationsProps = array_merge($catalogProps, [
+
+        $materialsVariantsProps = [
+            'WIDTH' => ['NAME' => 'Ширина, мм', 'TYPE' => 'N'],
+            'LENGTH' => ['NAME' => 'Длина, мм', 'TYPE' => 'N'],
+            'HEIGHT' => ['NAME' => 'Высота, мм', 'TYPE' => 'N'],
+            'DENSITY' => ['NAME' => 'Плотность', 'TYPE' => 'N'],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+        ];
+
+        $operationsProps = [
             'EQUIPMENTS' => ['NAME' => 'Оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-        ]);
-        
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+        ];
+
+        $operationsVariantsProps = [
+            'EQUIPMENTS' => ['NAME' => 'Оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+        ];
+
         $equipmentProps = [
             'FIELDS' => ['NAME' => 'Поля печатной машины', 'TYPE' => 'S'],
             'MAX_WIDTH' => ['NAME' => 'Макс. ширина, мм', 'TYPE' => 'N'],
             'MAX_LENGTH' => ['NAME' => 'Макс. длина, мм', 'TYPE' => 'N'],
             'START_COST' => ['NAME' => 'Стоимость приладки', 'TYPE' => 'N'],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+        ];
+
+        $detailsProps = [
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+        ];
+
+        $detailsVariantsProps = [
+            'WIDTH' => ['NAME' => 'Ширина, мм', 'TYPE' => 'N'],
+            'LENGTH' => ['NAME' => 'Длина, мм', 'TYPE' => 'N'],
+            'HEIGHT' => ['NAME' => 'Высота, мм', 'TYPE' => 'N'],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
         ];
 
         $installData['iblock_ids']['CALC_CONFIG'] = createIblockWithLog('calculator', 'CALC_CONFIG', 'Конфигурации калькуляций', $configProps);
         $installData['iblock_ids']['CALC_SETTINGS'] = createIblockWithLog('calculator', 'CALC_SETTINGS', 'Настройки калькуляторов', $settingsProps);
-        $installData['iblock_ids']['CALC_MATERIALS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS', 'Материалы', $catalogProps);
-        $installData['iblock_ids']['CALC_MATERIALS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS_VARIANTS', 'Варианты материалов', $catalogProps);
+        $installData['iblock_ids']['CALC_MATERIALS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS', 'Материалы', $materialsProps);
+        $installData['iblock_ids']['CALC_MATERIALS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS_VARIANTS', 'Варианты материалов', $materialsVariantsProps);
         $installData['iblock_ids']['CALC_OPERATIONS'] = createIblockWithLog('calculator_catalog', 'CALC_OPERATIONS', 'Операции', $operationsProps);
-        $installData['iblock_ids']['CALC_OPERATIONS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_OPERATIONS_VARIANTS', 'Варианты операций', $operationsProps);
+        $installData['iblock_ids']['CALC_OPERATIONS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_OPERATIONS_VARIANTS', 'Варианты операций', $operationsVariantsProps);
         $installData['iblock_ids']['CALC_EQUIPMENT'] = createIblockWithLog('calculator_catalog', 'CALC_EQUIPMENT', 'Оборудование', $equipmentProps);
-        $installData['iblock_ids']['CALC_DETAILS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS', 'Детали', $catalogProps);
-        $installData['iblock_ids']['CALC_DETAILS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS_VARIANTS', 'Варианты деталей', $catalogProps);
+        $installData['iblock_ids']['CALC_DETAILS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS', 'Детали', $detailsProps);
+        $installData['iblock_ids']['CALC_DETAILS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS_VARIANTS', 'Варианты деталей', $detailsVariantsProps);
 
         $created = count(array_filter($installData['iblock_ids'], fn($id) => $id > 0));
         installLog("Создано инфоблоков: {$created}/9", $created === 9 ? 'success' : 'warning');
@@ -485,7 +520,7 @@ switch ($currentStep) {
 
     case 3:
         installLog("ШАГ 3 из {$totalSteps}: НАСТРОЙКА SKU-СВЯЗЕЙ", 'header');
-        
+
         $ids = $installData['iblock_ids'];
         createSkuRelationWithLog($ids['CALC_MATERIALS'] ??  0, $ids['CALC_MATERIALS_VARIANTS'] ??  0, 'Материалы');
         createSkuRelationWithLog($ids['CALC_OPERATIONS'] ?? 0, $ids['CALC_OPERATIONS_VARIANTS'] ?? 0, 'Операции');

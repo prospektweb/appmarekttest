@@ -77,7 +77,7 @@ This diagram shows how the calculator admin page integrates React with Bitrix us
 │  InitPayloadService                                                     │
 │    ├─► Load configurations from CALC_CONFIG iblock                     │
 │    ├─► Load materials from CALC_MATERIALS iblock                       │
-│    ├─► Load operations from CALC_WORKS iblock                          │
+│    ├─► Load operations from CALC_OPERATIONS iblock                     │
 │    ├─► Load equipment from CALC_EQUIPMENT iblock                       │
 │    ├─► Load offer details from catalog                                 │
 │    └─► Prepare INIT payload                                            │

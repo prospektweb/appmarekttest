@@ -43,19 +43,19 @@ try {
     $configManager = new ConfigManager();
     $entityLoader = new EntityLoader();
 
-    // Загружаем операцию (работу) и её оборудование
-    $worksIblockId = $configManager->getIblockId('CALC_WORKS');
+    // Загружаем операцию и её оборудование
+    $operationsIblockId = $configManager->getIblockId('CALC_OPERATIONS');
     $equipmentIblockId = $configManager->getIblockId('CALC_EQUIPMENT');
 
-    $works = $entityLoader->loadElements($worksIblockId, [$operationId]);
+    $operations = $entityLoader->loadElements($operationsIblockId, [$operationId]);
 
-    if (empty($works[$operationId])) {
+    if (empty($operations[$operationId])) {
         echo json_encode(['success' => false, 'error' => 'operation_not_found', 'equipment' => []]);
         die();
     }
 
-    $work = $works[$operationId];
-    $equipmentIds = $work['PROPERTIES']['EQUIPMENTS']['VALUE'] ?? [];
+    $operation = $operations[$operationId];
+    $equipmentIds = $operation['PROPERTIES']['EQUIPMENTS']['VALUE'] ?? [];
 
     if (!is_array($equipmentIds)) {
         $equipmentIds = [$equipmentIds];

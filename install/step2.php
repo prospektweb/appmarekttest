@@ -97,8 +97,8 @@ $skuIblockId = $catalogInfo['IBLOCK_ID'] ?? null;
                 <ul>
                     <li><?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_IBLOCK_MATERIALS') ?></li>
                     <li><?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_IBLOCK_MATERIALS_VARIANTS') ?></li>
-                    <li><?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_IBLOCK_WORKS') ?></li>
-                    <li><?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_IBLOCK_WORKS_VARIANTS') ?></li>
+                    <li><?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_IBLOCK_OPERATIONS') ?></li>
+                    <li><?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_IBLOCK_OPERATIONS_VARIANTS') ?></li>
                     <li><?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_IBLOCK_EQUIPMENT') ?></li>
                     <li><?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_IBLOCK_DETAILS') ?></li>
                     <li><?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_IBLOCK_DETAILS_VARIANTS') ?></li>

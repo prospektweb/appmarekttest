@@ -122,7 +122,7 @@ class RollLamination extends BaseCalculator
     public function getOptionsSpec(): array
     {
         $materialsIblockId = $this->configManager->getIblockId('CALC_MATERIALS_VARIANTS');
-        $worksIblockId = $this->configManager->getIblockId('CALC_WORKS_VARIANTS');
+        $operationsIblockId = $this->configManager->getIblockId('CALC_OPERATIONS_VARIANTS');
 
         return [
             [
@@ -139,10 +139,10 @@ class RollLamination extends BaseCalculator
                 'default' => 'Y',
             ],
             [
-                'code' => 'WORK_ID',
+                'code' => 'OPERATION_ID',
                 'label' => 'Работа',
                 'type' => 'element',
-                'iblockId' => $worksIblockId,
+                'iblockId' => $operationsIblockId,
                 'multiple' => false,
             ],
             [
@@ -168,7 +168,7 @@ class RollLamination extends BaseCalculator
 
         // Получаем параметры
         $filmId = (int)($normalizedOptions['FILM_ID'] ?? 0);
-        $workId = (int)($normalizedOptions['WORK_ID'] ?? 0);
+        $operationId = (int)($normalizedOptions['OPERATION_ID'] ?? 0);
         $doubleSided = ($normalizedOptions['DOUBLE_SIDED'] ?? 'Y') === 'Y';
         $wastePercent = (float)($normalizedOptions['WASTE_PERCENT'] ?? 5);
 
@@ -182,7 +182,7 @@ class RollLamination extends BaseCalculator
             'cost' => $calculatedCost,
             'meta' => [
                 'film_id' => $filmId,
-                'work_id' => $workId,
+                'operation_id' => $operationId,
                 'double_sided' => $doubleSided,
                 'waste_percent' => $wastePercent,
             ],

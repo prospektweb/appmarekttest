@@ -102,7 +102,7 @@ class DigitalSheet extends BaseCalculator
     public function getOptionsSpec(): array
     {
         $materialsIblockId = $this->configManager->getIblockId('CALC_MATERIALS_VARIANTS');
-        $worksIblockId = $this->configManager->getIblockId('CALC_WORKS_VARIANTS');
+        $operationsIblockId = $this->configManager->getIblockId('CALC_OPERATIONS_VARIANTS');
 
         return [
             [
@@ -116,7 +116,7 @@ class DigitalSheet extends BaseCalculator
                 'code' => 'PRESS_ID',
                 'label' => 'Печать',
                 'type' => 'element',
-                'iblockId' => $worksIblockId,
+                'iblockId' => $operationsIblockId,
                 'multiple' => false,
             ],
             [
