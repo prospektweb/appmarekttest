@@ -448,8 +448,8 @@ class DemoDataCreator
      */
     protected function createOperations(array $iblockIds): void
     {
-        $operationsIblockId = $iblockIds['CALC_OPERATIONS'] ?? 0;
-        $variantsIblockId = $iblockIds['CALC_OPERATIONS_VARIANTS'] ?? 0;
+        $operationsIblockId = $iblockIds['CALC_WORKS'] ?? ($iblockIds['CALC_OPERATIONS'] ?? 0);
+        $variantsIblockId = $iblockIds['CALC_WORKS_VARIANTS'] ?? ($iblockIds['CALC_OPERATIONS_VARIANTS'] ?? 0);
 
         if ($operationsIblockId <= 0 || $variantsIblockId <= 0) {
             return;

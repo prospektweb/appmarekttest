@@ -62,9 +62,11 @@ if ($deleteData) {
         $iblockCodes = [
             'CALC_MATERIALS_VARIANTS',
             'CALC_WORKS_VARIANTS',
+            'CALC_OPERATIONS_VARIANTS',
             'CALC_DETAILS_VARIANTS',
             'CALC_MATERIALS',
             'CALC_WORKS',
+            'CALC_OPERATIONS',
             'CALC_DETAILS',
             'CALC_EQUIPMENT',
             'CALC_CONFIG',
@@ -130,6 +132,7 @@ if ($deleteData) {
         $skuRelations = [
             'CALC_MATERIALS' => 'CALC_MATERIALS_VARIANTS',
             'CALC_WORKS' => 'CALC_WORKS_VARIANTS',
+            'CALC_OPERATIONS' => 'CALC_OPERATIONS_VARIANTS',
             'CALC_DETAILS' => 'CALC_DETAILS_VARIANTS',
         ];
         
