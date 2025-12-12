@@ -274,6 +274,8 @@ class InitPayloadService
 
         $languageId = $context->getLanguage() ?: (defined('LANGUAGE_ID') ? LANGUAGE_ID : 'ru');
 
+        $siteUrl = $this->buildSiteUrl($context->getRequest()->getHttpHost());
+
         $userId = '0';
         if (is_object($USER) && method_exists($USER, 'GetID')) {
             $userIdValue = $USER->GetID();
@@ -287,7 +289,23 @@ class InitPayloadService
             'userId' => $userId,
             'lang' => $languageId,
             'timestamp' => time(),
+            'url' => $siteUrl,
         ];
+    }
+
+    private function buildSiteUrl(?string $host): string
+    {
+        if (empty($host)) {
+            $host = (string)Option::get('main', 'server_name', '');
+        }
+
+        $host = trim((string)$host);
+
+        if ($host === '') {
+            return '';
+        }
+
+        return sprintf('https://%s/', $host);
     }
 
     /**
