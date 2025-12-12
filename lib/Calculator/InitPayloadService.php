@@ -2,9 +2,10 @@
 
 namespace Prospektweb\Calc\Calculator;
 
+use Bitrix\Main\Application;
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\Loader;
-use Bitrix\Main\Application;
+use Prospektweb\Calc\Config\ConfigManager;
 
 /**
  * Сервис подготовки INIT payload для React-калькулятора
@@ -264,10 +265,27 @@ class InitPayloadService
     {
         global $USER;
 
+        $context = Application::getInstance()->getContext();
+
+        $resolvedSiteId = $context->getSite() ?: (defined('SITE_ID') ? SITE_ID : null);
+        if (empty($resolvedSiteId)) {
+            $resolvedSiteId = $siteId;
+        }
+
+        $languageId = $context->getLanguage() ?: (defined('LANGUAGE_ID') ? LANGUAGE_ID : 'ru');
+
+        $userId = '0';
+        if (is_object($USER) && method_exists($USER, 'GetID')) {
+            $userIdValue = $USER->GetID();
+            if ($userIdValue !== null) {
+                $userId = (string)$userIdValue;
+            }
+        }
+
         return [
-            'siteId' => $siteId,
-            'userId' => (string)($USER->GetID() ?? '0'),
-            'lang' => LANGUAGE_ID ?? 'ru',
+            'siteId' => (string)$resolvedSiteId,
+            'userId' => $userId,
+            'lang' => $languageId,
             'timestamp' => time(),
         ];
     }
@@ -279,13 +297,27 @@ class InitPayloadService
      */
     private function getIblocks(): array
     {
+        $configManager = new ConfigManager();
+        $moduleIblocks = $configManager->getAllIblockIds();
+
         return [
+            'products' => $configManager->getProductIblockId(),
+            'offers' => $configManager->getSkuIblockId(),
             'materials' => (int)Option::get(self::MODULE_ID, 'IBLOCK_MATERIALS', 0),
             'operations' => (int)Option::get(self::MODULE_ID, 'IBLOCK_OPERATIONS', 0),
             'equipment' => (int)Option::get(self::MODULE_ID, 'IBLOCK_EQUIPMENT', 0),
             'details' => (int)Option::get(self::MODULE_ID, 'IBLOCK_DETAILS', 0),
             'calculators' => (int)Option::get(self::MODULE_ID, 'IBLOCK_CALCULATORS', 0),
             'configurations' => (int)Option::get(self::MODULE_ID, 'IBLOCK_CONFIGURATIONS', 0),
+            'calcConfig' => (int)($moduleIblocks['CALC_CONFIG'] ?? 0),
+            'calcSettings' => (int)($moduleIblocks['CALC_SETTINGS'] ?? 0),
+            'calcMaterials' => (int)($moduleIblocks['CALC_MATERIALS'] ?? 0),
+            'calcMaterialsVariants' => (int)($moduleIblocks['CALC_MATERIALS_VARIANTS'] ?? 0),
+            'calcWorks' => (int)($moduleIblocks['CALC_WORKS'] ?? 0),
+            'calcWorksVariants' => (int)($moduleIblocks['CALC_WORKS_VARIANTS'] ?? 0),
+            'calcEquipment' => (int)($moduleIblocks['CALC_EQUIPMENT'] ?? 0),
+            'calcDetails' => (int)($moduleIblocks['CALC_DETAILS'] ?? 0),
+            'calcDetailsVariants' => (int)($moduleIblocks['CALC_DETAILS_VARIANTS'] ?? 0),
         ];
     }
 
