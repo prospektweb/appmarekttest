@@ -246,31 +246,31 @@ var ProspekwebCalc = {
 
         this.dialog = dialog;
 
-        // Используем ProspektwebCalcIntegration для обработки postMessage
-        iframe.onload = function() {
-            // Проверяем доступность ProspektwebCalcIntegration
-            if (typeof window.ProspektwebCalcIntegration === 'undefined') {
-                console.error('[ProspekwebCalc] ProspektwebCalcIntegration not loaded');
-                alert('Ошибка загрузки модуля интеграции');
-                return;
-            }
+        // Используем ProspektwebCalcIntegration для обработки postMessage сразу,
+        // чтобы не пропустить первое сообщение READY, которое iframe отправляет
+        // сразу после загрузки приложения.
+        // Проверяем доступность ProspektwebCalcIntegration
+        if (typeof window.ProspektwebCalcIntegration === 'undefined') {
+            console.error('[ProspekwebCalc] ProspektwebCalcIntegration not loaded');
+            alert('Ошибка загрузки модуля интеграции');
+            return;
+        }
 
-            // Создаём интеграцию с передачей iframe напрямую
-            self.integration = new window.ProspektwebCalcIntegration({
-                iframe: iframe,
-                ajaxEndpoint: '/bitrix/tools/prospektweb.calc/calculator_ajax.php',
-                offerIds: offers.map(function(o) { return o.id; }),
-                siteId: BX.message('SITE_ID') || (typeof SITE_ID !== 'undefined' ? SITE_ID : 's1'),
-                sessid: BX.bitrix_sessid(),
-                onClose: function() {
-                    self.closeDialog();
-                },
-                onError: function(error) {
-                    console.error('[ProspekwebCalc] Calc error:', error);
-                    alert('Ошибка калькулятора: ' + (error.message || 'Неизвестная ошибка'));
-                }
-            });
-        };
+        // Создаём интеграцию с передачей iframe напрямую
+        self.integration = new window.ProspektwebCalcIntegration({
+            iframe: iframe,
+            ajaxEndpoint: '/bitrix/tools/prospektweb.calc/calculator_ajax.php',
+            offerIds: offers.map(function(o) { return o.id; }),
+            siteId: BX.message('SITE_ID') || (typeof SITE_ID !== 'undefined' ? SITE_ID : 's1'),
+            sessid: BX.bitrix_sessid(),
+            onClose: function() {
+                self.closeDialog();
+            },
+            onError: function(error) {
+                console.error('[ProspekwebCalc] Calc error:', error);
+                alert('Ошибка калькулятора: ' + (error.message || 'Неизвестная ошибка'));
+            }
+        });
 
         dialog.Show();
     },
