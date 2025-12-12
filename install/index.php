@@ -149,8 +149,8 @@ class prospektweb_calc extends CModule
         $sourceApps = __DIR__ . '/assets/apps_dist';
         
         // Целевые директории в Bitrix
-        $targetJs = $docRoot . '/bitrix/js/prospektweb.calc';
-        $targetCss = $docRoot . '/bitrix/css/prospektweb.calc';
+        $targetJs = $docRoot . '/local/js/prospektweb.calc';
+        $targetCss = $docRoot . '/local/css/prospektweb.calc';
         
         // НОВОЕ: Публичная директория для API в /bitrix/tools
         $targetTools = $docRoot . '/bitrix/tools/prospektweb.calc';
@@ -247,17 +247,17 @@ class prospektweb_calc extends CModule
 
     public function uninstallFiles(): void
     {
-        $jsDir = Application::getDocumentRoot() . '/bitrix/js/prospektweb.calc';
-        $cssDir = Application::getDocumentRoot() . '/bitrix/css/prospektweb.calc';
+        $jsDir = Application::getDocumentRoot() . '/local/js/prospektweb.calc';
+        $cssDir = Application::getDocumentRoot() . '/local/css/prospektweb.calc';
         $toolsDir = Application::getDocumentRoot() . '/bitrix/tools/prospektweb.calc';
         $appsDir = Application::getDocumentRoot() . '/local/apps/prospektweb.calc';
         $adminFile = Application::getDocumentRoot() . '/bitrix/admin/prospektweb_calc_calculator.php';
 
         if (is_dir($jsDir)) {
-            DeleteDirFilesEx('/bitrix/js/prospektweb.calc');
+            DeleteDirFilesEx('/local/js/prospektweb.calc');
         }
         if (is_dir($cssDir)) {
-            DeleteDirFilesEx('/bitrix/css/prospektweb.calc');
+            DeleteDirFilesEx('/local/css/prospektweb.calc');
         }
         // НОВОЕ: Удаляем tools
         if (is_dir($toolsDir)) {
@@ -435,8 +435,8 @@ class prospektweb_calc extends CModule
 
         // Проверяем наличие файлов
         $docRoot = Application::getDocumentRoot();
-        $jsDir = $docRoot . '/bitrix/js/prospektweb.calc';
-        $cssDir = $docRoot . '/bitrix/css/prospektweb.calc';
+        $jsDir = $docRoot . '/local/js/prospektweb.calc';
+        $cssDir = $docRoot . '/local/css/prospektweb.calc';
         $toolsDir = $docRoot . '/bitrix/tools/prospektweb.calc';
         $appsDir = $docRoot . '/local/apps/prospektweb.calc';
         $adminFile = $docRoot . '/bitrix/admin/prospektweb_calc_calculator.php';

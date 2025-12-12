@@ -47,19 +47,19 @@ class AdminHandler
             false, \Bitrix\Main\Page\AssetLocation::AFTER_JS_KERNEL);
         
         // Добавляем CSS
-        $cssPath = '/bitrix/css/prospektweb.calc/calculator.css';
+        $cssPath = '/local/css/prospektweb.calc/calculator.css';
         if (file_exists(Application::getDocumentRoot() . $cssPath)) {
             $asset->addCss($cssPath);
         }
 
         // Добавляем integration.js перед calculator.js (для поддержки нового протокола postMessage)
-        $jsIntegrationPath = '/bitrix/js/prospektweb.calc/integration.js';
+        $jsIntegrationPath = '/local/js/prospektweb.calc/integration.js';
         if (file_exists(Application::getDocumentRoot() . $jsIntegrationPath)) {
             $asset->addJs($jsIntegrationPath);
         }
 
         // Добавляем JS
-        $jsPath = '/bitrix/js/prospektweb.calc/calculator.js';
+        $jsPath = '/local/js/prospektweb.calc/calculator.js';
         if (file_exists(Application::getDocumentRoot() . $jsPath)) {
             $asset->addJs($jsPath);
         }
