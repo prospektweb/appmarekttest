@@ -237,7 +237,7 @@ class ResultWriter
      * @param int    $productId ID товара.
      * @param array  $structure Структура расчёта.
      * @param float  $totalCost Итоговая себестоимость.
-     * @param array  $usedIds   Использованные ID [materials, works, equipment, details].
+     * @param array  $usedIds   Использованные ID [materials, operations, equipment, details].
      *
      * @return int|bool ID элемента или false.
      */
@@ -290,8 +290,8 @@ class ResultWriter
         if (!empty($usedIds['materials'])) {
             $properties['USED_MATERIALS'] = $usedIds['materials'];
         }
-        if (!empty($usedIds['works'])) {
-            $properties['USED_WORKS'] = $usedIds['works'];
+        if (!empty($usedIds['operations'])) {
+            $properties['USED_OPERATIONS'] = $usedIds['operations'];
         }
         if (!empty($usedIds['equipment'])) {
             $properties['USED_EQUIPMENT'] = $usedIds['equipment'];

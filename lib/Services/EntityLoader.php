@@ -296,18 +296,18 @@ class EntityLoader
     }
 
     /**
-     * Загружает оборудование для работы.
+     * Загружает оборудование для операции.
      *
-     * @param array $worksData Данные работ.
+     * @param array $operationsData Данные операций.
      *
      * @return int[]
      */
-    public function collectEquipmentIdsFromWorks(array $worksData): array
+    public function collectEquipmentIdsFromOperations(array $operationsData): array
     {
         $ids = [];
 
-        foreach ($worksData as $work) {
-            $values = $work['PROPERTIES']['EQUIPMENTS']['VALUE'] ?? [];
+        foreach ($operationsData as $operation) {
+            $values = $operation['PROPERTIES']['EQUIPMENTS']['VALUE'] ?? [];
 
             if (!is_array($values)) {
                 $values = [$values];
