@@ -78,39 +78,150 @@ class InitPayloadService
                 continue;
             }
 
-            $element = \CIBlockElement::GetByID($offerId)->Fetch();
-            if (!$element) {
+            $elementObject = \CIBlockElement::GetList(
+                [],
+                ['ID' => $offerId],
+                false,
+                false,
+                ['ID', 'IBLOCK_ID', 'NAME', 'PROPERTY_*']
+            )->GetNextElement();
+
+            if (!$elementObject) {
                 continue;
             }
 
-            // Получаем свойства элемента
+            $element = $elementObject->GetFields();
+            $propertiesRaw = $elementObject->GetProperties();
+
             $properties = [];
-            $dbProperties = \CIBlockElement::GetProperty(
-                $element['IBLOCK_ID'],
-                $offerId,
-                ['sort' => 'asc'],
-                ['CODE' => $propertyConfigId]
-            );
-            while ($prop = $dbProperties->Fetch()) {
-                $properties[$prop['CODE']] = $prop['VALUE'];
+            $configIdValue = null;
+
+            foreach ($propertiesRaw as $prop) {
+                $code = $prop['CODE'] ?: (string)$prop['ID'];
+                $value = $prop['MULTIPLE'] === 'Y' ? (array)$prop['VALUE'] : $prop['VALUE'];
+
+                if ($code === $propertyConfigId && $configIdValue === null) {
+                    $configIdValue = is_array($value) ? (int)reset($value) : (int)$value;
+                }
+
+                $properties[$code] = $value;
             }
 
+            $productData = \CCatalogProduct::GetByID($offerId) ?: [];
+            $measureInfo = $this->getMeasureInfo((int)($productData['MEASURE'] ?? 0));
+            $measureRatio = $this->getMeasureRatio($offerId);
+            $prices = $this->getPrices($offerId);
+
+            $productId = (int)($element['PROPERTY_CML2_LINK_VALUE'] ?? 0);
+            if ($productId <= 0) {
+                $skuParent = \CCatalogSku::GetProductInfo($offerId);
+                if (!empty($skuParent['ID'])) {
+                    $productId = (int)$skuParent['ID'];
+                }
+            }
+
+            // Получаем свойства элемента
             $offer = [
                 'id' => $offerId,
-                'productId' => (int)($element['PROPERTY_CML2_LINK_VALUE'] ?? 0),
+                'productId' => $productId,
                 'name' => $element['NAME'] ?? '',
-                'fields' => [],
+                'fields' => [
+                    'width' => isset($productData['WIDTH']) ? (float)$productData['WIDTH'] : null,
+                    'height' => isset($productData['HEIGHT']) ? (float)$productData['HEIGHT'] : null,
+                    'length' => isset($productData['LENGTH']) ? (float)$productData['LENGTH'] : null,
+                    'weight' => isset($productData['WEIGHT']) ? (float)$productData['WEIGHT'] : null,
+                ],
+                'measure' => $measureInfo,
+                'measureRatio' => $measureRatio,
+                'prices' => $prices,
+                'properties' => $properties,
             ];
 
             // Добавляем configId если есть
-            if (!empty($properties[$propertyConfigId])) {
-                $offer['configId'] = (int)$properties[$propertyConfigId];
+            if (!empty($configIdValue)) {
+                $offer['configId'] = $configIdValue;
             }
 
             $offers[] = $offer;
         }
 
         return $offers;
+    }
+
+    /**
+     * Получить коэффициент единицы измерения для товара
+     */
+    private function getMeasureRatio(int $productId): float
+    {
+        if ($productId <= 0) {
+            return 1.0;
+        }
+
+        $ratioIterator = \CCatalogMeasureRatio::getList(
+            [],
+            ['PRODUCT_ID' => $productId]
+        );
+
+        if ($ratio = $ratioIterator->Fetch()) {
+            return (float)($ratio['RATIO'] ?? 1);
+        }
+
+        return 1.0;
+    }
+
+    /**
+     * Получить информацию о единице измерения
+     */
+    private function getMeasureInfo(int $measureId): ?array
+    {
+        if ($measureId <= 0) {
+            return null;
+        }
+
+        $measureIterator = \CCatalogMeasure::getList(
+            ['ID' => 'ASC'],
+            ['=ID' => $measureId]
+        );
+
+        if ($measure = $measureIterator->Fetch()) {
+            return [
+                'id' => (int)$measure['ID'],
+                'code' => $measure['CODE'] ?? null,
+                'symbol' => $measure['SYMBOL'] ?? null,
+                'symbolInt' => $measure['SYMBOL_INTL'] ?? null,
+                'title' => $measure['MEASURE_TITLE'] ?? null,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Получить цены для торгового предложения
+     */
+    private function getPrices(int $productId): array
+    {
+        if ($productId <= 0) {
+            return [];
+        }
+
+        $prices = [];
+        $priceIterator = \CPrice::GetList(
+            [],
+            ['PRODUCT_ID' => $productId]
+        );
+
+        while ($price = $priceIterator->Fetch()) {
+            $prices[] = [
+                'typeId' => (int)$price['CATALOG_GROUP_ID'],
+                'price' => (float)$price['PRICE'],
+                'currency' => $price['CURRENCY'] ?? null,
+                'quantityFrom' => isset($price['QUANTITY_FROM']) ? (int)$price['QUANTITY_FROM'] : null,
+                'quantityTo' => isset($price['QUANTITY_TO']) ? (int)$price['QUANTITY_TO'] : null,
+            ];
+        }
+
+        return $prices;
     }
 
     /**
