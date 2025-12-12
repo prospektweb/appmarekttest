@@ -43,11 +43,13 @@ class InitPayloadService
 
         // Собираем ID инфоблоков
         $iblocks = $this->getIblocks();
+        $iblocksTypes = $this->getIblockTypes($iblocks);
 
         $payload = [
             'mode' => $mode,
             'context' => $context,
             'iblocks' => $iblocks,
+            'iblocksTypes' => $iblocksTypes,
             'selectedOffers' => $selectedOffers,
         ];
 
@@ -339,6 +341,32 @@ class InitPayloadService
         ];
 
         return array_filter($iblocks, static fn($value) => $value > 0);
+    }
+
+    /**
+     * Построить карту типов инфоблоков по их ID
+     */
+    private function getIblockTypes(array $iblocks): array
+    {
+        $types = [];
+
+        foreach ($iblocks as $iblockId) {
+            $id = (int)$iblockId;
+            if ($id <= 0) {
+                continue;
+            }
+
+            $iblock = \CIBlock::GetArrayByID($id);
+            $typeId = (string)($iblock['IBLOCK_TYPE_ID'] ?? '');
+
+            if ($typeId === '') {
+                continue;
+            }
+
+            $types[(string)$id] = $typeId;
+        }
+
+        return $types;
     }
 
     /**
