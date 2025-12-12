@@ -357,6 +357,8 @@ class prospektweb_calc extends CModule
             'CALC_SETTINGS',
             'CALC_MATERIALS',
             'CALC_MATERIALS_VARIANTS',
+            'CALC_OPERATIONS',
+            'CALC_OPERATIONS_VARIANTS',
             'CALC_WORKS',
             'CALC_WORKS_VARIANTS',
             'CALC_EQUIPMENT',
