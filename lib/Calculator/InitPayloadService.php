@@ -350,7 +350,33 @@ class InitPayloadService
     {
         $types = [];
 
-        foreach ($iblocks as $iblockId) {
+        $desiredOrder = [
+            'calcDetails',
+            'calcDetailsVariants',
+            'calcMaterials',
+            'calcMaterialsVariants',
+            'calcOperations',
+            'calcOperationsVariants',
+            'calcEquipment',
+        ];
+
+        $orderedIds = [];
+
+        foreach ($desiredOrder as $key) {
+            if (!empty($iblocks[$key])) {
+                $orderedIds[] = (int)$iblocks[$key];
+            }
+        }
+
+        foreach ($iblocks as $key => $iblockId) {
+            if (in_array($key, $desiredOrder, true)) {
+                continue;
+            }
+
+            $orderedIds[] = (int)$iblockId;
+        }
+
+        foreach ($orderedIds as $iblockId) {
             $id = (int)$iblockId;
             if ($id <= 0) {
                 continue;
