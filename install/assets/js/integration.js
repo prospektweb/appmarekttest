@@ -6,6 +6,9 @@
 (function (window) {
     'use strict';
 
+    var INTEGRATION_VERSION = '2.1.0';
+    console.log('[BitrixBridge] integration.js loaded, version=' + INTEGRATION_VERSION);
+
     /**
      * @typedef {Object} PwrtMessage
      * @property {'prospektweb.calc'|'bitrix'} source - Источник сообщения
@@ -40,9 +43,17 @@
             this.isInitialized = false;
             this.hasUnsavedChanges = false;
             this.debug = Boolean(config.debug);
-            
+            this.targetOrigin = '*';
+            this.readyOrigin = null;
+
             // Сохраняем ссылку на обработчик для корректного removeEventListener
             this.boundHandleMessage = this.handleMessage.bind(this);
+
+            this.logBridge('[BitrixBridge] ProspektwebCalcIntegration created', {
+                iframe: config.iframe ? this.describeIframe(config.iframe) : this.config.iframeSelector,
+                ajaxUrl: this.config.ajaxEndpoint,
+                offerIds: this.config.offerIds,
+            });
 
             this.init();
         }
@@ -93,7 +104,12 @@
             const message = event.data;
 
             // Валидация структуры сообщения
-            if (!this.isValidMessage(message)) {
+            const validationResult = this.validateMessage(message);
+            if (!validationResult.valid) {
+                this.logBridge('[BitrixBridge] received invalid message', {
+                    origin: event.origin,
+                    reason: validationResult.reason,
+                });
                 return;
             }
 
@@ -102,12 +118,22 @@
                 return;
             }
 
+            const sourceOk = event.source === this.iframeWindow;
+            this.logBridge('[BitrixBridge] received message', {
+                type: message.type,
+                source: message.source,
+                target: message.target,
+                requestId: message.requestId || null,
+                origin: event.origin,
+                sourceOk: sourceOk,
+            });
+
             this.logDebug('[CalcIntegration] Received message:', message.type, message);
 
             // Маршрутизация по типу сообщения
             switch (message.type) {
                 case 'READY':
-                    this.handleReady(message);
+                    this.handleReady(message, event);
                     break;
 
                 case 'INIT_DONE':
@@ -153,6 +179,31 @@
         }
 
         /**
+         * Расширенная валидация для логирования причин отказа
+         * @param {*} message
+         * @returns {{valid: boolean, reason?: string}}
+         */
+        validateMessage(message) {
+            if (!message || typeof message !== 'object') {
+                return { valid: false, reason: 'Message is not an object' };
+            }
+
+            if (!message.source) {
+                return { valid: false, reason: 'Missing source' };
+            }
+
+            if (!message.target) {
+                return { valid: false, reason: 'Missing target' };
+            }
+
+            if (!message.type) {
+                return { valid: false, reason: 'Missing type' };
+            }
+
+            return { valid: true };
+        }
+
+        /**
          * Отправка сообщения в iframe
          * @param {string} type - Тип сообщения
          * @param {*} payload - Данные
@@ -176,15 +227,31 @@
                 message.requestId = requestId;
             }
 
+            const targetOrigin = this.targetOrigin || '*';
+
+            if (type === 'INIT') {
+                this.logBridge('[BitrixBridge] sending INIT -> ' + this.describeIframe(this.iframe), {
+                    targetOrigin: targetOrigin,
+                    iframeSrc: this.iframe ? this.iframe.getAttribute('src') : null,
+                    summary: this.buildInitSummary(payload),
+                });
+            }
+
             this.logDebug('[CalcIntegration] Sending message:', type, message);
-            this.iframeWindow.postMessage(message, '*');
+            this.iframeWindow.postMessage(message, targetOrigin);
         }
 
         /**
          * Обработка READY
          */
-        async handleReady(message) {
+        async handleReady(message, event) {
             this.logDebug('[CalcIntegration] Iframe is ready, fetching init data...');
+
+            if (event && event.origin) {
+                this.readyOrigin = event.origin;
+                this.targetOrigin = event.origin;
+                this.logBridge('[BitrixBridge] targetOrigin set from READY origin: ' + event.origin);
+            }
 
             try {
                 // Получаем данные для инициализации через AJAX
@@ -301,24 +368,57 @@
                 '&siteId=' + encodeURIComponent(this.config.siteId) +
                 '&sessid=' + encodeURIComponent(this.config.sessid);
 
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
+            const startedAt = (window.performance && window.performance.now) ? window.performance.now() : Date.now();
+            this.logBridge('[BitrixBridge] AJAX getInitData start', {
+                url: url,
+                offerIdsCount: this.config.offerIds.length,
+                siteId: this.config.siteId,
             });
 
-            if (!response.ok) {
-                throw new Error('HTTP error ' + response.status);
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                const duration = ((window.performance && window.performance.now) ? window.performance.now() : Date.now()) - startedAt;
+
+                if (!response.ok) {
+                    this.logBridge('[BitrixBridge] AJAX getInitData error response', {
+                        status: response.status,
+                        durationMs: Math.round(duration),
+                    });
+                    throw new Error('HTTP error ' + response.status);
+                }
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    this.logBridge('[BitrixBridge] AJAX getInitData business error', {
+                        durationMs: Math.round(duration),
+                        message: data.message || data.error,
+                    });
+                    throw new Error(data.message || data.error || 'Ошибка получения данных');
+                }
+
+                this.logBridge('[BitrixBridge] AJAX getInitData success', {
+                    durationMs: Math.round(duration),
+                    status: 'ok',
+                    summary: this.buildInitSummary(data.data),
+                });
+
+                return data.data;
+            } catch (error) {
+                const duration = ((window.performance && window.performance.now) ? window.performance.now() : Date.now()) - startedAt;
+                this.logBridge('[BitrixBridge] AJAX getInitData failed', {
+                    durationMs: Math.round(duration),
+                    status: 'error',
+                    message: error.message,
+                });
+                throw error;
             }
-
-            const data = await response.json();
-
-            if (!data.success) {
-                throw new Error(data.message || data.error || 'Ошибка получения данных');
-            }
-
-            return data.data;
         }
 
         /**
@@ -372,6 +472,50 @@
             if (this.debug) {
                 console.log(...args);
             }
+        }
+
+        /**
+         * Универсальное логирование в консоль/BX.debug
+         */
+        logBridge(message, details) {
+            if (details !== undefined) {
+                console.log(message, details);
+                if (window.BX && typeof window.BX.debug === 'function') {
+                    window.BX.debug({ message: message, details: details });
+                }
+            } else {
+                console.log(message);
+                if (window.BX && typeof window.BX.debug === 'function') {
+                    window.BX.debug({ message: message });
+                }
+            }
+        }
+
+        /**
+         * Построение краткой сводки INIT payload
+         */
+        buildInitSummary(payload) {
+            return {
+                mode: payload ? payload.mode : null,
+                offers: payload && payload.selectedOffers ? payload.selectedOffers.length : 0,
+                ib_offers: payload && payload.iblocks ? payload.iblocks.offers : undefined,
+                ib_products: payload && payload.iblocks ? payload.iblocks.products : undefined,
+                lang: payload && payload.context ? payload.context.lang : undefined,
+                url: payload && payload.context ? payload.context.url : undefined,
+            };
+        }
+
+        /**
+         * Текстовое описание iframe для логов
+         */
+        describeIframe(iframe) {
+            if (!iframe) {
+                return 'iframe:not-found';
+            }
+
+            const id = iframe.id ? ('#' + iframe.id) : null;
+            const name = iframe.getAttribute('name');
+            return id || name || 'iframe';
         }
     }
 

@@ -4,6 +4,8 @@
  * @version 2.0.0
  */
 
+console.log('[BitrixBridge] calculator.js loaded, init integration...');
+
 var ProspekwebCalc = {
     // Пути
     appUrl: '/local/apps/prospektweb.calc/index.html',
@@ -270,6 +272,11 @@ var ProspekwebCalc = {
                 console.error('[ProspekwebCalc] Calc error:', error);
                 alert('Ошибка калькулятора: ' + (error.message || 'Неизвестная ошибка'));
             }
+        });
+
+        console.log('[BitrixBridge] ProspektwebCalcIntegration created', {
+            iframe: '#calc-iframe',
+            ajaxUrl: '/bitrix/tools/prospektweb.calc/calculator_ajax.php',
         });
 
         dialog.Show();
