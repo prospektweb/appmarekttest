@@ -7,7 +7,7 @@
 var ProspekwebCalc = {
     // Пути
     appUrl: '/local/apps/prospektweb.calc/index.html',
-    apiBase: '/local/tools/prospektweb.calc/',
+    apiBase: '/bitrix/tools/prospektweb.calc/',
     cssPath: '/local/css/prospektweb.calc/calculator.css',
 
     loadCss: function(href) {

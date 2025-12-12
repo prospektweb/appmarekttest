@@ -589,7 +589,7 @@ switch ($currentStep) {
         if ($filesResult) {
             installLog("  → JS скопированы в /local/js/prospektweb.calc/", 'success');
             installLog("  → CSS скопированы в /local/css/prospektweb.calc/", 'success');
-            installLog("  → Tools скопированы в /local/tools/prospektweb.calc/", 'success');
+            installLog("  → Tools скопированы в /bitrix/tools/prospektweb.calc/", 'success');
         } else {
             installLog("Некоторые файлы не были скопированы (возможно, отсутствуют исходные директории)", 'warning');
         }

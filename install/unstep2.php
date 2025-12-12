@@ -183,7 +183,7 @@ uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP2'), 'header');
 $docRoot = Application::getDocumentRoot();
 $jsDir = $docRoot . '/local/js/prospektweb.calc';
 $cssDir = $docRoot . '/local/css/prospektweb.calc';
-$toolsDir = $docRoot . '/local/tools/prospektweb.calc';
+$toolsDir = $docRoot . '/bitrix/tools/prospektweb.calc';
 $appsDir = $docRoot . '/local/apps/prospektweb.calc';
 
 if (is_dir($jsDir)) {
@@ -207,7 +207,7 @@ if (is_dir($cssDir)) {
 }
 
 if (is_dir($toolsDir)) {
-    if (DeleteDirFilesEx('/local/tools/prospektweb.calc')) {
+    if (DeleteDirFilesEx('/bitrix/tools/prospektweb.calc')) {
         uninstallLog("  → Tools: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
     } else {
         uninstallLog("  → Tools: " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_ERROR'), 'error');
