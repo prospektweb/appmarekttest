@@ -265,7 +265,11 @@
             const iblockType = requestPayload.iblockType || null;
             const lang = requestPayload.lang || null;
 
-            const id = await this.promptElementId('Введите ID элемента для выбора', iblockId);
+            const id = await this.openElementSelectionDialog({
+                iblockId: iblockId,
+                iblockType: iblockType,
+                lang: lang,
+            });
             if (!id) {
                 this.sendPwrtMessage('SELECT_CANCELLED', message.pwcode, {
                     iblockId: iblockId,
@@ -366,6 +370,80 @@
             const offerId = payload.id || null;
 
             this.sendPwrtMessage('REMOVE_OFFER_ACK', message.pwcode, { id: offerId, status: 'ok' }, message.requestId, origin);
+        }
+
+        openElementSelectionDialog({ iblockId, iblockType, lang }) {
+            if (window.BX && window.BX.CDialog) {
+                return new Promise((resolve) => {
+                    let resolved = false;
+                    const dialogId = 'pwrt-select-element';
+                    const label = 'Введите ID элемента';
+
+                    const contentParts = [
+                        '<div style="padding: 10px 5px;">',
+                        '<div style="margin-bottom: 10px; font-weight: 600;">' + label + '</div>',
+                        '<input type="number" min="1" style="width: 100%;" id="pwrt-select-element-input" />',
+                    ];
+
+                    if (iblockId) {
+                        contentParts.push('<div style="margin-top: 8px; color: #6c727b;">IBLOCK_ID: ' + iblockId + '</div>');
+                    }
+
+                    if (iblockType) {
+                        contentParts.push('<div style="margin-top: 2px; color: #6c727b;">IBLOCK_TYPE: ' + iblockType + '</div>');
+                    }
+
+                    contentParts.push('</div>');
+
+                    const popup = new window.BX.CDialog({
+                        id: dialogId,
+                        title: 'Выбор элемента',
+                        width: 420,
+                        height: 180,
+                        resizable: false,
+                        content: contentParts.join(''),
+                        buttons: [
+                            {
+                                title: 'Выбрать',
+                                id: dialogId + '-choose',
+                                name: dialogId + '-choose',
+                                action: function () {
+                                    const input = popup.Get().querySelector('#pwrt-select-element-input');
+                                    const value = input ? parseInt(input.value, 10) : null;
+
+                                    if (!value || isNaN(value) || value <= 0) {
+                                        alert('Некорректный ID элемента');
+                                        return;
+                                    }
+
+                                    resolved = true;
+                                    popup.Close();
+                                    resolve(value);
+                                },
+                            },
+                            {
+                                title: 'Отмена',
+                                id: dialogId + '-cancel',
+                                name: dialogId + '-cancel',
+                                action: function () {
+                                    popup.Close();
+                                },
+                            },
+                        ],
+                    });
+
+                    popup.Show();
+
+                    BX.addCustomEvent(popup, 'onWindowClose', function () {
+                        if (!resolved) {
+                            resolved = true;
+                            resolve(null);
+                        }
+                    });
+                });
+            }
+
+            return this.promptElementId('Введите ID элемента для выбора', iblockId, lang);
         }
 
         async promptElementId(promptText, iblockId) {
