@@ -6,7 +6,7 @@
 (function (window) {
     'use strict';
 
-    var INTEGRATION_VERSION = '2.1.0';
+    var INTEGRATION_VERSION = '2.2.0';
     console.log('[BitrixBridge] integration.js loaded, version=' + INTEGRATION_VERSION);
 
     /**
@@ -21,6 +21,7 @@
 
     const MODULE_SOURCE = 'bitrix';
     const MODULE_TARGET = 'prospektweb.calc';
+    const MODULE_PROTOCOL = 'pwrt-v1';
 
     /**
      * Класс для интеграции с React-калькулятором
@@ -45,6 +46,8 @@
             this.debug = Boolean(config.debug);
             this.targetOrigin = '*';
             this.readyOrigin = null;
+            this.pendingRequests = {};
+            this.initData = null;
 
             // Сохраняем ссылку на обработчик для корректного removeEventListener
             this.boundHandleMessage = this.handleMessage.bind(this);
@@ -113,6 +116,11 @@
                 return;
             }
 
+            if (message.protocol === MODULE_PROTOCOL) {
+                this.handlePwrtMessage(message, event);
+                return;
+            }
+
             // Проверяем, что сообщение для нас
             if (message.target !== MODULE_SOURCE) {
                 return;
@@ -159,6 +167,252 @@
                 default:
                     console.warn('[CalcIntegration] Unknown message type:', message.type);
             }
+        }
+
+        /**
+         * Обработка сообщений протокола pwrt-v1
+         */
+        async handlePwrtMessage(message, event) {
+            if (message.target !== MODULE_SOURCE) {
+                return;
+            }
+
+            const origin = (event && event.origin) ? event.origin : (this.targetOrigin || '*');
+            if (origin && origin !== '*') {
+                this.targetOrigin = origin;
+            }
+
+            console.info('[FROM_IFRAME]', {
+                type: message.type,
+                pwcode: message.pwcode,
+                requestId: message.requestId,
+                payload: message.payload,
+            });
+
+            switch (message.type) {
+                case 'SELECT_REQUEST':
+                    await this.handleSelectRequest(message, origin);
+                    break;
+                case 'REFRESH_REQUEST':
+                    await this.handleRefreshRequest(message, origin);
+                    break;
+                case 'ADD_OFFER_REQUEST':
+                    await this.handleAddOfferRequest(message, origin);
+                    break;
+                case 'REMOVE_OFFER_REQUEST':
+                    this.handleRemoveOfferRequest(message, origin);
+                    break;
+                default:
+                    console.warn('[CalcIntegration] Unknown pwrt message type:', message.type);
+            }
+        }
+
+        /**
+         * Отправка сообщения по протоколу pwrt-v1
+         */
+        sendPwrtMessage(type, pwcode, payload, requestId, targetOrigin) {
+            if (!this.iframeWindow) {
+                console.error('[CalcIntegration] Iframe window not available');
+                return;
+            }
+
+            const message = {
+                protocol: MODULE_PROTOCOL,
+                source: MODULE_SOURCE,
+                target: MODULE_TARGET,
+                type: type,
+                pwcode: pwcode,
+                requestId: requestId,
+                timestamp: Date.now(),
+                payload: payload,
+            };
+
+            const origin = targetOrigin || this.targetOrigin || '*';
+            const payloadSummary = this.buildPayloadSummary(type, payload);
+
+            console.info('[TO_IFRAME]', {
+                type: type,
+                pwcode: pwcode,
+                requestId: requestId,
+                payloadSummary: payloadSummary,
+                targetOrigin: origin,
+            });
+
+            this.iframeWindow.postMessage(message, origin);
+        }
+
+        buildPayloadSummary(type, payload) {
+            if (type === 'REFRESH_RESULT' && Array.isArray(payload)) {
+                return payload.map(function(item) {
+                    const hasData = item && Array.isArray(item.data);
+                    const dataCount = hasData ? item.data.length : 0;
+                    return { iblockId: item ? (item.iblockId || null) : null, count: dataCount };
+                });
+            }
+
+            if (payload && typeof payload === 'object') {
+                if (payload.id) {
+                    return { id: payload.id, productId: payload.productId || null };
+                }
+            }
+
+            return null;
+        }
+
+        async handleSelectRequest(message, origin) {
+            const requestPayload = message.payload || {};
+            const iblockId = requestPayload.iblockId || null;
+            const iblockType = requestPayload.iblockType || null;
+            const lang = requestPayload.lang || null;
+
+            const id = await this.promptElementId('Введите ID элемента для выбора', iblockId);
+            if (!id) {
+                this.sendPwrtMessage('SELECT_CANCELLED', message.pwcode, {
+                    iblockId: iblockId,
+                    iblockType: iblockType,
+                    lang: lang,
+                    reason: 'user_closed',
+                }, message.requestId, origin);
+                return;
+            }
+
+            try {
+                const response = await this.fetchRefreshData([
+                    { iblockId: iblockId, iblockType: iblockType, ids: [id] },
+                ]);
+
+                const elementData = Array.isArray(response) && response[0] && Array.isArray(response[0].data)
+                    ? response[0].data[0]
+                    : null;
+
+                if (!elementData) {
+                    this.sendPwrtMessage('SELECT_CANCELLED', message.pwcode, {
+                        iblockId: iblockId,
+                        iblockType: iblockType,
+                        lang: lang,
+                        reason: 'not_found',
+                    }, message.requestId, origin);
+                    return;
+                }
+
+                this.sendPwrtMessage('SELECT_RESULT', message.pwcode, {
+                    iblockId: iblockId,
+                    iblockType: iblockType,
+                    lang: lang,
+                    id: elementData.id,
+                    name: elementData.name,
+                    data: elementData,
+                }, message.requestId, origin);
+            } catch (error) {
+                console.error('[CalcIntegration] Error during select request', error);
+                this.sendPwrtMessage('SELECT_CANCELLED', message.pwcode, {
+                    iblockId: iblockId,
+                    iblockType: iblockType,
+                    lang: lang,
+                    reason: 'fetch_failed',
+                }, message.requestId, origin);
+            }
+        }
+
+        async handleRefreshRequest(message, origin) {
+            try {
+                const payload = Array.isArray(message.payload) ? message.payload : [];
+                const result = await this.fetchRefreshData(payload);
+
+                this.sendPwrtMessage('REFRESH_RESULT', message.pwcode, result, message.requestId, origin);
+            } catch (error) {
+                console.error('[CalcIntegration] Error during refresh request', error);
+                this.sendPwrtMessage('REFRESH_RESULT', message.pwcode, [], message.requestId, origin);
+            }
+        }
+
+        async handleAddOfferRequest(message, origin) {
+            const offersIblockId = (this.initData && this.initData.iblocks && this.initData.iblocks.offers)
+                ? this.initData.iblocks.offers
+                : null;
+            const iblockType = offersIblockId && this.initData && this.initData.iblocksTypes
+                ? this.initData.iblocksTypes[offersIblockId]
+                : null;
+
+            const id = await this.promptElementId('Введите ID торгового предложения', offersIblockId);
+            if (!id) {
+                this.sendPwrtMessage('ADD_OFFER_CANCELLED', message.pwcode, { reason: 'user_closed' }, message.requestId, origin);
+                return;
+            }
+
+            try {
+                const response = await this.fetchRefreshData([
+                    { iblockId: offersIblockId, iblockType: iblockType, ids: [id] },
+                ]);
+
+                const elementData = Array.isArray(response) && response[0] && Array.isArray(response[0].data)
+                    ? response[0].data[0]
+                    : null;
+
+                if (!elementData) {
+                    this.sendPwrtMessage('ADD_OFFER_CANCELLED', message.pwcode, { reason: 'not_found' }, message.requestId, origin);
+                    return;
+                }
+
+                this.sendPwrtMessage('ADD_OFFER_RESULT', message.pwcode, elementData, message.requestId, origin);
+            } catch (error) {
+                console.error('[CalcIntegration] Error during add offer request', error);
+                this.sendPwrtMessage('ADD_OFFER_CANCELLED', message.pwcode, { reason: 'fetch_failed' }, message.requestId, origin);
+            }
+        }
+
+        handleRemoveOfferRequest(message, origin) {
+            const payload = message.payload || {};
+            const offerId = payload.id || null;
+
+            this.sendPwrtMessage('REMOVE_OFFER_ACK', message.pwcode, { id: offerId, status: 'ok' }, message.requestId, origin);
+        }
+
+        async promptElementId(promptText, iblockId) {
+            let text = promptText;
+            if (iblockId) {
+                text += ' (IBLOCK_ID ' + iblockId + ')';
+            }
+
+            const input = window.prompt(text, '');
+            if (!input) {
+                return null;
+            }
+
+            const parsed = parseInt(input, 10);
+            if (isNaN(parsed) || parsed <= 0) {
+                alert('Некорректный ID элемента');
+                return null;
+            }
+
+            return parsed;
+        }
+
+        async fetchRefreshData(items) {
+            const formData = new FormData();
+            formData.append('action', 'refreshData');
+            formData.append('payload', JSON.stringify(items));
+            formData.append('sessid', this.config.sessid);
+
+            const response = await fetch(this.config.ajaxEndpoint, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error('HTTP error ' + response.status);
+            }
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.message || data.error || 'Ошибка обновления данных');
+            }
+
+            return data.data || [];
         }
 
         /**
@@ -257,6 +511,8 @@
                 // Получаем данные для инициализации через AJAX
                 const initData = await this.fetchInitData();
 
+                this.initData = initData;
+
                 // Отправляем INIT в iframe
                 this.sendMessageToIframe('INIT', initData, message.requestId);
             } catch (error) {
@@ -353,7 +609,8 @@
             if (typeof this.config.onError === 'function') {
                 this.config.onError(message.payload);
             } else {
-                alert('Ошибка: ' + (message.payload?.message || 'Неизвестная ошибка'));
+                var errorMessage = (message.payload && message.payload.message) ? message.payload.message : 'Неизвестная ошибка';
+                alert('Ошибка: ' + errorMessage);
             }
         }
 
