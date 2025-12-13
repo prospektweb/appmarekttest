@@ -307,7 +307,7 @@ class InitPayloadService
             return '';
         }
 
-        return sprintf('https://%s/', $host);
+        return sprintf('https://%s', $host);
     }
 
     /**
