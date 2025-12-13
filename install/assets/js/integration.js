@@ -338,7 +338,11 @@
                 ? this.initData.iblocksTypes[offersIblockId]
                 : null;
 
-            const id = await this.promptElementId('Введите ID торгового предложения', offersIblockId);
+            const id = await this.openElementSelectionDialog({
+                iblockId: offersIblockId,
+                iblockType: iblockType,
+                lang: (this.initData && this.initData.lang) ? this.initData.lang : null,
+            });
             if (!id) {
                 this.sendPwrtMessage('ADD_OFFER_CANCELLED', message.pwcode, { reason: 'user_closed' }, message.requestId, origin);
                 return;
@@ -373,97 +377,101 @@
         }
 
         openElementSelectionDialog({ iblockId, iblockType, lang }) {
-            if (window.BX && window.BX.CDialog) {
-                return new Promise((resolve) => {
-                    let resolved = false;
-                    const dialogId = 'pwrt-select-element';
-                    const label = 'Введите ID элемента';
+            const dialogLang = lang
+                || (window.BX && window.BX.message && window.BX.message('LANGUAGE_ID'))
+                || 'ru';
+            const callbackName = '__pwrtElementSelect_' + Math.random().toString(36).slice(2);
 
-                    const contentParts = [
-                        '<div style="padding: 10px 5px;">',
-                        '<div style="margin-bottom: 10px; font-weight: 600;">' + label + '</div>',
-                        '<input type="number" min="1" style="width: 100%;" id="pwrt-select-element-input" />',
-                    ];
+            const params = new URLSearchParams({
+                lang: dialogLang,
+                n: callbackName,
+                func_name: callbackName,
+                m: 'n',
+            });
 
-                    if (iblockId) {
-                        contentParts.push('<div style="margin-top: 8px; color: #6c727b;">IBLOCK_ID: ' + iblockId + '</div>');
-                    }
-
-                    if (iblockType) {
-                        contentParts.push('<div style="margin-top: 2px; color: #6c727b;">IBLOCK_TYPE: ' + iblockType + '</div>');
-                    }
-
-                    contentParts.push('</div>');
-
-                    const popup = new window.BX.CDialog({
-                        id: dialogId,
-                        title: 'Выбор элемента',
-                        width: 420,
-                        height: 180,
-                        resizable: false,
-                        content: contentParts.join(''),
-                        buttons: [
-                            {
-                                title: 'Выбрать',
-                                id: dialogId + '-choose',
-                                name: dialogId + '-choose',
-                                action: function () {
-                                    const input = popup.Get().querySelector('#pwrt-select-element-input');
-                                    const value = input ? parseInt(input.value, 10) : null;
-
-                                    if (!value || isNaN(value) || value <= 0) {
-                                        alert('Некорректный ID элемента');
-                                        return;
-                                    }
-
-                                    resolved = true;
-                                    popup.Close();
-                                    resolve(value);
-                                },
-                            },
-                            {
-                                title: 'Отмена',
-                                id: dialogId + '-cancel',
-                                name: dialogId + '-cancel',
-                                action: function () {
-                                    popup.Close();
-                                },
-                            },
-                        ],
-                    });
-
-                    popup.Show();
-
-                    BX.addCustomEvent(popup, 'onWindowClose', function () {
-                        if (!resolved) {
-                            resolved = true;
-                            resolve(null);
-                        }
-                    });
-                });
-            }
-
-            return this.promptElementId('Введите ID элемента для выбора', iblockId, lang);
-        }
-
-        async promptElementId(promptText, iblockId) {
-            let text = promptText;
             if (iblockId) {
-                text += ' (IBLOCK_ID ' + iblockId + ')';
+                params.append('IBLOCK_ID', iblockId);
             }
 
-            const input = window.prompt(text, '');
-            if (!input) {
-                return null;
+            if (iblockType) {
+                params.append('IBLOCK_TYPE', iblockType);
             }
 
-            const parsed = parseInt(input, 10);
-            if (isNaN(parsed) || parsed <= 0) {
-                alert('Некорректный ID элемента');
-                return null;
-            }
+            const url = '/bitrix/admin/iblock_element_search.php?' + params.toString();
 
-            return parsed;
+            return new Promise((resolve) => {
+                let resolved = false;
+                let dialog = null;
+                let popupWatcher = null;
+
+                const cleanup = () => {
+                    delete window[callbackName];
+
+                    if (popupWatcher) {
+                        clearInterval(popupWatcher);
+                        popupWatcher = null;
+                    }
+                };
+
+                const handleClose = () => {
+                    if (resolved) {
+                        return;
+                    }
+
+                    resolved = true;
+                    cleanup();
+                    resolve(null);
+
+                    if (dialog && window.BX) {
+                        window.BX.removeCustomEvent(dialog, 'onWindowClose', handleClose);
+                    }
+                };
+
+                window[callbackName] = function (elementId) {
+                    const parsedId = parseInt(elementId, 10);
+
+                    if (!parsedId || isNaN(parsedId) || parsedId <= 0) {
+                        return;
+                    }
+
+                    resolved = true;
+                    cleanup();
+
+                    if (dialog && typeof dialog.Close === 'function') {
+                        dialog.Close();
+                    }
+
+                    resolve(parsedId);
+                };
+
+                if (window.BX && window.BX.CDialog) {
+                    dialog = new window.BX.CDialog({
+                        id: 'pwrt-element-search-' + callbackName,
+                        title: 'Выбор элемента инфоблока',
+                        content_url: url,
+                        width: 900,
+                        height: 600,
+                        resizable: true,
+                        draggable: true,
+                        buttons: [window.BX.CDialog.btnClose],
+                    });
+
+                    window.BX.addCustomEvent(dialog, 'onWindowClose', handleClose);
+                    dialog.Show();
+                } else {
+                    const popupWindow = window.open(
+                        url,
+                        'pwrt-element-search-' + callbackName,
+                        'width=900,height=700,resizable=yes,scrollbars=yes'
+                    );
+
+                    popupWatcher = setInterval(() => {
+                        if (!popupWindow || popupWindow.closed) {
+                            handleClose();
+                        }
+                    }, 500);
+                }
+            });
         }
 
         async fetchRefreshData(items) {
