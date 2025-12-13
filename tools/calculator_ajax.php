@@ -12,6 +12,7 @@ use Bitrix\Main\Loader;
 use Bitrix\Main\Application;
 use Bitrix\Main\Config\Option;
 use Prospektweb\Calc\Calculator\InitPayloadService;
+use Prospektweb\Calc\Calculator\ElementDataService;
 use Prospektweb\Calc\Calculator\SaveHandler;
 
 // Constants
@@ -53,6 +54,10 @@ try {
 
         case 'save':
             handleSave($request);
+            break;
+
+        case 'refreshData':
+            handleRefreshData($request);
             break;
 
         default:
@@ -125,6 +130,38 @@ function handleSave($request): void
         sendJsonResponse(['success' => $result['status'] !== 'error', 'data' => $result]);
     } catch (\Exception $e) {
         logError('Save error: ' . $e->getMessage());
+        sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Обработка запроса refreshData
+ */
+function handleRefreshData($request): void
+{
+    $payloadRaw = $request->get('payload');
+
+    if (empty($payloadRaw)) {
+        sendJsonResponse(['error' => 'Missing parameter', 'message' => 'Параметр payload обязателен'], 400);
+    }
+
+    if (is_string($payloadRaw)) {
+        $payload = json_decode($payloadRaw, true);
+        if (!is_array($payload)) {
+            sendJsonResponse(['error' => 'Invalid parameter', 'message' => 'Некорректный формат payload'], 400);
+        }
+    } else {
+        $payload = $payloadRaw;
+    }
+
+    try {
+        $service = new ElementDataService();
+        $result = $service->prepareRefreshPayload($payload);
+
+        logInfo('RefreshData success for ' . count($payload) . ' groups');
+        sendJsonResponse(['success' => true, 'data' => $result]);
+    } catch (\Exception $e) {
+        logError('RefreshData error: ' . $e->getMessage());
         sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
     }
 }
