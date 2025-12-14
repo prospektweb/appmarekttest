@@ -24,8 +24,11 @@ class HeaderTabsService
     public function getHeaderIblockMap(): array
     {
         $map = [
+            'materials' => $this->configManager->getIblockId('CALC_MATERIALS'),
             'materialsVariants' => $this->configManager->getIblockId('CALC_MATERIALS_VARIANTS'),
+            'operations' => $this->configManager->getIblockId('CALC_OPERATIONS'),
             'operationsVariants' => $this->configManager->getIblockId('CALC_OPERATIONS_VARIANTS'),
+            'details' => $this->configManager->getIblockId('CALC_DETAILS'),
             'detailsVariants' => $this->configManager->getIblockId('CALC_DETAILS_VARIANTS'),
             'equipment' => $this->configManager->getIblockId('CALC_EQUIPMENT'),
         ];
@@ -55,7 +58,7 @@ class HeaderTabsService
     /**
      * Собирает данные элементов для вкладок шапки калькуляции.
      *
-     * @param string   $entityType materialsVariants|operationsVariants|detailsVariants|equipment
+     * @param string   $entityType materials|materialsVariants|operations|operationsVariants|details|detailsVariants|equipment
      * @param int      $iblockId   ID инфоблока.
      * @param int[]    $itemIds    ID элементов.
      *
@@ -93,8 +96,11 @@ class HeaderTabsService
     protected function buildHeaderItemId(string $entityType, int $itemId): string
     {
         return match ($entityType) {
+            'materials' => 'header-material-' . $itemId,
             'materialsVariants' => 'header-material-' . $itemId,
+            'operations' => 'header-operation-' . $itemId,
             'operationsVariants' => 'header-operation-' . $itemId,
+            'details' => 'header-detail-' . $itemId,
             'detailsVariants' => 'header-detail-' . $itemId,
             'equipment' => 'header-equipment-' . $itemId,
             default => 'header-item-' . $itemId,
