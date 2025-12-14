@@ -183,7 +183,8 @@ class AdminHandler
         $debugLog['exitReason'] = 'success - config and JS added';
 
         // СНАЧАЛА добавляем конфиг (должен быть в DOM раньше чем JS-файл)
-        // Используем AssetLocation::AFTER_JS_KERNEL чтобы конфиг выводился раньше обычных JS
+        // Используем AssetLocation::AFTER_JS_KERNEL - это гарантирует вывод сразу после ядра Bitrix,
+        // до обычных JS-файлов подключенных через addJs() (которые выводятся позже в зоне AFTER_JS)
         $asset->addString(
             '<script>window.ProspektwebCalcHeaderTabsConfig = ' .
             json_encode($config, self::JSON_ENCODE_FLAGS) .
@@ -192,7 +193,8 @@ class AdminHandler
             AssetLocation::AFTER_JS_KERNEL
         );
 
-        // ПОТОМ подключаем JS-файл (будет выведен после конфига)
+        // ПОТОМ подключаем JS-файл через addJs() без явного AssetLocation
+        // Он будет выведен в дефолтной зоне (после AFTER_JS_KERNEL), поэтому конфиг уже будет доступен
         if ($jsFileExists) {
             $asset->addJs($jsPath);
         }
