@@ -401,7 +401,7 @@
 
             return new Promise((resolve) => {
                 let resolved = false;
-                let dialog = null;
+                let popupWindow = null;
                 let popupWatcher = null;
 
                 const cleanup = () => {
@@ -421,10 +421,6 @@
                     resolved = true;
                     cleanup();
                     resolve(null);
-
-                    if (dialog && window.BX) {
-                        window.BX.removeCustomEvent(dialog, 'onWindowClose', handleClose);
-                    }
                 };
 
                 window[callbackName] = function (elementId) {
@@ -437,40 +433,24 @@
                     resolved = true;
                     cleanup();
 
-                    if (dialog && typeof dialog.Close === 'function') {
-                        dialog.Close();
+                    if (popupWindow && !popupWindow.closed) {
+                        popupWindow.close();
                     }
 
                     resolve(parsedId);
                 };
 
-                if (window.BX && window.BX.CDialog) {
-                    dialog = new window.BX.CDialog({
-                        id: 'pwrt-element-search-' + callbackName,
-                        title: 'Выбор элемента инфоблока',
-                        content_url: url,
-                        width: 900,
-                        height: 600,
-                        resizable: true,
-                        draggable: true,
-                        buttons: [window.BX.CDialog.btnClose],
-                    });
+                popupWindow = window.open(
+                    url,
+                    'pwrt-element-search-' + callbackName,
+                    'width=900,height=700,resizable=yes,scrollbars=yes'
+                );
 
-                    window.BX.addCustomEvent(dialog, 'onWindowClose', handleClose);
-                    dialog.Show();
-                } else {
-                    const popupWindow = window.open(
-                        url,
-                        'pwrt-element-search-' + callbackName,
-                        'width=900,height=700,resizable=yes,scrollbars=yes'
-                    );
-
-                    popupWatcher = setInterval(() => {
-                        if (!popupWindow || popupWindow.closed) {
-                            handleClose();
-                        }
-                    }, 500);
-                }
+                popupWatcher = setInterval(() => {
+                    if (!popupWindow || popupWindow.closed) {
+                        handleClose();
+                    }
+                }, 500);
             });
         }
 
