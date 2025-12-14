@@ -168,8 +168,8 @@ class AdminHandler
             $asset->addJs($jsPath);
         }
 
-        // Проверяем доступность модуля (для диагностики)
-        // Модуль уже должен быть загружен, т.к. этот класс является его частью
+        // Проверяем установку модуля (для диагностики)
+        // Помогает убедиться, что модуль корректно зарегистрирован в системе
         $moduleInstalled = Loader::moduleExists('prospektweb.calc');
         $debugLog['moduleInstalled'] = $moduleInstalled;
 
