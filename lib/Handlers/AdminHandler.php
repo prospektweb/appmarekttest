@@ -164,10 +164,6 @@ class AdminHandler
         $debugLog['jsFullPath'] = $jsFullPath;
         $debugLog['jsFileExists'] = $jsFileExists;
 
-        if ($jsFileExists) {
-            $asset->addJs($jsPath);
-        }
-
         // Проверяем установку модуля (для диагностики)
         // Помогает убедиться, что модуль корректно зарегистрирован в системе
         $moduleInstalled = Loader::includeModule('prospektweb.calc');
@@ -186,13 +182,20 @@ class AdminHandler
         $debugLog['configAdded'] = true;
         $debugLog['exitReason'] = 'success - config and JS added';
 
+        // СНАЧАЛА добавляем конфиг (должен быть в DOM раньше чем JS-файл)
+        // Используем AssetLocation::AFTER_JS_KERNEL чтобы конфиг выводился раньше обычных JS
         $asset->addString(
             '<script>window.ProspektwebCalcHeaderTabsConfig = ' .
             json_encode($config, self::JSON_ENCODE_FLAGS) .
             ';</script>',
             false,
-            AssetLocation::AFTER_JS
+            AssetLocation::AFTER_JS_KERNEL
         );
+
+        // ПОТОМ подключаем JS-файл (будет выведен после конфига)
+        if ($jsFileExists) {
+            $asset->addJs($jsPath);
+        }
 
         // Выводим полный лог в консоль
         $asset->addString(
