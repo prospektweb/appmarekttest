@@ -27,6 +27,10 @@ class AdminHandler
         $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
 
         if (strpos($scriptName, '/bitrix/admin/iblock_element_edit.php') !== false) {
+            if (self::isHeaderIblockPage()) {
+                self::addHeaderTabsAction();
+            }
+
             self::addCalculatorButton();
         }
 
@@ -150,5 +154,22 @@ class AdminHandler
     public static function onAdminListDisplay(\CAdminList &$adminList): void
     {
         // Можно добавить кнопку массовой калькуляции в список элементов
+    }
+
+    /**
+     * Проверяет, относится ли текущая страница к поддерживаемым инфоблокам шапки калькуляции.
+     */
+    protected static function isHeaderIblockPage(): bool
+    {
+        $service = new HeaderTabsService();
+        $iblockMap = $service->getHeaderIblockMap();
+
+        if (empty($iblockMap)) {
+            return false;
+        }
+
+        $iblockId = (int)($_REQUEST['IBLOCK_ID'] ?? $_REQUEST['iblock_id'] ?? $_REQUEST['PARENT'] ?? 0);
+
+        return in_array($iblockId, array_map('intval', $iblockMap), true);
     }
 }

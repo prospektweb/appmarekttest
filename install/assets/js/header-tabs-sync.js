@@ -17,21 +17,51 @@
 
     var currentIblockId = getCurrentIblockId();
     var currentEntity = iblockToEntity[currentIblockId];
+    var isEditPage = (window.location.pathname || '').indexOf('iblock_element_edit.php') !== -1;
+    var isListPage = (window.location.pathname || '').indexOf('iblock_list_admin.php') !== -1;
 
     if (!currentIblockId || !currentEntity) {
         return;
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        addActionOptions();
-        bindApplyButton();
-        bindRowDelete();
+        if (isEditPage) {
+            initEditPage();
+            return;
+        }
+
+        if (isListPage) {
+            addActionOptions();
+            bindApplyButton();
+            bindRowDelete();
+        }
     });
 
     function getCurrentIblockId() {
         var params = new URLSearchParams(window.location.search);
         var value = parseInt(params.get('IBLOCK_ID') || params.get('iblock_id') || params.get('PARENT') || '0', 10);
-        return isNaN(value) ? 0 : value;
+        if (!isNaN(value) && value > 0) {
+            return value;
+        }
+
+        var hidden = document.querySelector('input[name="IBLOCK_ID"], input[name="iblock_id"], input[name="PARENT"]');
+        var hiddenValue = hidden ? parseInt(hidden.value, 10) : 0;
+
+        return isNaN(hiddenValue) ? 0 : hiddenValue;
+    }
+
+    function getCurrentElementId() {
+        var params = new URLSearchParams(window.location.search);
+        var value = parseInt(params.get('ID') || params.get('id') || '0', 10);
+
+        if (!isNaN(value) && value > 0) {
+            return value;
+        }
+
+        var hidden = document.querySelector('input[name="ID"], input[name="id"]');
+        var hiddenValue = hidden ? parseInt(hidden.value, 10) : 0;
+
+        return isNaN(hiddenValue) ? 0 : hiddenValue;
     }
 
     function addActionOptions() {
@@ -93,6 +123,34 @@
             }
         }
         return null;
+    }
+
+    function initEditPage() {
+        var elementId = getCurrentElementId();
+        if (!elementId) {
+            return;
+        }
+
+        var container = document.querySelector('.adm-title-buttons')
+            || document.querySelector('.adm-detail-toolbar-right')
+            || document.querySelector('.adm-detail-toolbar');
+
+        if (!container || container.querySelector('[data-role="calc-header-tabs-btn"]')) {
+            return;
+        }
+
+        var button = document.createElement('a');
+        button.className = 'adm-btn';
+        button.dataset.role = 'calc-header-tabs-btn';
+        button.href = '#';
+        button.textContent = actionTitle;
+
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+            sendItems([elementId]);
+        });
+
+        container.appendChild(button);
     }
 
     function getSelectedIds() {
