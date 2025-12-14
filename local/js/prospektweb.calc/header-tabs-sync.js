@@ -523,8 +523,11 @@
         var raw = localStorage.getItem('calc_header_tabs');
         var empty = {
             equipment: [],
+            materials: [],
             materialsVariants: [],
+            operations: [],
             operationsVariants: [],
+            details: [],
             detailsVariants: []
         };
 
@@ -534,7 +537,7 @@
 
         try {
             var parsed = JSON.parse(raw);
-            ['equipment', 'materialsVariants', 'operationsVariants', 'detailsVariants'].forEach(function(key) {
+            ['equipment', 'materials', 'materialsVariants', 'operations', 'operationsVariants', 'details', 'detailsVariants'].forEach(function(key) {
                 if (!Array.isArray(parsed[key])) {
                     parsed[key] = [];
                 }
@@ -591,10 +594,16 @@
 
     function buildHeaderId(entityType, itemId) {
         switch (entityType) {
+            case 'materials':
+                return 'header-material-' + itemId;
             case 'materialsVariants':
                 return 'header-material-' + itemId;
+            case 'operations':
+                return 'header-operation-' + itemId;
             case 'operationsVariants':
                 return 'header-operation-' + itemId;
+            case 'details':
+                return 'header-detail-' + itemId;
             case 'detailsVariants':
                 return 'header-detail-' + itemId;
             case 'equipment':
