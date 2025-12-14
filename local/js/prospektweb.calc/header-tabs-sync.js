@@ -49,6 +49,7 @@
         if (isEditPage) {
             console.log('8. Initializing edit page');
             initEditPage();
+            console.groupEnd();
             return;
         }
 
@@ -56,10 +57,11 @@
             console.log('8. Initializing list page');
             initListPage();
             bindRowDelete();
+            console.groupEnd();
         } else {
             console.warn('Page is neither edit nor list page');
+            console.groupEnd();
         }
-        console.groupEnd();
     });
 
     function getCurrentIblockId() {
