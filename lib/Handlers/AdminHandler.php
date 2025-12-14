@@ -19,14 +19,56 @@ class AdminHandler
      */
     public static function onProlog(): void
     {
+        $asset = Asset::getInstance();
+        
         if (!defined('ADMIN_SECTION') || ADMIN_SECTION !== true) {
+            $asset->addString(
+                '<script>console.group("ProspektwebCalc Debug - onProlog"); console.log("Exit reason:", "Not ADMIN_SECTION"); console.groupEnd();</script>',
+                false,
+                AssetLocation::AFTER_JS
+            );
             return;
         }
 
         // Проверяем, что мы на странице редактирования элемента инфоблока
         $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        $requestUrl = $_REQUEST['url'] ?? '';
+        $gridId = $_REQUEST['grid_id'] ?? '';
+        $iblockId = (int)($_REQUEST['IBLOCK_ID'] ?? $_REQUEST['iblock_id'] ?? $_REQUEST['PARENT'] ?? 0);
 
-        if (strpos($scriptName, '/bitrix/admin/iblock_element_edit.php') !== false) {
+        // Диагностическое логирование
+        $debugInfo = [
+            'scriptName' => $scriptName,
+            'requestUrl' => $requestUrl,
+            'gridId' => $gridId,
+            'iblockId' => $iblockId,
+        ];
+        
+        $asset->addString(
+            '<script>console.group("ProspektwebCalc Debug - onProlog"); console.log(' . json_encode($debugInfo, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) . '); console.groupEnd();</script>',
+            false,
+            AssetLocation::AFTER_JS
+        );
+
+        // Проверяем страницы редактирования элемента
+        $isEditPage = strpos($scriptName, '/bitrix/admin/iblock_element_edit.php') !== false;
+        $isListPage = strpos($scriptName, '/bitrix/admin/iblock_list_admin.php') !== false;
+        
+        // Проверяем сайдпанель
+        $isSidepanel = strpos($scriptName, 'ui_sidepanel') !== false 
+            || strpos($scriptName, 'ui_sidepanel_workarea.php') !== false;
+        
+        $isSidepanelEdit = $isSidepanel && (
+            strpos($requestUrl, 'iblock_element_edit.php') !== false ||
+            strpos($gridId, 'iblock_element_edit') !== false
+        );
+        
+        $isSidepanelList = $isSidepanel && (
+            strpos($requestUrl, 'iblock_list_admin.php') !== false ||
+            strpos($gridId, 'iblock_list_admin') !== false
+        );
+
+        if ($isEditPage || $isSidepanelEdit) {
             if (self::isHeaderIblockPage()) {
                 self::addHeaderTabsAction();
             }
@@ -35,7 +77,7 @@ class AdminHandler
         }
 
         // Также добавляем на странице списка элементов (для кнопки в тулбаре)
-        if (strpos($scriptName, '/bitrix/admin/iblock_list_admin.php') !== false) {
+        if ($isListPage || $isSidepanelList) {
             self::addCalculatorButton();
             self::addHeaderTabsAction();
         }
@@ -86,19 +128,49 @@ class AdminHandler
      */
     protected static function addHeaderTabsAction(): void
     {
+        $asset = Asset::getInstance();
+        
+        // Собираем отладочную информацию
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        $iblockId = (int)($_REQUEST['IBLOCK_ID'] ?? $_REQUEST['iblock_id'] ?? $_REQUEST['PARENT'] ?? 0);
+        
+        $debugLog = [
+            'method' => 'addHeaderTabsAction',
+            'scriptName' => $scriptName,
+            'iblockId' => $iblockId,
+        ];
+
         $service = new HeaderTabsService();
         $entityMap = $service->getHeaderIblockMap();
+        
+        $debugLog['entityMap'] = $entityMap;
+        $debugLog['entityMapEmpty'] = empty($entityMap);
 
         if (empty($entityMap)) {
+            $debugLog['exitReason'] = 'entityMap is empty';
+            $asset->addString(
+                '<script>console.group("ProspektwebCalc Debug - addHeaderTabsAction"); console.log(' . json_encode($debugLog, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) . '); console.groupEnd();</script>',
+                false,
+                AssetLocation::AFTER_JS
+            );
             return;
         }
 
-        $asset = Asset::getInstance();
         $jsPath = '/local/js/prospektweb.calc/header-tabs-sync.js';
+        $jsFullPath = Application::getDocumentRoot() . $jsPath;
+        $jsFileExists = file_exists($jsFullPath);
+        
+        $debugLog['jsPath'] = $jsPath;
+        $debugLog['jsFullPath'] = $jsFullPath;
+        $debugLog['jsFileExists'] = $jsFileExists;
 
-        if (file_exists(Application::getDocumentRoot() . $jsPath)) {
+        if ($jsFileExists) {
             $asset->addJs($jsPath);
         }
+
+        // Проверяем загрузку модуля
+        $moduleLoaded = Loader::includeModule('prospektweb.calc');
+        $debugLog['moduleLoaded'] = $moduleLoaded;
 
         $config = [
             'ajaxEndpoint' => '/bitrix/tools/prospektweb.calc/calculator_ajax.php',
@@ -110,10 +182,20 @@ class AdminHandler
             'sessid' => bitrix_sessid(),
         ];
 
+        $debugLog['configAdded'] = true;
+        $debugLog['exitReason'] = 'success - config and JS added';
+
         $asset->addString(
             '<script>window.ProspektwebCalcHeaderTabsConfig = ' .
             json_encode($config, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) .
             ';</script>',
+            false,
+            AssetLocation::AFTER_JS
+        );
+
+        // Выводим полный лог в консоль
+        $asset->addString(
+            '<script>console.group("ProspektwebCalc Debug - addHeaderTabsAction"); console.log(' . json_encode($debugLog, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) . '); console.groupEnd();</script>',
             false,
             AssetLocation::AFTER_JS
         );
@@ -161,15 +243,41 @@ class AdminHandler
      */
     protected static function isHeaderIblockPage(): bool
     {
+        $asset = Asset::getInstance();
+        
         $service = new HeaderTabsService();
         $iblockMap = $service->getHeaderIblockMap();
 
+        $iblockId = (int)($_REQUEST['IBLOCK_ID'] ?? $_REQUEST['iblock_id'] ?? $_REQUEST['PARENT'] ?? 0);
+        
+        $debugLog = [
+            'method' => 'isHeaderIblockPage',
+            'iblockId' => $iblockId,
+            'iblockMap' => $iblockMap,
+            'iblockMapEmpty' => empty($iblockMap),
+        ];
+
         if (empty($iblockMap)) {
+            $debugLog['result'] = false;
+            $debugLog['reason'] = 'iblockMap is empty';
+            $asset->addString(
+                '<script>console.group("ProspektwebCalc Debug - isHeaderIblockPage"); console.log(' . json_encode($debugLog, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) . '); console.groupEnd();</script>',
+                false,
+                AssetLocation::AFTER_JS
+            );
             return false;
         }
 
-        $iblockId = (int)($_REQUEST['IBLOCK_ID'] ?? $_REQUEST['iblock_id'] ?? $_REQUEST['PARENT'] ?? 0);
+        $result = in_array($iblockId, array_map('intval', $iblockMap), true);
+        $debugLog['result'] = $result;
+        $debugLog['reason'] = $result ? 'iblockId found in map' : 'iblockId NOT found in map';
+        
+        $asset->addString(
+            '<script>console.group("ProspektwebCalc Debug - isHeaderIblockPage"); console.log(' . json_encode($debugLog, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) . '); console.groupEnd();</script>',
+            false,
+            AssetLocation::AFTER_JS
+        );
 
-        return in_array($iblockId, array_map('intval', $iblockMap), true);
+        return $result;
     }
 }
