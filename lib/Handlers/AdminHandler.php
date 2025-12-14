@@ -14,21 +14,21 @@ use Prospektweb\Calc\Services\HeaderTabsService;
 class AdminHandler
 {
     /**
+     * Флаги для безопасного JSON кодирования в HTML/JS контексте
+     */
+    private const JSON_ENCODE_FLAGS = JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT;
+
+    /**
      * Обработчик события OnProlog.
      * Добавляет JS для кнопки "Калькуляция" в админку.
      */
     public static function onProlog(): void
     {
-        $asset = Asset::getInstance();
-        
         if (!defined('ADMIN_SECTION') || ADMIN_SECTION !== true) {
-            $asset->addString(
-                '<script>console.group("ProspektwebCalc Debug - onProlog"); console.log("Exit reason:", "Not ADMIN_SECTION"); console.groupEnd();</script>',
-                false,
-                AssetLocation::AFTER_JS
-            );
             return;
         }
+
+        $asset = Asset::getInstance();
 
         // Проверяем, что мы на странице редактирования элемента инфоблока
         $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
@@ -45,7 +45,7 @@ class AdminHandler
         ];
         
         $asset->addString(
-            '<script>console.group("ProspektwebCalc Debug - onProlog"); console.log(' . json_encode($debugInfo, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) . '); console.groupEnd();</script>',
+            '<script>console.group("ProspektwebCalc Debug - onProlog"); console.log(' . json_encode($debugInfo, self::JSON_ENCODE_FLAGS) . '); console.groupEnd();</script>',
             false,
             AssetLocation::AFTER_JS
         );
@@ -149,7 +149,7 @@ class AdminHandler
         if (empty($entityMap)) {
             $debugLog['exitReason'] = 'entityMap is empty';
             $asset->addString(
-                '<script>console.group("ProspektwebCalc Debug - addHeaderTabsAction"); console.log(' . json_encode($debugLog, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) . '); console.groupEnd();</script>',
+                '<script>console.group("ProspektwebCalc Debug - addHeaderTabsAction"); console.log(' . json_encode($debugLog, self::JSON_ENCODE_FLAGS) . '); console.groupEnd();</script>',
                 false,
                 AssetLocation::AFTER_JS
             );
@@ -187,7 +187,7 @@ class AdminHandler
 
         $asset->addString(
             '<script>window.ProspektwebCalcHeaderTabsConfig = ' .
-            json_encode($config, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) .
+            json_encode($config, self::JSON_ENCODE_FLAGS) .
             ';</script>',
             false,
             AssetLocation::AFTER_JS
@@ -195,7 +195,7 @@ class AdminHandler
 
         // Выводим полный лог в консоль
         $asset->addString(
-            '<script>console.group("ProspektwebCalc Debug - addHeaderTabsAction"); console.log(' . json_encode($debugLog, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) . '); console.groupEnd();</script>',
+            '<script>console.group("ProspektwebCalc Debug - addHeaderTabsAction"); console.log(' . json_encode($debugLog, self::JSON_ENCODE_FLAGS) . '); console.groupEnd();</script>',
             false,
             AssetLocation::AFTER_JS
         );
@@ -261,7 +261,7 @@ class AdminHandler
             $debugLog['result'] = false;
             $debugLog['reason'] = 'iblockMap is empty';
             $asset->addString(
-                '<script>console.group("ProspektwebCalc Debug - isHeaderIblockPage"); console.log(' . json_encode($debugLog, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) . '); console.groupEnd();</script>',
+                '<script>console.group("ProspektwebCalc Debug - isHeaderIblockPage"); console.log(' . json_encode($debugLog, self::JSON_ENCODE_FLAGS) . '); console.groupEnd();</script>',
                 false,
                 AssetLocation::AFTER_JS
             );
@@ -273,7 +273,7 @@ class AdminHandler
         $debugLog['reason'] = $result ? 'iblockId found in map' : 'iblockId NOT found in map';
         
         $asset->addString(
-            '<script>console.group("ProspektwebCalc Debug - isHeaderIblockPage"); console.log(' . json_encode($debugLog, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) . '); console.groupEnd();</script>',
+            '<script>console.group("ProspektwebCalc Debug - isHeaderIblockPage"); console.log(' . json_encode($debugLog, self::JSON_ENCODE_FLAGS) . '); console.groupEnd();</script>',
             false,
             AssetLocation::AFTER_JS
         );
