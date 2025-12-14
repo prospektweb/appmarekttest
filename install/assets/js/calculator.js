@@ -248,6 +248,8 @@ var ProspekwebCalc = {
 
         this.dialog = dialog;
 
+        BX.addCustomEvent(dialog, 'onWindowClose', this.closeDialog.bind(this));
+
         // Используем ProspektwebCalcIntegration для обработки postMessage сразу,
         // чтобы не пропустить первое сообщение READY, которое iframe отправляет
         // сразу после загрузки приложения.
