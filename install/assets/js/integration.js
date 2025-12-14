@@ -48,6 +48,7 @@
             this.readyOrigin = null;
             this.pendingRequests = {};
             this.initData = null;
+            this.currentSelectionItems = null;
 
             // Сохраняем ссылку на обработчик для корректного removeEventListener
             this.boundHandleMessage = this.handleMessage.bind(this);
@@ -218,6 +219,7 @@
 
             const message = {
                 protocol: MODULE_PROTOCOL,
+                version: '1.0.0',
                 source: MODULE_SOURCE,
                 target: MODULE_TARGET,
                 type: type,
@@ -237,6 +239,10 @@
                 payloadSummary: payloadSummary,
                 targetOrigin: origin,
             });
+
+            if (type === 'SELECT_DONE') {
+                console.info('[TO_IFRAME_SELECT_DONE]', message);
+            }
 
             this.iframeWindow.postMessage(message, origin);
         }
@@ -265,57 +271,21 @@
             const iblockType = requestPayload.iblockType || null;
             const lang = requestPayload.lang || null;
 
-            const id = await this.openElementSelectionDialog({
+            const selectedIds = await this.openElementSelectionDialog({
                 iblockId: iblockId,
                 iblockType: iblockType,
                 lang: lang,
             });
-            if (!id) {
-                this.sendPwrtMessage('SELECT_CANCELLED', message.pwcode, {
-                    iblockId: iblockId,
-                    iblockType: iblockType,
-                    lang: lang,
-                    reason: 'user_closed',
-                }, message.requestId, origin);
-                return;
-            }
 
-            try {
-                const response = await this.fetchRefreshData([
-                    { iblockId: iblockId, iblockType: iblockType, ids: [id] },
-                ]);
-
-                const elementData = Array.isArray(response) && response[0] && Array.isArray(response[0].data)
-                    ? response[0].data[0]
-                    : null;
-
-                if (!elementData) {
-                    this.sendPwrtMessage('SELECT_CANCELLED', message.pwcode, {
-                        iblockId: iblockId,
-                        iblockType: iblockType,
-                        lang: lang,
-                        reason: 'not_found',
-                    }, message.requestId, origin);
-                    return;
-                }
-
-                this.sendPwrtMessage('SELECT_RESULT', message.pwcode, {
-                    iblockId: iblockId,
-                    iblockType: iblockType,
-                    lang: lang,
-                    id: elementData.id,
-                    name: elementData.name,
-                    data: elementData,
-                }, message.requestId, origin);
-            } catch (error) {
-                console.error('[CalcIntegration] Error during select request', error);
-                this.sendPwrtMessage('SELECT_CANCELLED', message.pwcode, {
-                    iblockId: iblockId,
-                    iblockType: iblockType,
-                    lang: lang,
-                    reason: 'fetch_failed',
-                }, message.requestId, origin);
-            }
+            await this.sendSelectDone({
+                ids: selectedIds,
+                iblockId: iblockId,
+                iblockType: iblockType,
+                lang: lang,
+                pwcode: message.pwcode,
+                requestId: message.requestId,
+                origin: origin,
+            });
         }
 
         async handleRefreshRequest(message, origin) {
@@ -338,35 +308,86 @@
                 ? this.initData.iblocksTypes[offersIblockId]
                 : null;
 
-            const id = await this.openElementSelectionDialog({
+            const selectedIds = await this.openElementSelectionDialog({
                 iblockId: offersIblockId,
                 iblockType: iblockType,
                 lang: (this.initData && this.initData.lang) ? this.initData.lang : null,
             });
-            if (!id) {
-                this.sendPwrtMessage('ADD_OFFER_CANCELLED', message.pwcode, { reason: 'user_closed' }, message.requestId, origin);
-                return;
+
+            await this.sendSelectDone({
+                ids: selectedIds,
+                iblockId: offersIblockId,
+                iblockType: iblockType,
+                lang: (this.initData && this.initData.lang) ? this.initData.lang : null,
+                pwcode: message.pwcode,
+                requestId: message.requestId,
+                origin: origin,
+            });
+        }
+
+        async sendSelectDone({ ids, iblockId, iblockType, lang, pwcode, requestId, origin }) {
+            const normalizedIds = this.normalizeSelectedIds(ids);
+            let items = [];
+
+            if (normalizedIds.length > 0) {
+                try {
+                    const response = await this.fetchRefreshData([
+                        { iblockId: iblockId, iblockType: iblockType, ids: normalizedIds },
+                    ]);
+
+                    const elements = Array.isArray(response) && response[0] && Array.isArray(response[0].data)
+                        ? response[0].data
+                        : [];
+
+                    items = elements.map((item) => this.normalizeItemData(item));
+                } catch (error) {
+                    console.error('[CalcIntegration] Error during select processing', error);
+                }
             }
 
-            try {
-                const response = await this.fetchRefreshData([
-                    { iblockId: offersIblockId, iblockType: iblockType, ids: [id] },
-                ]);
+            this.sendPwrtMessage('SELECT_DONE', pwcode, {
+                iblockId: iblockId,
+                iblockType: iblockType,
+                lang: lang,
+                items: items,
+            }, requestId, origin);
+        }
 
-                const elementData = Array.isArray(response) && response[0] && Array.isArray(response[0].data)
-                    ? response[0].data[0]
-                    : null;
+        normalizeSelectedIds(ids) {
+            const list = Array.isArray(ids) ? ids : [];
+            const result = [];
 
-                if (!elementData) {
-                    this.sendPwrtMessage('ADD_OFFER_CANCELLED', message.pwcode, { reason: 'not_found' }, message.requestId, origin);
+            list.forEach((value) => {
+                const parsed = parseInt(value, 10);
+                if (!parsed || isNaN(parsed) || parsed <= 0) {
                     return;
                 }
+                if (result.indexOf(parsed) === -1) {
+                    result.push(parsed);
+                }
+            });
 
-                this.sendPwrtMessage('ADD_OFFER_RESULT', message.pwcode, elementData, message.requestId, origin);
-            } catch (error) {
-                console.error('[CalcIntegration] Error during add offer request', error);
-                this.sendPwrtMessage('ADD_OFFER_CANCELLED', message.pwcode, { reason: 'fetch_failed' }, message.requestId, origin);
-            }
+            return result;
+        }
+
+        normalizeItemData(item) {
+            const safeItem = item || {};
+            const normalizedMeasureRatio = (typeof safeItem.measureRatio === 'number')
+                ? safeItem.measureRatio
+                : (safeItem.measureRatio !== undefined && safeItem.measureRatio !== null
+                    ? Number(safeItem.measureRatio)
+                    : null);
+
+            return {
+                id: safeItem.id != null ? safeItem.id : null,
+                productId: safeItem.productId != null ? safeItem.productId : null,
+                name: safeItem.name || '',
+                fields: safeItem.fields || {},
+                measure: safeItem.measure !== undefined ? safeItem.measure : null,
+                measureRatio: normalizedMeasureRatio,
+                prices: Array.isArray(safeItem.prices) ? safeItem.prices : [],
+                properties: safeItem.properties || {},
+            };
         }
 
         handleRemoveOfferRequest(message, origin) {
@@ -381,12 +402,14 @@
                 || (window.BX && window.BX.message && window.BX.message('LANGUAGE_ID'))
                 || 'ru';
             const callbackName = '__pwrtElementSelect_' + Math.random().toString(36).slice(2);
+            const selectedIds = [];
+            this.currentSelectionItems = selectedIds;
 
             const params = new URLSearchParams({
                 lang: dialogLang,
                 n: callbackName,
                 func_name: callbackName,
-                m: 'n',
+                m: 'y',
             });
 
             if (iblockId) {
@@ -403,9 +426,12 @@
                 let resolved = false;
                 let popupWindow = null;
                 let popupWatcher = null;
+                let counterNode = null;
+                let closeListenerAttached = false;
 
                 const cleanup = () => {
                     delete window[callbackName];
+                    this.currentSelectionItems = null;
 
                     if (popupWatcher) {
                         clearInterval(popupWatcher);
@@ -420,7 +446,44 @@
 
                     resolved = true;
                     cleanup();
-                    resolve(null);
+                    resolve(selectedIds);
+                };
+
+                const updateCounter = () => {
+                    try {
+                        if (!popupWindow || !popupWindow.document) {
+                            return;
+                        }
+
+                        if (!counterNode) {
+                            counterNode = popupWindow.document.getElementById('pwrt-selected-counter');
+                        }
+
+                        if (!counterNode) {
+                            counterNode = popupWindow.document.createElement('div');
+                            counterNode.id = 'pwrt-selected-counter';
+                            counterNode.style.position = 'fixed';
+                            counterNode.style.right = '16px';
+                            counterNode.style.top = '16px';
+                            counterNode.style.zIndex = '9999';
+                            counterNode.style.background = '#eef2f6';
+                            counterNode.style.border = '1px solid #c5d0dc';
+                            counterNode.style.borderRadius = '4px';
+                            counterNode.style.padding = '6px 10px';
+                            counterNode.style.color = '#1e1e1e';
+                            counterNode.style.fontSize = '13px';
+                            counterNode.style.fontFamily = 'Arial, sans-serif';
+
+                            const container = popupWindow.document.body || popupWindow.document.documentElement;
+                            if (container) {
+                                container.appendChild(counterNode);
+                            }
+                        }
+
+                        counterNode.textContent = 'Выбрано: ' + selectedIds.length;
+                    } catch (e) {
+                        // Игнорируем ошибки доступа к popup до готовности документа
+                    }
                 };
 
                 window[callbackName] = function (elementId) {
@@ -430,14 +493,11 @@
                         return;
                     }
 
-                    resolved = true;
-                    cleanup();
-
-                    if (popupWindow && !popupWindow.closed) {
-                        popupWindow.close();
+                    if (selectedIds.indexOf(parsedId) === -1) {
+                        selectedIds.push(parsedId);
                     }
 
-                    resolve(parsedId);
+                    updateCounter();
                 };
 
                 popupWindow = window.open(
@@ -449,6 +509,18 @@
                 popupWatcher = setInterval(() => {
                     if (!popupWindow || popupWindow.closed) {
                         handleClose();
+                        return;
+                    }
+
+                    updateCounter();
+
+                    try {
+                        if (!closeListenerAttached) {
+                            popupWindow.addEventListener('beforeunload', handleClose, { once: true });
+                            closeListenerAttached = true;
+                        }
+                    } catch (e) {
+                        // Игнорируем ошибки подписки, если окно ещё не инициализировалось
                     }
                 }, 500);
             });
