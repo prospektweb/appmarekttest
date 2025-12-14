@@ -206,9 +206,21 @@
     }
 
     function getGridSelectedIds(grid) {
+        var ids = [];
         if (grid && grid.getRows && grid.getRows().getSelectedIds) {
-            var ids = grid.getRows().getSelectedIds();
-            return Array.isArray(ids) ? ids : [];
+            var rawIds = grid.getRows().getSelectedIds();
+            if (Array.isArray(rawIds)) {
+                for (var i = 0; i < rawIds.length; i++) {
+                    var rawValue = String(rawIds[i]);
+                    // Удаляем префикс E если есть
+                    var cleanValue = rawValue.replace(/^E/i, '');
+                    var id = parseInt(cleanValue, 10);
+                    if (!isNaN(id) && id > 0) {
+                        ids.push(id);
+                    }
+                }
+            }
+            return ids;
         }
 
         return getSelectedIds();
