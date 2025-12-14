@@ -170,7 +170,7 @@ class AdminHandler
 
         // Проверяем установку модуля (для диагностики)
         // Помогает убедиться, что модуль корректно зарегистрирован в системе
-        $moduleInstalled = Loader::moduleExists('prospektweb.calc');
+        $moduleInstalled = Loader::includeModule('prospektweb.calc');
         $debugLog['moduleInstalled'] = $moduleInstalled;
 
         $config = [
