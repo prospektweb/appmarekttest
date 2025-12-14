@@ -1,7 +1,11 @@
 (function(window, document, BX) {
     'use strict';
 
+    console.group('HeaderTabsSync Debug');
+
     var config = window.ProspektwebCalcHeaderTabsConfig || {};
+    console.log('1. Script loaded - ProspektwebCalcHeaderTabsConfig:', config);
+
     var entityMap = config.entityMap || {};
     var iblockToEntity = {};
     Object.keys(entityMap).forEach(function(entityType) {
@@ -10,29 +14,53 @@
             iblockToEntity[iblockId] = entityType;
         }
     });
+    console.log('2. Built iblockToEntity mapping:', iblockToEntity);
+
     var actionValue = config.actionValue || 'calc_use_in_header';
     var ajaxEndpoint = config.ajaxEndpoint;
     var actionTitle = (config.messages && config.messages.actionTitle) || 'Использовать в калькуляции';
     var sessid = config.sessid || (BX && BX.bitrix_sessid ? BX.bitrix_sessid() : '');
 
     var currentIblockId = getCurrentIblockId();
+    console.log('3. Current iblock ID:', currentIblockId);
+
     var currentEntity = iblockToEntity[currentIblockId];
+    console.log('4. Current entity:', currentEntity);
+
     var isEditPage = (window.location.pathname || '').indexOf('iblock_element_edit.php') !== -1;
     var isListPage = (window.location.pathname || '').indexOf('iblock_list_admin.php') !== -1;
+    console.log('5. Page checks - isEditPage:', isEditPage, ', isListPage:', isListPage);
 
     if (!currentIblockId || !currentEntity) {
+        if (!currentIblockId) {
+            console.warn('Early exit: currentIblockId is 0 or invalid');
+        }
+        if (!currentEntity) {
+            console.warn('Early exit: currentEntity not found for iblockId', currentIblockId);
+        }
+        console.groupEnd();
         return;
     }
 
+    console.log('6. Initialization proceeding - will attach DOMContentLoaded listener');
+
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('7. DOMContentLoaded event fired');
         if (isEditPage) {
+            console.log('8. Initializing edit page');
             initEditPage();
+            console.groupEnd();
             return;
         }
 
         if (isListPage) {
+            console.log('8. Initializing list page');
             initListPage();
             bindRowDelete();
+            console.groupEnd();
+        } else {
+            console.warn('Page is neither edit nor list page');
+            console.groupEnd();
         }
     });
 
@@ -64,7 +92,9 @@
     }
 
     function getGridInstance() {
+        console.log('getGridInstance: Checking for BX.Main.gridManager');
         if (!(BX && BX.Main && BX.Main.gridManager)) {
+            console.warn('getGridInstance: BX.Main.gridManager not available');
             return null;
         }
 
@@ -72,57 +102,79 @@
         var managerData = BX.Main.gridManager.data || [];
         if (Array.isArray(managerData) && managerData.length && managerData[0].id) {
             gridId = managerData[0].id;
+            console.log('getGridInstance: Found gridId from gridManager.data:', gridId);
         }
 
         if (!gridId) {
             var gridNode = document.querySelector('[data-entity="main-grid"]');
             if (gridNode && gridNode.id) {
                 gridId = gridNode.id.replace('grid_', '') || gridNode.id;
+                console.log('getGridInstance: Found gridId from DOM node:', gridId);
             }
         }
 
         if (!gridId) {
+            console.warn('getGridInstance: Could not determine gridId');
             return null;
         }
 
         if (typeof BX.Main.gridManager.getInstanceById === 'function') {
-            return BX.Main.gridManager.getInstanceById(gridId);
+            var instance = BX.Main.gridManager.getInstanceById(gridId);
+            console.log('getGridInstance: Got instance via getInstanceById:', !!instance);
+            return instance;
         }
 
         if (typeof BX.Main.gridManager.getById === 'function') {
             var gridData = BX.Main.gridManager.getById(gridId);
             if (gridData && gridData.instance) {
+                console.log('getGridInstance: Got instance via getById:', !!gridData.instance);
                 return gridData.instance;
             }
         }
 
+        console.warn('getGridInstance: No method available to get grid instance');
         return null;
     }
 
     function addGridAction(grid) {
+        console.log('addGridAction: Starting - grid:', !!grid);
         var dropdown = getActionDropdown(grid);
         if (!dropdown) {
-            return;
+            console.warn('addGridAction: Dropdown not found');
+            return false;
         }
+        console.log('addGridAction: Dropdown found:', dropdown);
 
         var items = parseDropdownItems(dropdown);
+        console.log('addGridAction: Existing dropdown items:', items);
+
         var exists = items.some(function(item) { return item && item.VALUE === actionValue; });
         if (exists) {
-            return;
+            console.log('addGridAction: Action already exists in dropdown');
+            return false;
         }
 
         items.push({ NAME: actionTitle, VALUE: actionValue });
         dropdown.setAttribute('data-items', JSON.stringify(items));
+        console.log('addGridAction: Added new action to dropdown, refreshing...');
         refreshDropdown(dropdown, items);
+        console.log('addGridAction: Successfully added action option');
+        return true;
     }
 
     function getActionDropdown(grid) {
         var gridId = grid && typeof grid.getId === 'function' ? grid.getId() : null;
+        console.log('getActionDropdown: gridId:', gridId);
         if (!gridId) {
+            console.warn('getActionDropdown: Could not get gridId from grid');
             return null;
         }
 
-        return document.querySelector('.main-dropdown[data-name="action_button_' + gridId + '"]');
+        var selector = '.main-dropdown[data-name="action_button_' + gridId + '"]';
+        console.log('getActionDropdown: Looking for dropdown with selector:', selector);
+        var dropdown = document.querySelector(selector);
+        console.log('getActionDropdown: Found dropdown:', !!dropdown);
+        return dropdown;
     }
 
     function parseDropdownItems(dropdown) {
@@ -305,16 +357,24 @@
     }
 
     function initListPage() {
+        console.log('initListPage: Starting list page initialization');
         var grid = getGridInstance();
         if (grid) {
-            addGridAction(grid);
+            console.log('initListPage: Grid instance found, adding action');
+            var actionAdded = addGridAction(grid);
+            console.log('initListPage: Action added result:', actionAdded);
             bindGridApply(grid);
+        } else {
+            console.warn('initListPage: Grid instance not found');
         }
     }
 
     function initEditPage() {
+        console.log('initEditPage: Starting edit page initialization');
         var elementId = getCurrentElementId();
+        console.log('initEditPage: Element ID:', elementId);
         if (!elementId) {
+            console.warn('initEditPage: Element ID not found');
             return;
         }
 
@@ -322,7 +382,13 @@
             || document.querySelector('.adm-detail-toolbar-right')
             || document.querySelector('.adm-detail-toolbar');
 
+        console.log('initEditPage: Button container found:', !!container);
         if (!container || container.querySelector('[data-role="calc-header-tabs-btn"]')) {
+            if (!container) {
+                console.warn('initEditPage: Container not found');
+            } else {
+                console.log('initEditPage: Button already exists');
+            }
             return;
         }
 
@@ -338,6 +404,7 @@
         });
 
         container.appendChild(button);
+        console.log('initEditPage: Button successfully added to container');
     }
 
     function getSelectedIds() {
