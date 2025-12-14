@@ -221,7 +221,7 @@
         var offersInput = document.querySelector('input[name="OFFERS_IBLOCK_ID"]');
         if (offersInput && offersInput.value) {
             var skuId = parseInt(offersInput.value, 10);
-            if (!isNaN(skuId) && skuId > 0) {
+            if (!isNaN(skuId) && skuId > 0 && iblockToEntity[skuId]) {
                 console.log('getSkuIblockId: Found SKU IBLOCK_ID from OFFERS_IBLOCK_ID input:', skuId);
                 return skuId;
             }
@@ -230,18 +230,21 @@
         // Method 2: Check if config has skuIblockId
         if (config.skuIblockId) {
             var skuId = parseInt(config.skuIblockId, 10);
-            if (!isNaN(skuId) && skuId > 0) {
+            if (!isNaN(skuId) && skuId > 0 && iblockToEntity[skuId]) {
                 console.log('getSkuIblockId: Found SKU IBLOCK_ID from config:', skuId);
                 return skuId;
             }
         }
         
         // Method 3: Look in entityMap for *Variants type related to current iblock
-        for (var entityType in entityMap) {
-            if (entityType.indexOf('Variants') !== -1) {
+        // Try to find the most relevant Variants type based on the current entity
+        var variantPriority = ['materialsVariants', 'operationsVariants', 'detailsVariants'];
+        for (var i = 0; i < variantPriority.length; i++) {
+            var entityType = variantPriority[i];
+            if (entityMap[entityType]) {
                 var skuId = parseInt(entityMap[entityType], 10);
-                if (!isNaN(skuId) && skuId > 0) {
-                    console.log('getSkuIblockId: Found SKU IBLOCK_ID from entityMap Variants:', skuId, 'entityType:', entityType);
+                if (!isNaN(skuId) && skuId > 0 && iblockToEntity[skuId]) {
+                    console.log('getSkuIblockId: Found SKU IBLOCK_ID from entityMap:', skuId, 'entityType:', entityType);
                     return skuId;
                 }
             }
@@ -306,7 +309,14 @@
                 event.preventDefault();
                 
                 // Get selected checkboxes from SKU table
-                var tableId = footer.id.replace('_footer', '');
+                // Extract table ID more safely
+                var footerId = footer.id || '';
+                if (!footerId || footerId.indexOf('_footer') === -1) {
+                    console.warn('initSkuTable: Invalid footer ID:', footerId);
+                    return;
+                }
+                
+                var tableId = footerId.replace('_footer', '');
                 var table = document.getElementById(tableId);
                 if (!table) {
                     console.warn('initSkuTable: SKU table not found:', tableId);
