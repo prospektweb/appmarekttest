@@ -136,215 +136,73 @@
         return null;
     }
 
-    function addGridAction(grid) {
-        console.log('addGridAction: Starting - grid:', !!grid);
-        var dropdown = getActionDropdown(grid);
-        if (!dropdown) {
-            console.warn('addGridAction: Dropdown not found');
+    function createListPageButton(grid) {
+        console.log('createListPageButton: Starting - grid:', !!grid);
+        
+        // Find the "Всего:" cell in the panel
+        var totalCell = document.querySelector('.main-grid-panel-total.main-grid-panel-cell');
+        if (!totalCell) {
+            console.warn('createListPageButton: Total cell not found');
             return false;
         }
-        console.log('addGridAction: Dropdown found:', dropdown);
-
-        var items = parseDropdownItems(dropdown);
-        console.log('addGridAction: Existing dropdown items:', items);
-
-        var exists = items.some(function(item) { return item && item.VALUE === actionValue; });
-        if (exists) {
-            console.log('addGridAction: Action already exists in dropdown');
+        
+        // Check if button already exists
+        var existingCell = document.getElementById('calc-header-tabs-cell');
+        if (existingCell) {
+            console.log('createListPageButton: Button cell already exists');
             return false;
         }
-
-        items.push({ NAME: actionTitle, VALUE: actionValue });
-        dropdown.setAttribute('data-items', JSON.stringify(items));
-        console.log('addGridAction: Added new action to dropdown, refreshing...');
-        refreshDropdown(dropdown, items);
-        console.log('addGridAction: Successfully added action option');
-        return true;
-    }
-
-    function getActionDropdown(grid) {
-        var gridId = grid && typeof grid.getId === 'function' ? grid.getId() : null;
-        console.log('getActionDropdown: gridId:', gridId);
-        if (!gridId) {
-            console.warn('getActionDropdown: Could not get gridId from grid');
-            return null;
-        }
-
-        var selector = '.main-dropdown[data-name="action_button_' + gridId + '"]';
-        console.log('getActionDropdown: Looking for dropdown with selector:', selector);
-        var dropdown = document.querySelector(selector);
-        console.log('getActionDropdown: Found dropdown:', !!dropdown);
-        return dropdown;
-    }
-
-    function parseDropdownItems(dropdown) {
-        var itemsRaw = dropdown ? dropdown.getAttribute('data-items') : '';
-        if (!itemsRaw) {
-            return [];
-        }
-
-        try {
-            var parsed = JSON.parse(itemsRaw);
-            return Array.isArray(parsed) ? parsed : [];
-        } catch (e) {
-            console.warn('[calc_header_tabs] unable to parse dropdown items', e);
-            return [];
-        }
-    }
-
-    function refreshDropdown(dropdown, items) {
-        if (!dropdown) {
-            return;
-        }
-
-        var dropdownInstance = dropdown.BX && (dropdown.BX.dropdown || dropdown.BX.MainDropdown || dropdown.BX.menu);
-        if (dropdownInstance) {
-            if (typeof dropdownInstance.setItems === 'function') {
-                dropdownInstance.setItems(items);
-                return;
-            }
-            if (typeof dropdownInstance.setData === 'function') {
-                dropdownInstance.setData(items);
-                return;
-            }
-            if (typeof dropdownInstance.updateItems === 'function') {
-                dropdownInstance.updateItems(items);
-                return;
-            }
-        }
-
-        if (BX && BX.UI && BX.UI.Dropdown) {
-            dropdown.dataset.items = JSON.stringify(items);
-            if (!dropdown.dataset.initialized) {
-                // Инициализируем выпадающий список, если он ещё не создан
-                /* eslint-disable no-new */
-                new BX.UI.Dropdown({
-                    targetElement: dropdown,
-                    items: items
-                });
-                /* eslint-enable no-new */
-                dropdown.dataset.initialized = 'true';
-            }
-        } else {
-            dropdown.dataset.items = JSON.stringify(items);
-        }
-    }
-
-    function bindGridApply(grid) {
-        var applyButtons = getApplyButtons(grid);
-        applyButtons.forEach(function(button) {
-            button.addEventListener('click', function(event) {
-                var selectedAction = getSelectedGridAction(grid);
-                handleGridAction(grid, selectedAction, event);
-            });
-        });
-
-        if (BX && BX.Event && BX.Event.EventEmitter && typeof BX.Event.EventEmitter.subscribe === 'function') {
-            var handler = function(event) {
-                var targetGrid = event.getTarget ? event.getTarget() : null;
-                if (targetGrid && typeof targetGrid.getId === 'function' && grid && grid.getId && grid.getId() !== targetGrid.getId()) {
-                    return;
-                }
-
-                var actionId = extractActionFromEvent(event, grid);
-                handleGridAction(grid, actionId, event);
-            };
-
-            BX.Event.EventEmitter.subscribe('Grid::onActionButtonClick', handler);
-            BX.Event.EventEmitter.subscribe('grid:clickAction', handler);
-        }
-    }
-
-    function getApplyButtons(grid) {
-        var panel = grid && grid.getActionsPanel && grid.getActionsPanel().getPanel ? grid.getActionsPanel().getPanel() : null;
-        var buttons = panel ? panel.querySelectorAll('.ui-btn[data-id="apply_button"]') : null;
-
-        if (buttons && buttons.length) {
-            return Array.prototype.slice.call(buttons);
-        }
-
-        return Array.prototype.slice.call(document.querySelectorAll('.ui-btn[data-id="apply_button"]'));
-    }
-
-    function getSelectedGridAction(grid) {
-        var gridId = grid && typeof grid.getId === 'function' ? grid.getId() : null;
-        if (!gridId) {
-            return null;
-        }
-
-        var hiddenInput = document.querySelector('input[name="action_button_' + gridId + '"]');
-        if (hiddenInput && hiddenInput.value) {
-            return hiddenInput.value;
-        }
-
-        var dropdown = getActionDropdown(grid);
-        if (dropdown) {
-            var datasetValue = dropdown.dataset ? dropdown.dataset.value : null;
-            if (datasetValue) {
-                return datasetValue;
-            }
-
-            var attrValue = dropdown.getAttribute('data-value');
-            if (attrValue) {
-                return attrValue;
-            }
-        }
-
-        return null;
-    }
-
-    function extractActionFromEvent(event, grid) {
-        var data = event && typeof event.getData === 'function' ? event.getData() : (event && event.data) || {};
-        if (Array.isArray(data)) {
-            data = data[0] || {};
-        }
-
-        var actionId = data.action || data.actionId || data.value || null;
-
-        if (!actionId && data.button && data.button.dataset) {
-            actionId = data.button.dataset.action || data.button.dataset.id;
-        }
-
-        if (!actionId && data.button && data.button.getAttribute) {
-            actionId = data.button.getAttribute('data-action') || data.button.getAttribute('data-id');
-        }
-
-        if (!actionId && grid) {
-            actionId = getSelectedGridAction(grid);
-        }
-
-        return actionId;
-    }
-
-    function handleGridAction(grid, actionId, event) {
-        if (!actionId) {
-            return;
-        }
-
-        if (actionId === actionValue) {
-            if (event && typeof event.preventDefault === 'function') {
-                event.preventDefault();
-            }
-            if (event && typeof event.stopPropagation === 'function') {
-                event.stopPropagation();
-            }
-
+        
+        // Create new cell with button
+        var buttonCell = document.createElement('td');
+        buttonCell.className = 'main-grid-panel-cell main-grid-cell-left';
+        buttonCell.id = 'calc-header-tabs-cell';
+        
+        var button = document.createElement('button');
+        button.className = 'ui-btn ui-btn-primary ui-btn-sm';
+        button.id = 'calc-use-in-header-btn';
+        button.title = actionTitle;
+        button.textContent = actionTitle;
+        
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
             var selectedIds = getGridSelectedIds(grid);
             if (!selectedIds.length) {
                 alert('Не выбраны элементы для добавления в калькуляцию');
                 return;
             }
-
+            
             sendItems(selectedIds);
-            return;
+        });
+        
+        buttonCell.appendChild(button);
+        
+        // Insert after total cell
+        totalCell.parentNode.insertBefore(buttonCell, totalCell.nextSibling);
+        
+        console.log('createListPageButton: Button successfully added');
+        
+        // Listen to grid selection changes for delete tracking
+        if (grid && BX && BX.Event && BX.Event.EventEmitter) {
+            BX.Event.EventEmitter.subscribe('Grid::onActionButtonClick', function(event) {
+                var data = event && typeof event.getData === 'function' ? event.getData() : (event && event.data) || {};
+                if (Array.isArray(data)) {
+                    data = data[0] || {};
+                }
+                var actionId = data.action || data.actionId || data.value || null;
+                
+                if (actionId === 'delete' || actionId === 'delete_all') {
+                    var idsForDelete = getGridSelectedIds(grid);
+                    if (idsForDelete.length) {
+                        markDeleted(idsForDelete);
+                    }
+                }
+            });
         }
-
-        if (actionId === 'delete' || actionId === 'delete_all') {
-            var idsForDelete = getGridSelectedIds(grid);
-            if (idsForDelete.length) {
-                markDeleted(idsForDelete);
-            }
-        }
+        
+        return true;
     }
 
     function getGridSelectedIds(grid) {
@@ -356,14 +214,202 @@
         return getSelectedIds();
     }
 
+    function getSkuIblockId() {
+        console.log('getSkuIblockId: Starting SKU IBLOCK_ID detection');
+        
+        // Method 1: Look for hidden input OFFERS_IBLOCK_ID
+        var offersInput = document.querySelector('input[name="OFFERS_IBLOCK_ID"]');
+        if (offersInput && offersInput.value) {
+            var skuId = parseInt(offersInput.value, 10);
+            if (!isNaN(skuId) && skuId > 0 && iblockToEntity[skuId]) {
+                console.log('getSkuIblockId: Found SKU IBLOCK_ID from OFFERS_IBLOCK_ID input:', skuId);
+                return skuId;
+            }
+        }
+        
+        // Method 2: Check if config has skuIblockId
+        if (config.skuIblockId) {
+            var skuId = parseInt(config.skuIblockId, 10);
+            if (!isNaN(skuId) && skuId > 0 && iblockToEntity[skuId]) {
+                console.log('getSkuIblockId: Found SKU IBLOCK_ID from config:', skuId);
+                return skuId;
+            }
+        }
+        
+        // Method 3: Look in entityMap for *Variants type related to current iblock
+        // Try to find the most relevant Variants type based on the current entity
+        var variantPriority = ['materialsVariants', 'operationsVariants', 'detailsVariants'];
+        for (var i = 0; i < variantPriority.length; i++) {
+            var entityType = variantPriority[i];
+            if (entityMap[entityType]) {
+                var skuId = parseInt(entityMap[entityType], 10);
+                if (!isNaN(skuId) && skuId > 0 && iblockToEntity[skuId]) {
+                    console.log('getSkuIblockId: Found SKU IBLOCK_ID from entityMap:', skuId, 'entityType:', entityType);
+                    return skuId;
+                }
+            }
+        }
+        
+        console.warn('getSkuIblockId: Could not determine SKU IBLOCK_ID');
+        return 0;
+    }
+
+    function initSkuTable() {
+        console.log('initSkuTable: Starting SKU table initialization');
+        
+        // Find SKU table by looking for elements with id containing 'tbl_iblock_sub_element_'
+        var skuFooters = document.querySelectorAll('[id^="tbl_iblock_sub_element_"][id$="_footer"]');
+        if (!skuFooters.length) {
+            console.warn('initSkuTable: No SKU table footer found');
+            return;
+        }
+        
+        console.log('initSkuTable: Found', skuFooters.length, 'SKU table footer(s)');
+        
+        var skuIblockId = getSkuIblockId();
+        if (!skuIblockId) {
+            console.warn('initSkuTable: Could not determine SKU IBLOCK_ID');
+            return;
+        }
+        
+        var skuEntity = iblockToEntity[skuIblockId];
+        if (!skuEntity) {
+            console.warn('initSkuTable: SKU IBLOCK_ID', skuIblockId, 'not found in entityMap');
+            return;
+        }
+        
+        console.log('initSkuTable: Using SKU IBLOCK_ID:', skuIblockId, 'entity:', skuEntity);
+        
+        skuFooters.forEach(function(footer) {
+            // Check if button already exists
+            if (footer.querySelector('#calc-header-tabs-sku-wrap')) {
+                console.log('initSkuTable: Button already exists in footer');
+                return;
+            }
+            
+            // Find the counter element
+            var counter = footer.querySelector('.adm-table-counter');
+            if (!counter) {
+                console.warn('initSkuTable: Counter not found in footer');
+                return;
+            }
+            
+            // Create button wrapper
+            var buttonWrap = document.createElement('span');
+            buttonWrap.className = 'adm-btn-wrap';
+            buttonWrap.id = 'calc-header-tabs-sku-wrap';
+            
+            var button = document.createElement('input');
+            button.type = 'button';
+            button.className = 'adm-btn';
+            button.value = actionTitle;
+            button.id = 'calc-use-in-header-sku-btn';
+            
+            button.addEventListener('click', function(event) {
+                event.preventDefault();
+                
+                // Get selected checkboxes from SKU table
+                // Extract table ID more safely
+                var footerId = footer.id || '';
+                var suffix = '_footer';
+                var endsWithFooter = footerId.length > suffix.length && 
+                                    footerId.lastIndexOf(suffix) === footerId.length - suffix.length;
+                
+                if (!footerId || !endsWithFooter) {
+                    console.warn('initSkuTable: Invalid footer ID:', footerId);
+                    return;
+                }
+                
+                var tableId = footerId.substring(0, footerId.length - suffix.length);
+                var table = document.getElementById(tableId);
+                if (!table) {
+                    console.warn('initSkuTable: SKU table not found:', tableId);
+                    return;
+                }
+                
+                var checkboxes = table.querySelectorAll('input[type="checkbox"][name="ID[]"]:checked');
+                var selectedIds = [];
+                for (var i = 0; i < checkboxes.length; i++) {
+                    var id = parseInt(checkboxes[i].value, 10);
+                    if (!isNaN(id) && id > 0) {
+                        selectedIds.push(id);
+                    }
+                }
+                
+                if (!selectedIds.length) {
+                    alert('Не выбраны элементы для добавления в калькуляцию');
+                    return;
+                }
+                
+                console.log('initSkuTable: Sending SKU items:', selectedIds, 'iblockId:', skuIblockId, 'entity:', skuEntity);
+                sendSkuItems(selectedIds, skuIblockId, skuEntity);
+            });
+            
+            buttonWrap.appendChild(button);
+            counter.parentNode.insertBefore(buttonWrap, counter);
+            
+            console.log('initSkuTable: Button successfully added to SKU table footer');
+        });
+    }
+
+    function sendSkuItems(ids, iblockId, entityType) {
+        var payload = {
+            action: 'headerTabsAdd',
+            iblockId: iblockId,
+            entityType: entityType,
+            itemIds: ids,
+            sessid: sessid
+        };
+
+        var onError = function(message) {
+            console.error('[calc_header_tabs] error', message);
+            alert(message || 'Ошибка при добавлении элементов в калькуляцию');
+        };
+
+        var onSuccess = function(response) {
+            if (!response || response.error) {
+                onError(response && response.message);
+                return;
+            }
+
+            var data = response.data || {};
+            if (!data.items || !Array.isArray(data.items)) {
+                onError('Некорректный ответ сервера');
+                return;
+            }
+
+            updateLocalStorage(data.entityType || entityType, data.items);
+            alert('Элементы добавлены в калькуляцию');
+        };
+
+        if (BX && BX.ajax && BX.ajax.post) {
+            BX.ajax.post(ajaxEndpoint, payload, function(result) {
+                try {
+                    var parsed = JSON.parse(result);
+                    onSuccess(parsed);
+                } catch (e) {
+                    onError(e.message);
+                }
+            });
+        } else {
+            fetch(ajaxEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: buildFormData(payload)
+            })
+                .then(function(res) { return res.json(); })
+                .then(onSuccess)
+                .catch(function(err) { onError(err.message); });
+        }
+    }
+
     function initListPage() {
         console.log('initListPage: Starting list page initialization');
         var grid = getGridInstance();
         if (grid) {
-            console.log('initListPage: Grid instance found, adding action');
-            var actionAdded = addGridAction(grid);
-            console.log('initListPage: Action added result:', actionAdded);
-            bindGridApply(grid);
+            console.log('initListPage: Grid instance found, adding button');
+            var buttonAdded = createListPageButton(grid);
+            console.log('initListPage: Button added result:', buttonAdded);
         } else {
             console.warn('initListPage: Grid instance not found');
         }
@@ -389,22 +435,24 @@
             } else {
                 console.log('initEditPage: Button already exists');
             }
-            return;
+        } else {
+            var button = document.createElement('a');
+            button.className = 'adm-btn';
+            button.dataset.role = 'calc-header-tabs-btn';
+            button.href = '#';
+            button.textContent = actionTitle;
+
+            button.addEventListener('click', function(event) {
+                event.preventDefault();
+                sendItems([elementId]);
+            });
+
+            container.appendChild(button);
+            console.log('initEditPage: Button successfully added to container');
         }
-
-        var button = document.createElement('a');
-        button.className = 'adm-btn';
-        button.dataset.role = 'calc-header-tabs-btn';
-        button.href = '#';
-        button.textContent = actionTitle;
-
-        button.addEventListener('click', function(event) {
-            event.preventDefault();
-            sendItems([elementId]);
-        });
-
-        container.appendChild(button);
-        console.log('initEditPage: Button successfully added to container');
+        
+        // Also try to initialize SKU table if present
+        initSkuTable();
     }
 
     function getSelectedIds() {
@@ -489,8 +537,11 @@
         var raw = localStorage.getItem('calc_header_tabs');
         var empty = {
             equipment: [],
+            materials: [],
             materialsVariants: [],
+            operations: [],
             operationsVariants: [],
+            details: [],
             detailsVariants: []
         };
 
@@ -500,7 +551,7 @@
 
         try {
             var parsed = JSON.parse(raw);
-            ['equipment', 'materialsVariants', 'operationsVariants', 'detailsVariants'].forEach(function(key) {
+            ['equipment', 'materials', 'materialsVariants', 'operations', 'operationsVariants', 'details', 'detailsVariants'].forEach(function(key) {
                 if (!Array.isArray(parsed[key])) {
                     parsed[key] = [];
                 }
@@ -557,10 +608,16 @@
 
     function buildHeaderId(entityType, itemId) {
         switch (entityType) {
+            case 'materials':
+                return 'header-material-' + itemId;
             case 'materialsVariants':
                 return 'header-material-' + itemId;
+            case 'operations':
+                return 'header-operation-' + itemId;
             case 'operationsVariants':
                 return 'header-operation-' + itemId;
+            case 'details':
+                return 'header-detail-' + itemId;
             case 'detailsVariants':
                 return 'header-detail-' + itemId;
             case 'equipment':
