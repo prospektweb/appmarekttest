@@ -91,7 +91,7 @@ class AdminHandler
         $asset = Asset::getInstance();
         
         // Безопасное экранирование SITE_ID для JavaScript через JSON
-        $siteId = json_encode(SITE_ID, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $siteId = json_encode(SITE_ID, self::JSON_ENCODE_FLAGS);
         $asset->addString('<script>BX.message({ SITE_ID: ' . $siteId . ' });</script>', 
             false, \Bitrix\Main\Page\AssetLocation::AFTER_JS_KERNEL);
         
@@ -168,9 +168,10 @@ class AdminHandler
             $asset->addJs($jsPath);
         }
 
-        // Проверяем загрузку модуля
-        $moduleLoaded = Loader::includeModule('prospektweb.calc');
-        $debugLog['moduleLoaded'] = $moduleLoaded;
+        // Проверяем доступность модуля (для диагностики)
+        // Модуль уже должен быть загружен, т.к. этот класс является его частью
+        $moduleInstalled = Loader::moduleExists('prospektweb.calc');
+        $debugLog['moduleInstalled'] = $moduleInstalled;
 
         $config = [
             'ajaxEndpoint' => '/bitrix/tools/prospektweb.calc/calculator_ajax.php',
