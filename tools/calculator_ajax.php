@@ -14,6 +14,7 @@ use Bitrix\Main\Config\Option;
 use Prospektweb\Calc\Calculator\InitPayloadService;
 use Prospektweb\Calc\Calculator\ElementDataService;
 use Prospektweb\Calc\Calculator\SaveHandler;
+use Prospektweb\Calc\Services\HeaderTabsService;
 
 // Constants
 const LOG_FILE = '/local/logs/prospektweb.calc.ajax.log';
@@ -58,6 +59,10 @@ try {
 
         case 'refreshData':
             handleRefreshData($request);
+            break;
+
+        case 'headerTabsAdd':
+            handleHeaderTabsAdd($request);
             break;
 
         default:
@@ -164,6 +169,45 @@ function handleRefreshData($request): void
         logError('RefreshData error: ' . $e->getMessage());
         sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
     }
+}
+
+/**
+ * Обработка запроса headerTabsAdd
+ */
+function handleHeaderTabsAdd($request): void
+{
+    $iblockId = (int)($request->get('iblockId') ?? 0);
+    $entityType = $request->get('entityType');
+    $itemIdsRaw = $request->get('itemIds');
+
+    $itemIds = is_array($itemIdsRaw) ? $itemIdsRaw : explode(',', (string)$itemIdsRaw);
+    $itemIds = array_values(array_unique(array_filter(array_map('intval', $itemIds), static function (int $id): bool {
+        return $id > 0;
+    })));
+
+    if (empty($itemIds)) {
+        sendJsonResponse(['error' => 'Missing parameter', 'message' => 'Не выбраны элементы'], 400);
+    }
+
+    $service = new HeaderTabsService();
+    $resolvedEntityType = $entityType ?: $service->resolveEntityTypeByIblockId($iblockId);
+
+    if ($resolvedEntityType === null) {
+        sendJsonResponse(['error' => 'Invalid parameter', 'message' => 'Инфоблок не поддерживается в калькуляции'], 400);
+    }
+
+    $iblockMap = $service->getHeaderIblockMap();
+    $targetIblockId = isset($iblockMap[$resolvedEntityType]) ? (int)$iblockMap[$resolvedEntityType] : $iblockId;
+
+    $items = $service->prepareHeaderItems($resolvedEntityType, $targetIblockId, $itemIds);
+
+    sendJsonResponse([
+        'success' => true,
+        'data' => [
+            'entityType' => $resolvedEntityType,
+            'items' => $items,
+        ],
+    ]);
 }
 
 /**

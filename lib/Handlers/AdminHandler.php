@@ -4,7 +4,9 @@ namespace Prospektweb\Calc\Handlers;
 
 use Bitrix\Main\Loader;
 use Bitrix\Main\Page\Asset;
+use Bitrix\Main\Page\AssetLocation;
 use Bitrix\Main\Application;
+use Prospektweb\Calc\Services\HeaderTabsService;
 
 /**
  * Обработчик для добавления кнопки/вкладки в админку.
@@ -31,6 +33,7 @@ class AdminHandler
         // Также добавляем на странице списка элементов (для кнопки в тулбаре)
         if (strpos($scriptName, '/bitrix/admin/iblock_list_admin.php') !== false) {
             self::addCalculatorButton();
+            self::addHeaderTabsAction();
         }
     }
 
@@ -71,7 +74,45 @@ class AdminHandler
                     window.ProspekwebCalc.init();
                 }
             });
-        </script>', false, \Bitrix\Main\Page\AssetLocation::AFTER_JS);
+        </script>', false, AssetLocation::AFTER_JS);
+    }
+
+    /**
+     * Добавляет JS для массового действия "Использовать в калькуляции".
+     */
+    protected static function addHeaderTabsAction(): void
+    {
+        $service = new HeaderTabsService();
+        $entityMap = $service->getHeaderIblockMap();
+
+        if (empty($entityMap)) {
+            return;
+        }
+
+        $asset = Asset::getInstance();
+        $jsPath = '/local/js/prospektweb.calc/header-tabs-sync.js';
+
+        if (file_exists(Application::getDocumentRoot() . $jsPath)) {
+            $asset->addJs($jsPath);
+        }
+
+        $config = [
+            'ajaxEndpoint' => '/bitrix/tools/prospektweb.calc/calculator_ajax.php',
+            'entityMap' => $entityMap,
+            'actionValue' => 'calc_use_in_header',
+            'messages' => [
+                'actionTitle' => 'Использовать в калькуляции',
+            ],
+            'sessid' => bitrix_sessid(),
+        ];
+
+        $asset->addString(
+            '<script>window.ProspektwebCalcHeaderTabsConfig = ' .
+            json_encode($config, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) .
+            ';</script>',
+            false,
+            AssetLocation::AFTER_JS
+        );
     }
 
     /**
