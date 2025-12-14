@@ -311,12 +311,16 @@
                 // Get selected checkboxes from SKU table
                 // Extract table ID more safely
                 var footerId = footer.id || '';
-                if (!footerId || footerId.indexOf('_footer') === -1) {
+                var suffix = '_footer';
+                var endsWithFooter = footerId.length > suffix.length && 
+                                    footerId.lastIndexOf(suffix) === footerId.length - suffix.length;
+                
+                if (!footerId || !endsWithFooter) {
                     console.warn('initSkuTable: Invalid footer ID:', footerId);
                     return;
                 }
                 
-                var tableId = footerId.replace('_footer', '');
+                var tableId = footerId.substring(0, footerId.length - suffix.length);
                 var table = document.getElementById(tableId);
                 if (!table) {
                     console.warn('initSkuTable: SKU table not found:', tableId);
