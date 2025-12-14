@@ -327,14 +327,29 @@
                     return;
                 }
                 
-                var checkboxes = table.querySelectorAll('input[type="checkbox"][name="ID[]"]:checked');
+                // Ищем чекбоксы в SKU-таблице (name="ID[]" или name="SUB_ID[]")
+                var checkboxes = table.querySelectorAll(
+                    'input[type="checkbox"][name="ID[]"]:checked, ' +
+                    'input[type="checkbox"][name="SUB_ID[]"]:checked'
+                );
                 var selectedIds = [];
+                var rawValues = [];
                 for (var i = 0; i < checkboxes.length; i++) {
-                    var id = parseInt(checkboxes[i].value, 10);
+                    var rawValue = checkboxes[i].value;
+                    rawValues.push(rawValue);
+                    
+                    // Удаляем префикс E если есть (Bitrix добавляет E для элементов)
+                    var cleanValue = rawValue.replace(/^E/i, '');
+                    var id = parseInt(cleanValue, 10);
                     if (!isNaN(id) && id > 0) {
                         selectedIds.push(id);
                     }
                 }
+                
+                console.log('[HeaderTabsSync] initSkuTable - selected items:', {
+                    rawCheckboxValues: rawValues,
+                    cleanedIds: selectedIds
+                });
                 
                 if (!selectedIds.length) {
                     alert('Не выбраны элементы для добавления в калькуляцию');
@@ -353,6 +368,12 @@
     }
 
     function sendSkuItems(ids, iblockId, entityType) {
+        console.log('[HeaderTabsSync] Sending SKU items:', {
+            cleanedIds: ids,
+            iblockId: iblockId,
+            entityType: entityType
+        });
+        
         var payload = {
             action: 'headerTabsAdd',
             iblockId: iblockId,
@@ -456,18 +477,41 @@
     }
 
     function getSelectedIds() {
-        var checkboxes = document.querySelectorAll('input[type="checkbox"][name="ID[]"]:checked');
+        // Ищем чекбоксы в обычном списке (name="ID[]") и в SKU-таблице (name="SUB_ID[]")
+        var checkboxes = document.querySelectorAll(
+            'input[type="checkbox"][name="ID[]"]:checked, ' +
+            'input[type="checkbox"][name="SUB_ID[]"]:checked'
+        );
+        
         var ids = [];
+        var rawValues = [];
         for (var i = 0; i < checkboxes.length; i++) {
-            var id = parseInt(checkboxes[i].value, 10);
+            var rawValue = checkboxes[i].value;
+            rawValues.push(rawValue);
+            
+            // Удаляем префикс E если есть (Bitrix добавляет E для элементов)
+            var cleanValue = rawValue.replace(/^E/i, '');
+            var id = parseInt(cleanValue, 10);
             if (!isNaN(id) && id > 0) {
                 ids.push(id);
             }
         }
+        
+        console.log('[HeaderTabsSync] getSelectedIds:', {
+            rawCheckboxValues: rawValues,
+            cleanedIds: ids
+        });
+        
         return ids;
     }
 
     function sendItems(ids) {
+        console.log('[HeaderTabsSync] Sending items:', {
+            cleanedIds: ids,
+            iblockId: currentIblockId,
+            entityType: currentEntity
+        });
+        
         var payload = {
             action: 'headerTabsAdd',
             iblockId: currentIblockId,
