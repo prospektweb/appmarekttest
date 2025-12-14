@@ -42,6 +42,8 @@ var ProspekwebCalc = {
     iframe: null,
     messageHandler: null,
     observer: null,
+    windowCloseHandler: null,
+    isClosing: false,
 
     /**
      * Инициализация кнопки в админке
@@ -248,7 +250,8 @@ var ProspekwebCalc = {
 
         this.dialog = dialog;
 
-        BX.addCustomEvent(dialog, 'onWindowClose', this.closeDialog.bind(this));
+        this.windowCloseHandler = this.handleWindowClose.bind(this);
+        BX.addCustomEvent(dialog, 'onWindowClose', this.windowCloseHandler);
 
         // Используем ProspektwebCalcIntegration для обработки postMessage сразу,
         // чтобы не пропустить первое сообщение READY, которое iframe отправляет
@@ -357,7 +360,19 @@ var ProspekwebCalc = {
     /**
      * Закрытие диалога
      */
-    closeDialog: function() {
+    handleWindowClose: function() {
+        this.closeDialog({ skipDialogClose: true });
+    },
+
+    closeDialog: function(options) {
+        var opts = options || {};
+
+        if (this.isClosing) {
+            return;
+        }
+
+        this.isClosing = true;
+
         // Уничтожаем интеграцию если она существует
         if (this.integration && typeof this.integration.destroy === 'function') {
             this.integration.destroy();
@@ -369,13 +384,22 @@ var ProspekwebCalc = {
             window.removeEventListener('message', this.messageHandler);
             this.messageHandler = null;
         }
-        
+
         if (this.dialog) {
-            this.dialog.Close();
+            if (this.windowCloseHandler) {
+                BX.removeCustomEvent(this.dialog, 'onWindowClose', this.windowCloseHandler);
+                this.windowCloseHandler = null;
+            }
+
+            if (!opts.skipDialogClose) {
+                this.dialog.Close();
+            }
             this.dialog = null;
         }
-        
+
         this.iframe = null;
+
+        this.isClosing = false;
     },
 
     /**
