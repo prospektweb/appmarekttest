@@ -428,6 +428,7 @@
                 let popupWatcher = null;
                 let counterNode = null;
                 let closeListenerAttached = false;
+                let functionsOverridden = false;
 
                 const cleanup = () => {
                     delete window[callbackName];
@@ -486,6 +487,50 @@
                     }
                 };
 
+                const overrideFunctions = () => {
+                    if (functionsOverridden) return;
+
+                    try {
+                        if (!popupWindow || !popupWindow.document || !popupWindow.document.body) return;
+
+                        // Переопределяем SelEl - вызывается при двойном клике на элемент
+                        popupWindow.SelEl = function(id, name) {
+                            const parsedId = parseInt(id, 10);
+                            if (parsedId && !isNaN(parsedId) && parsedId > 0) {
+                                if (selectedIds.indexOf(parsedId) === -1) {
+                                    selectedIds.push(parsedId);
+                                }
+                            }
+                            updateCounter();
+                            console.log('[PWRT] SelEl called:', id, name, 'selectedIds:', selectedIds);
+                        };
+
+                        // Переопределяем SelAll - вызывается при клике на кнопку "Выбрать"
+                        popupWindow.SelAll = function() {
+                            // Собираем все отмеченные чекбоксы
+                            const checkboxes = popupWindow.document.querySelectorAll('input[type="checkbox"][name="ID[]"]:checked');
+                            checkboxes.forEach(function(checkbox) {
+                                const parsedId = parseInt(checkbox.value, 10);
+                                if (parsedId && !isNaN(parsedId) && parsedId > 0) {
+                                    if (selectedIds.indexOf(parsedId) === -1) {
+                                        selectedIds.push(parsedId);
+                                    }
+                                }
+                            });
+
+                            console.log('[PWRT] SelAll called, collected IDs:', selectedIds);
+
+                            // Закрываем окно
+                            popupWindow.close();
+                        };
+
+                        functionsOverridden = true;
+                        console.log('[PWRT] SelEl and SelAll overridden successfully');
+                    } catch (e) {
+                        console.warn('[PWRT] Failed to override functions:', e);
+                    }
+                };
+
                 window[callbackName] = function (elementId) {
                     const parsedId = parseInt(elementId, 10);
 
@@ -512,6 +557,7 @@
                         return;
                     }
 
+                    overrideFunctions();
                     updateCounter();
 
                     try {
@@ -522,7 +568,7 @@
                     } catch (e) {
                         // Игнорируем ошибки подписки, если окно ещё не инициализировалось
                     }
-                }, 500);
+                }, 300);
             });
         }
 
