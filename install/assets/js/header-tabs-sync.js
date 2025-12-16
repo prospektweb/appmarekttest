@@ -457,34 +457,8 @@
             return;
         }
 
-        var container = document.querySelector('.adm-title-buttons')
-            || document.querySelector('.adm-detail-toolbar-right')
-            || document.querySelector('.adm-detail-toolbar');
-
-        console.log('initEditPage: Button container found:', !!container);
-        if (!container || container.querySelector('[data-role="calc-header-tabs-btn"]')) {
-            if (!container) {
-                console.warn('initEditPage: Container not found');
-            } else {
-                console.log('initEditPage: Button already exists');
-            }
-        } else {
-            var button = document.createElement('a');
-            button.className = 'adm-btn';
-            button.dataset.role = 'calc-header-tabs-btn';
-            button.href = '#';
-            button.textContent = actionTitle;
-
-            button.addEventListener('click', function(event) {
-                event.preventDefault();
-                sendItems([elementId]);
-            });
-
-            container.appendChild(button);
-            console.log('initEditPage: Button successfully added to container');
-        }
-        
-        // Also try to initialize SKU table if present
+        // On edit page, we only initialize SKU table for parent entities
+        // The button will appear in the SKU table footer, not in the main toolbar
         initSkuTable();
     }
 
