@@ -156,6 +156,80 @@ class AdminHandler
             return;
         }
 
+        // Определяем тип сущности для текущего инфоблока
+        $currentEntity = null;
+        foreach ($entityMap as $entityType => $entityIblockId) {
+            if ((int)$entityIblockId === $iblockId) {
+                $currentEntity = $entityType;
+                break;
+            }
+        }
+
+        $debugLog['currentEntity'] = $currentEntity;
+
+        if (!$currentEntity) {
+            $debugLog['exitReason'] = 'Current iblock not found in entityMap';
+            $asset->addString(
+                '<script>console.group("ProspektwebCalc Debug - addHeaderTabsAction"); console.log(' . json_encode($debugLog, self::JSON_ENCODE_FLAGS) . '); console.groupEnd();</script>',
+                false,
+                AssetLocation::AFTER_JS
+            );
+            return;
+        }
+
+        // Определяем текущую страницу
+        $isListPage = strpos($scriptName, 'iblock_list_admin.php') !== false;
+        $isEditPage = strpos($scriptName, 'iblock_element_edit.php') !== false;
+
+        $debugLog['isListPage'] = $isListPage;
+        $debugLog['isEditPage'] = $isEditPage;
+
+        // Список типов сущностей, для которых показываем кнопку в списке
+        // Варианты и оборудование
+        $variantEntityTypes = [
+            'detailsVariants',
+            'materialsVariants',
+            'operationsVariants',
+            'equipment',
+        ];
+
+        // Список родительских типов сущностей (детали, материалы, операции)
+        // Для них кнопка показывается только на странице редактирования (в табе ТП)
+        $parentEntityTypes = [
+            'details',
+            'materials',
+            'operations',
+        ];
+
+        $showButton = false;
+
+        if ($isListPage) {
+            // В списке показываем только для вариантов и оборудования
+            $showButton = in_array($currentEntity, $variantEntityTypes, true);
+            $debugLog['showButtonReason'] = $showButton 
+                ? 'List page - entity is variant or equipment'
+                : 'List page - entity is parent (not showing)';
+        } elseif ($isEditPage) {
+            // На странице редактирования показываем для родительских сущностей
+            // (кнопка будет во вкладке "Торговые предложения")
+            $showButton = in_array($currentEntity, $parentEntityTypes, true);
+            $debugLog['showButtonReason'] = $showButton
+                ? 'Edit page - entity is parent (show for SKU tab)'
+                : 'Edit page - entity is not parent';
+        }
+
+        $debugLog['showButton'] = $showButton;
+
+        if (!$showButton) {
+            $debugLog['exitReason'] = 'Button should not be shown for this page/entity combination';
+            $asset->addString(
+                '<script>console.group("ProspektwebCalc Debug - addHeaderTabsAction"); console.log(' . json_encode($debugLog, self::JSON_ENCODE_FLAGS) . '); console.groupEnd();</script>',
+                false,
+                AssetLocation::AFTER_JS
+            );
+            return;
+        }
+        
         $jsPath = '/local/js/prospektweb.calc/header-tabs-sync.js';
         $jsFullPath = Application::getDocumentRoot() . $jsPath;
         $jsFileExists = file_exists($jsFullPath);
@@ -178,6 +252,17 @@ class AdminHandler
             ],
             'sessid' => bitrix_sessid(),
         ];
+
+        // Добавляем skuIblockId для страниц редактирования родительских сущностей
+        if ($isEditPage && in_array($currentEntity, $parentEntityTypes, true)) {
+            // Определяем инфоблок вариантов по текущему родительскому
+            $skuEntityType = $currentEntity . 'Variants';
+            if (isset($entityMap[$skuEntityType])) {
+                $config['skuIblockId'] = $entityMap[$skuEntityType];
+                $debugLog['skuIblockId'] = $config['skuIblockId'];
+                $debugLog['skuEntityType'] = $skuEntityType;
+            }
+        }
 
         $debugLog['configAdded'] = true;
         $debugLog['exitReason'] = 'success - config and JS added';
