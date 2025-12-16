@@ -206,16 +206,20 @@ class AdminHandler
         if ($isListPage) {
             // В списке показываем только для вариантов и оборудования
             $showButton = in_array($currentEntity, $variantEntityTypes, true);
-            $debugLog['showButtonReason'] = $showButton 
-                ? 'List page - entity is variant or equipment'
-                : 'List page - entity is parent (not showing)';
+            if ($showButton) {
+                $debugLog['showButtonReason'] = 'List page - entity is variant or equipment';
+            } else {
+                $debugLog['showButtonReason'] = 'List page - entity is parent (not showing)';
+            }
         } elseif ($isEditPage) {
             // На странице редактирования показываем для родительских сущностей
             // (кнопка будет во вкладке "Торговые предложения")
             $showButton = in_array($currentEntity, $parentEntityTypes, true);
-            $debugLog['showButtonReason'] = $showButton
-                ? 'Edit page - entity is parent (show for SKU tab)'
-                : 'Edit page - entity is not parent';
+            if ($showButton) {
+                $debugLog['showButtonReason'] = 'Edit page - entity is parent (show for SKU tab)';
+            } else {
+                $debugLog['showButtonReason'] = 'Edit page - entity is not parent';
+            }
         }
 
         $debugLog['showButton'] = $showButton;
