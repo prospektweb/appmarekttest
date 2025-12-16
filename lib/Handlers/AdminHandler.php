@@ -233,7 +233,7 @@ class AdminHandler
             );
             return;
         }
-        
+
         $jsPath = '/local/js/prospektweb.calc/header-tabs-sync.js';
         $jsFullPath = Application::getDocumentRoot() . $jsPath;
         $jsFileExists = file_exists($jsFullPath);
@@ -260,11 +260,14 @@ class AdminHandler
         // Добавляем skuIblockId для страниц редактирования родительских сущностей
         if ($isEditPage && in_array($currentEntity, $parentEntityTypes, true)) {
             // Определяем инфоблок вариантов по текущему родительскому
+            // Используем стандартный паттерн именования: {entityName}Variants
             $skuEntityType = $currentEntity . 'Variants';
-            if (isset($entityMap[$skuEntityType])) {
-                $config['skuIblockId'] = $entityMap[$skuEntityType];
+            if (isset($entityMap[$skuEntityType]) && (int)$entityMap[$skuEntityType] > 0) {
+                $config['skuIblockId'] = (int)$entityMap[$skuEntityType];
                 $debugLog['skuIblockId'] = $config['skuIblockId'];
                 $debugLog['skuEntityType'] = $skuEntityType;
+            } else {
+                $debugLog['skuEntityType'] = $skuEntityType . ' (not found in entityMap)';
             }
         }
 

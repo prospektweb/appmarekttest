@@ -183,6 +183,8 @@
                 this.targetOrigin = origin;
             }
 
+            // Note: pwcode parameter was removed from the protocol as it was unused
+            // and caused unnecessary log pollution (pwcode: undefined)
             console.info('[FROM_IFRAME]', {
                 type: message.type,
                 requestId: message.requestId,
