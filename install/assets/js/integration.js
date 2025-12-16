@@ -185,7 +185,6 @@
 
             console.info('[FROM_IFRAME]', {
                 type: message.type,
-                pwcode: message.pwcode,
                 requestId: message.requestId,
                 payload: message.payload,
             });
@@ -211,7 +210,7 @@
         /**
          * Отправка сообщения по протоколу pwrt-v1
          */
-        sendPwrtMessage(type, pwcode, payload, requestId, targetOrigin) {
+        sendPwrtMessage(type, payload, requestId, targetOrigin) {
             if (!this.iframeWindow) {
                 console.error('[CalcIntegration] Iframe window not available');
                 return;
@@ -223,7 +222,6 @@
                 source: MODULE_SOURCE,
                 target: MODULE_TARGET,
                 type: type,
-                pwcode: pwcode,
                 requestId: requestId,
                 timestamp: Date.now(),
                 payload: payload,
@@ -234,7 +232,6 @@
 
             console.info('[TO_IFRAME]', {
                 type: type,
-                pwcode: pwcode,
                 requestId: requestId,
                 payloadSummary: payloadSummary,
                 targetOrigin: origin,
@@ -282,7 +279,6 @@
                 iblockId: iblockId,
                 iblockType: iblockType,
                 lang: lang,
-                pwcode: message.pwcode,
                 requestId: message.requestId,
                 origin: origin,
             });
@@ -293,10 +289,10 @@
                 const payload = Array.isArray(message.payload) ? message.payload : [];
                 const result = await this.fetchRefreshData(payload);
 
-                this.sendPwrtMessage('REFRESH_RESULT', message.pwcode, result, message.requestId, origin);
+                this.sendPwrtMessage('REFRESH_RESULT', result, message.requestId, origin);
             } catch (error) {
                 console.error('[CalcIntegration] Error during refresh request', error);
-                this.sendPwrtMessage('REFRESH_RESULT', message.pwcode, [], message.requestId, origin);
+                this.sendPwrtMessage('REFRESH_RESULT', [], message.requestId, origin);
             }
         }
 
@@ -319,13 +315,12 @@
                 iblockId: offersIblockId,
                 iblockType: iblockType,
                 lang: (this.initData && this.initData.lang) ? this.initData.lang : null,
-                pwcode: message.pwcode,
                 requestId: message.requestId,
                 origin: origin,
             });
         }
 
-        async sendSelectDone({ ids, iblockId, iblockType, lang, pwcode, requestId, origin }) {
+        async sendSelectDone({ ids, iblockId, iblockType, lang, requestId, origin }) {
             const normalizedIds = this.normalizeSelectedIds(ids);
             let items = [];
 
@@ -345,7 +340,7 @@
                 }
             }
 
-            this.sendPwrtMessage('SELECT_DONE', pwcode, {
+            this.sendPwrtMessage('SELECT_DONE', {
                 iblockId: iblockId,
                 iblockType: iblockType,
                 lang: lang,
@@ -394,7 +389,7 @@
             const payload = message.payload || {};
             const offerId = payload.id || null;
 
-            this.sendPwrtMessage('REMOVE_OFFER_ACK', message.pwcode, { id: offerId, status: 'ok' }, message.requestId, origin);
+            this.sendPwrtMessage('REMOVE_OFFER_ACK', { id: offerId, status: 'ok' }, message.requestId, origin);
         }
 
         openElementSelectionDialog({ iblockId, iblockType, lang }) {
