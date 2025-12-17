@@ -204,6 +204,9 @@
                 case 'REMOVE_OFFER_REQUEST':
                     this.handleRemoveOfferRequest(message, origin);
                     break;
+                case 'CLOSE_REQUEST':
+                    this.handleCloseRequest(message);
+                    break;
                 default:
                     console.warn('[CalcIntegration] Unknown pwrt message type:', message.type);
             }
