@@ -444,30 +444,17 @@ class InitPayloadService
     {
         $iblocks = $this->getIblocks();
         $trees = [];
-        
-        // Товары с ТП
-        if (!empty($iblocks['products'])) {
-            $trees['products'] = $this->buildProductsTree(
-                $iblocks['products'], 
-                $iblocks['offers'] ?? 0
-            );
-        }
-        
+
         // CALC_SETTINGS
         if (!empty($iblocks['calcSettings'])) {
             $trees['calcSettings'] = $this->buildIblockTree($iblocks['calcSettings']);
         }
-        
-        // CALC_CONFIG
-        if (!empty($iblocks['calcConfig'])) {
-            $trees['calcConfig'] = $this->buildIblockTree($iblocks['calcConfig']);
-        }
-        
+
         // CALC_EQUIPMENT
         if (!empty($iblocks['calcEquipment'])) {
             $trees['calcEquipment'] = $this->buildIblockTree($iblocks['calcEquipment']);
         }
-        
+
         // CALC_MATERIALS с variants
         if (!empty($iblocks['calcMaterials'])) {
             $trees['calcMaterials'] = $this->buildCatalogTree(
@@ -483,26 +470,7 @@ class InitPayloadService
                 $iblocks['calcOperationsVariants'] ?? 0
             );
         }
-        
-        // CALC_DETAILS с variants
-        if (!empty($iblocks['calcDetails'])) {
-            $trees['calcDetails'] = $this->buildCatalogTree(
-                $iblocks['calcDetails'],
-                $iblocks['calcDetailsVariants'] ?? 0
-            );
-        }
-        
-        // Отдельно variants (если нужны без родителей)
-        if (!empty($iblocks['calcMaterialsVariants'])) {
-            $trees['calcMaterialsVariants'] = $this->buildIblockTree($iblocks['calcMaterialsVariants']);
-        }
-        if (!empty($iblocks['calcOperationsVariants'])) {
-            $trees['calcOperationsVariants'] = $this->buildIblockTree($iblocks['calcOperationsVariants']);
-        }
-        if (!empty($iblocks['calcDetailsVariants'])) {
-            $trees['calcDetailsVariants'] = $this->buildIblockTree($iblocks['calcDetailsVariants']);
-        }
-        
+
         return $trees;
     }
 
@@ -564,7 +532,6 @@ class InitPayloadService
                             'code' => $offer['CODE'] ?? '',
                             'iblockId' => $offersIblockId,
                             'parentId' => $productId,
-                            'properties' => [],
                         ];
                     }
                 }
@@ -681,17 +648,7 @@ class InitPayloadService
             ['ID', 'NAME', 'CODE', 'IBLOCK_SECTION_ID', 'IBLOCK_ID']
         );
 
-        while ($elementObject = $res->GetNextElement()) {
-            $fields = $elementObject->GetFields();
-            $propsRaw = $elementObject->GetProperties();
-
-            $properties = [];
-            foreach ($propsRaw as $prop) {
-                $code = $prop['CODE'] ?: (string)$prop['ID'];
-                $value = $prop['MULTIPLE'] === 'Y' ? (array)$prop['VALUE'] : $prop['VALUE'];
-                $properties[$code] = $value;
-            }
-
+        while ($fields = $res->Fetch()) {
             $elements[] = [
                 'type' => 'element',
                 'id' => (int)$fields['ID'],
@@ -699,7 +656,6 @@ class InitPayloadService
                 'code' => $fields['CODE'] ?? '',
                 'iblockId' => (int)$fields['IBLOCK_ID'],
                 'sectionId' => !empty($fields['IBLOCK_SECTION_ID']) ? (int)$fields['IBLOCK_SECTION_ID'] : 0,
-                'properties' => $properties,
             ];
         }
 
@@ -732,27 +688,10 @@ class InitPayloadService
             ['ID', 'NAME', 'CODE', 'IBLOCK_ID', 'PROPERTY_CML2_LINK']
         );
 
-        while ($elementObject = $res->GetNextElement()) {
-            $fields = $elementObject->GetFields();
-            $propsRaw = $elementObject->GetProperties();
-
-            $properties = [];
-            $parentId = 0;
-
-            foreach ($propsRaw as $prop) {
-                $code = $prop['CODE'] ?: (string)$prop['ID'];
-                $value = $prop['MULTIPLE'] === 'Y' ? (array)$prop['VALUE'] : $prop['VALUE'];
-                
-                if ($code === 'CML2_LINK') {
-                    $parentId = is_array($value) ? (int)reset($value) : (int)$value;
-                }
-                
-                $properties[$code] = $value;
-            }
-
-            if ($parentId <= 0 && !empty($fields['PROPERTY_CML2_LINK_VALUE'])) {
-                $parentId = (int)$fields['PROPERTY_CML2_LINK_VALUE'];
-            }
+        while ($fields = $res->Fetch()) {
+            $parentId = !empty($fields['PROPERTY_CML2_LINK_VALUE'])
+                ? (int)$fields['PROPERTY_CML2_LINK_VALUE']
+                : 0;
 
             $variants[] = [
                 'type' => 'child',
@@ -761,7 +700,6 @@ class InitPayloadService
                 'code' => $fields['CODE'] ?? '',
                 'iblockId' => $variantsIblockId,
                 'parentId' => $parentId,
-                'properties' => $properties,
             ];
         }
 
