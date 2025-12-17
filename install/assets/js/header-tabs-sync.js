@@ -688,13 +688,14 @@
         }
 
         var itemId = parseInt(button.dataset.itemId, 10);
-        var itemName = button.dataset.itemName || ('Элемент ' + itemId);
         var iblockId = parseInt(button.dataset.iblockId, 10);
 
         if (isNaN(itemId) || itemId <= 0 || isNaN(iblockId) || iblockId <= 0) {
             console.warn('[HeaderTabsSync] Invalid data on button:', button.dataset);
             return;
         }
+
+        var itemName = button.dataset.itemName || ('Элемент ' + itemId);
 
         // Определяем тип сущности по iblockId
         var tabType = iblockToEntity[iblockId];
@@ -739,8 +740,9 @@
             }
             
             // Проверяем, нет ли уже такого элемента
+            var itemIdInt = parseInt(itemId, 10);
             var exists = headerTabs[tabType].some(function(el) {
-                return parseInt(el.itemId, 10) === parseInt(itemId, 10);
+                return parseInt(el.itemId, 10) === itemIdInt;
             });
             
             if (exists) {

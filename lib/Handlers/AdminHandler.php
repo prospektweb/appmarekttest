@@ -355,8 +355,13 @@ class AdminHandler
         }
 
         // Получаем код инфоблока
-        $iblock = \Bitrix\Iblock\IblockTable::getById($iblockId)->fetch();
-        if (!$iblock) {
+        $iblockResult = \Bitrix\Iblock\IblockTable::getById($iblockId);
+        if (!$iblockResult) {
+            return false;
+        }
+        
+        $iblock = $iblockResult->fetch();
+        if (!$iblock || !is_array($iblock)) {
             return false;
         }
         
