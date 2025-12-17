@@ -74,8 +74,7 @@ class ElementDataService
             $properties = [];
             foreach ($propertiesRaw as $prop) {
                 $code = $prop['CODE'] ?: (string)$prop['ID'];
-                $value = $prop['MULTIPLE'] === 'Y' ? (array)$prop['VALUE'] : $prop['VALUE'];
-                $properties[$code] = $value;
+                $properties[$code] = $prop;
             }
 
             $productData = \CCatalogProduct::GetByID($elementId) ?: [];
