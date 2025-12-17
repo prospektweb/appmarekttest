@@ -127,9 +127,33 @@ class IblockCreator
         if (isset($data['LINK_IBLOCK_ID'])) {
             $arProperty['LINK_IBLOCK_ID'] = $data['LINK_IBLOCK_ID'];
         }
+        
+        // Resolve LINK_IBLOCK_CODE to LINK_IBLOCK_ID
+        if (isset($data['LINK_IBLOCK_CODE']) && isset($data['LINK_IBLOCK_TYPE_ID'])) {
+            $rsIBlock = \CIBlock::GetList(
+                [],
+                [
+                    'CODE' => $data['LINK_IBLOCK_CODE'],
+                    'TYPE' => $data['LINK_IBLOCK_TYPE_ID']
+                ]
+            );
+            if ($arLinkedIBlock = $rsIBlock->Fetch()) {
+                $arProperty['LINK_IBLOCK_ID'] = (int)$arLinkedIBlock['ID'];
+            }
+        }
 
         if ($data['TYPE'] === 'L' && isset($data['VALUES'])) {
             $arProperty['VALUES'] = $data['VALUES'];
+        }
+        
+        // Set default value if provided
+        if (isset($data['DEFAULT_VALUE'])) {
+            $arProperty['DEFAULT_VALUE'] = $data['DEFAULT_VALUE'];
+        }
+        
+        // Set file type for FileMan user type
+        if (isset($data['FILE_TYPE'])) {
+            $arProperty['FILE_TYPE'] = $data['FILE_TYPE'];
         }
 
         $ibp = new \CIBlockProperty();
@@ -251,17 +275,76 @@ class IblockCreator
     public function createCalcSettingsIblock(): int
     {
         $properties = [
-            'CALCULATOR_CODE' => ['NAME' => 'Код калькулятора', 'TYPE' => 'S'],
-            'SUPPORTED_EQUIPMENT_LIST' => ['NAME' => 'Список поддерживаемого оборудования', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'PATH_TO_SCRIPT' => ['NAME' => 'Путь к скрипту расчёта', 'TYPE' => 'S', 'USER_TYPE' => 'FileMan'],
-            'DEFAULT_MATERIAL' => ['NAME' => 'Материал по умолчанию', 'TYPE' => 'E'],
-            'DEFAULT_OPTIONS' => ['NAME' => 'Опции по умолчанию', 'TYPE' => 'S', 'USER_TYPE' => 'HTML'],
-            'CAN_BE_FIRST' => [
-                'NAME' => 'Может быть первым',
-                'TYPE' => 'L',
-                'VALUES' => [['VALUE' => 'Y'], ['VALUE' => 'N']],
+            'PATH_TO_SCRIPT' => [
+                'NAME' => 'Путь к скрипту расчёта',
+                'TYPE' => 'S',
+                'USER_TYPE' => 'FileMan',
+                'SORT' => 100,
+                'FILE_TYPE' => 'php',
+                'DEFAULT_VALUE' => '/bitrix/modules/prospektweb.calc/lib/Calculator/Calculators/',
             ],
-            'REQUIRES_BEFORE' => ['NAME' => 'Требует перед собой', 'TYPE' => 'S'],
+            'USE_OPERATION' => [
+                'NAME' => 'Активировать Операцию',
+                'TYPE' => 'L',
+                'SORT' => 200,
+                'VALUES' => [
+                    ['VALUE' => 'Да', 'XML_ID' => 'Y'],
+                    ['VALUE' => 'Нет', 'XML_ID' => 'N'],
+                ],
+            ],
+            'DEFAULT_OPERATION' => [
+                'NAME' => 'Операция по умолчанию',
+                'TYPE' => 'E',
+                'SORT' => 250,
+                'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
+                'LINK_IBLOCK_CODE' => 'CALC_OPERATIONS',
+            ],
+            'SUPPORTED_EQUIPMENT_LIST' => [
+                'NAME' => 'Поддерживаемое оборудование',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'SORT' => 300,
+                'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
+                'LINK_IBLOCK_CODE' => 'CALC_EQUIPMENT',
+            ],
+            'USE_MATERIAL' => [
+                'NAME' => 'Активировать Материал',
+                'TYPE' => 'L',
+                'SORT' => 400,
+                'VALUES' => [
+                    ['VALUE' => 'Да', 'XML_ID' => 'Y'],
+                    ['VALUE' => 'Нет', 'XML_ID' => 'N'],
+                ],
+            ],
+            'DEFAULT_MATERIAL' => [
+                'NAME' => 'Материал по умолчанию',
+                'TYPE' => 'E',
+                'SORT' => 450,
+                'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
+                'LINK_IBLOCK_CODE' => 'CALC_MATERIALS',
+            ],
+            'CAN_BE_FIRST' => [
+                'NAME' => 'Может быть добавлен на первом этапе',
+                'TYPE' => 'L',
+                'SORT' => 500,
+                'VALUES' => [
+                    ['VALUE' => 'Да', 'XML_ID' => 'Y'],
+                    ['VALUE' => 'Нет', 'XML_ID' => 'N'],
+                ],
+            ],
+            'REQUIRES_BEFORE' => [
+                'NAME' => 'Используется после калькулятора',
+                'TYPE' => 'E',
+                'SORT' => 550,
+                'LINK_IBLOCK_TYPE_ID' => 'calculator',
+                'LINK_IBLOCK_CODE' => 'CALC_SETTINGS',
+            ],
+            'DEFAULT_OPTIONS' => [
+                'NAME' => 'Опции по умолчанию',
+                'TYPE' => 'S',
+                'USER_TYPE' => 'HTML',
+                'SORT' => 600,
+            ],
         ];
 
         return $this->createIblock('calculator', 'CALC_SETTINGS', 'Настройки калькуляторов', $properties);

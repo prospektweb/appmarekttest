@@ -61,7 +61,7 @@ class ElementDataService
                 ['ID' => $elementId],
                 false,
                 false,
-                ['ID', 'IBLOCK_ID', 'NAME', 'PROPERTY_CML2_LINK']
+                ['ID', 'IBLOCK_ID', 'NAME', 'CODE', 'PROPERTY_CML2_LINK']
             )->GetNextElement();
 
             if (!$elementObject) {
@@ -92,6 +92,7 @@ class ElementDataService
 
             $elements[] = [
                 'id' => (int)$fields['ID'],
+                'code' => $fields['CODE'] ?? null,
                 'productId' => $productId > 0 ? $productId : null,
                 'name' => $fields['NAME'] ?? '',
                 'fields' => [

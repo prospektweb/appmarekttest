@@ -87,7 +87,7 @@ class InitPayloadService
                 ['ID' => $offerId],
                 false,
                 false,
-                ['ID', 'IBLOCK_ID', 'NAME', 'PROPERTY_*']
+                ['ID', 'IBLOCK_ID', 'NAME', 'CODE', 'PROPERTY_*']
             )->GetNextElement();
 
             if (!$elementObject) {
@@ -127,6 +127,7 @@ class InitPayloadService
             // Получаем свойства элемента
             $offer = [
                 'id' => $offerId,
+                'code' => $element['CODE'] ?? null,
                 'productId' => $productId,
                 'name' => $element['NAME'] ?? '',
                 'fields' => [
