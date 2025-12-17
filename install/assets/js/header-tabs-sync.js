@@ -678,4 +678,91 @@
             markDeleted([itemId]);
         });
     }
+
+    // Глобальный обработчик кликов для кнопки "Использовать в калькуляции"
+    // Поддерживает кнопки с атрибутом data-pwcode="btn-use-in-calc"
+    document.addEventListener('click', function(event) {
+        var button = event.target.closest('[data-pwcode="btn-use-in-calc"]');
+        if (!button) {
+            return;
+        }
+
+        var itemId = parseInt(button.dataset.itemId, 10);
+        var itemName = button.dataset.itemName || ('Элемент ' + itemId);
+        var iblockId = parseInt(button.dataset.iblockId, 10);
+
+        if (isNaN(itemId) || itemId <= 0 || isNaN(iblockId) || iblockId <= 0) {
+            console.warn('[HeaderTabsSync] Invalid data on button:', button.dataset);
+            return;
+        }
+
+        // Определяем тип сущности по iblockId
+        var tabType = iblockToEntity[iblockId];
+        
+        if (!tabType) {
+            console.warn('[HeaderTabsSync] Unknown iblock type for ID:', iblockId);
+            return;
+        }
+
+        console.log('[HeaderTabsSync] Button clicked - adding to', tabType, ':', itemId, itemName);
+        addToHeaderTabs(tabType, itemId, itemName);
+        
+        // Показываем уведомление
+        if (window.BX && window.BX.UI && window.BX.UI.Notification) {
+            window.BX.UI.Notification.Center.notify({
+                content: 'Элемент добавлен в калькуляцию',
+                position: 'top-right',
+                autoHideDelay: 2000
+            });
+        } else {
+            alert('Элемент добавлен в калькуляцию');
+        }
+    });
+
+    // Функция добавления элемента в headerTabs
+    function addToHeaderTabs(tabType, itemId, itemName) {
+        try {
+            var stored = localStorage.getItem('calc_header_tabs');
+            var headerTabs = stored ? JSON.parse(stored) : {
+                equipment: [],
+                materials: [],
+                materialsVariants: [],
+                operations: [],
+                operationsVariants: [],
+                details: [],
+                detailsVariants: []
+            };
+            
+            // Проверяем существование массива для данного типа
+            if (!Array.isArray(headerTabs[tabType])) {
+                headerTabs[tabType] = [];
+            }
+            
+            // Проверяем, нет ли уже такого элемента
+            var exists = headerTabs[tabType].some(function(el) {
+                return parseInt(el.itemId, 10) === parseInt(itemId, 10);
+            });
+            
+            if (exists) {
+                console.log('[HeaderTabsSync] Element already exists:', itemId);
+                return;
+            }
+            
+            // Добавляем новый элемент
+            headerTabs[tabType].push({
+                id: buildHeaderId(tabType, itemId),
+                type: tabType,
+                itemId: itemId,
+                name: itemName
+            });
+            
+            localStorage.setItem('calc_header_tabs', JSON.stringify(headerTabs));
+            console.log('[HeaderTabsSync] Added to', tabType, ':', itemId, itemName);
+            
+            // Триггерим событие для фрейма
+            window.dispatchEvent(new Event('storage'));
+        } catch (error) {
+            console.error('[HeaderTabsSync] Error adding element:', error);
+        }
+    }
 })(window, document, window.BX || null);

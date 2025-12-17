@@ -204,6 +204,9 @@
                 case 'REMOVE_OFFER_REQUEST':
                     this.handleRemoveOfferRequest(message, origin);
                     break;
+                case 'OFFER_CHECKBOX_SYNC':
+                    this.handleOfferCheckboxSync(message, origin);
+                    break;
                 default:
                     console.warn('[CalcIntegration] Unknown pwrt message type:', message.type);
             }
@@ -392,6 +395,38 @@
             const offerId = payload.id || null;
 
             this.sendPwrtMessage('REMOVE_OFFER_ACK', { id: offerId, status: 'ok' }, message.requestId, origin);
+        }
+
+        handleOfferCheckboxSync(message, origin) {
+            const payload = message.payload || {};
+            const offerId = payload.offerId;
+            const checked = payload.checked;
+            
+            if (!offerId) {
+                console.warn('[CalcIntegration] OFFER_CHECKBOX_SYNC: missing offerId');
+                return;
+            }
+            
+            // Ищем чекбокс торгового предложения на странице
+            // Формат ID: tbl_iblock_sub_element_*_<offerId>_*
+            const checkboxes = document.querySelectorAll(`input[type="checkbox"][name="SUB_ID[]"][value="${offerId}"]`);
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = checked;
+                
+                // Триггерим событие change для Bitrix UI
+                const event = new Event('change', { bubbles: true });
+                checkbox.dispatchEvent(event);
+                
+                console.log('[CalcIntegration] Checkbox synced:', offerId, '=', checked);
+            });
+            
+            // Отправляем подтверждение
+            this.sendPwrtMessage('OFFER_CHECKBOX_SYNC_ACK', { 
+                offerId: offerId, 
+                checked: checked,
+                status: 'ok' 
+            }, message.requestId, origin);
         }
 
         openElementSelectionDialog({ iblockId, iblockType, lang }) {
@@ -767,18 +802,40 @@
 
             if (typeof this.config.onClose === 'function') {
                 this.config.onClose();
-            } else {
-                // По умолчанию закрываем окно/попап
-                if (window.BX && window.BX.PopupWindow) {
-                    // Если используется BX.PopupWindow
-                    const popup = window.BX.PopupWindow.getById('calc-popup');
-                    if (popup) {
-                        popup.close();
+                return;
+            }
+
+            // Пробуем закрыть через BX.PopupManager (новый API)
+            if (window.BX && window.BX.PopupManager) {
+                const popups = window.BX.PopupManager.getPopups();
+                for (const popupId in popups) {
+                    const popup = popups[popupId];
+                    // Ищем popup содержащий наш iframe
+                    if (popup && popup.contentContainer) {
+                        const iframe = popup.contentContainer.querySelector('iframe');
+                        if (iframe && iframe === this.iframe) {
+                            popup.close();
+                            return;
+                        }
                     }
-                } else {
-                    window.close();
                 }
             }
+
+            // Пробуем через BX.PopupWindow (старый API)
+            if (window.BX && window.BX.PopupWindow) {
+                // Пробуем разные возможные ID
+                const possibleIds = ['calc-popup', 'calculator-popup', 'prospektweb-calc-popup'];
+                for (const id of possibleIds) {
+                    const popup = window.BX.PopupWindow.getById(id);
+                    if (popup) {
+                        popup.close();
+                        return;
+                    }
+                }
+            }
+
+            // Fallback: закрываем window
+            window.close();
         }
 
         /**
