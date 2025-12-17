@@ -394,7 +394,103 @@
             const payload = message.payload || {};
             const offerId = payload.id || null;
 
+            const desyncFixed = this.tryUncheckOfferRow(offerId);
+            if (!desyncFixed) {
+                this.logBridge('[CalcIntegration] Failed to deselect offer checkbox before REMOVE_OFFER_ACK', {
+                    offerId: offerId,
+                });
+            }
+
             this.sendPwrtMessage('REMOVE_OFFER_ACK', { id: offerId, status: 'ok' }, message.requestId, origin);
+        }
+
+        findOffersTabContainer() {
+            const directSelectors = [
+                '#tab_cont_offers',
+                '#tab_content_offers',
+                '#tab_cont_sku',
+                '#tab_content_sku',
+                '#tab_cont_product_sku',
+                '#tab_content_product_sku',
+                '[data-tab-id="offers"]',
+                '[data-tab="offers"]',
+            ];
+
+            for (let i = 0; i < directSelectors.length; i++) {
+                const element = document.querySelector(directSelectors[i]);
+                if (element) {
+                    return element;
+                }
+            }
+
+            const tabLink = Array.from(document.querySelectorAll('.adm-detail-tab a, .adm-detail-subtab a'))
+                .find(function(node) {
+                    return node.textContent && node.textContent.trim() === 'Торговые предложения';
+                });
+
+            if (tabLink) {
+                const href = tabLink.getAttribute('href');
+                if (href && href.startsWith('#')) {
+                    const contentId = href.slice(1).replace('tab_cont_', 'tab_content_');
+                    const byHref = document.getElementById(href.slice(1)) || document.getElementById(contentId);
+                    if (byHref) {
+                        return byHref;
+                    }
+                }
+
+                if (tabLink.dataset && tabLink.dataset.tabId) {
+                    const byData = document.querySelector('[data-tab-id="' + tabLink.dataset.tabId + '"]');
+                    if (byData) {
+                        return byData;
+                    }
+                }
+            }
+
+            return document;
+        }
+
+        tryUncheckOfferRow(rawOfferId) {
+            if (!rawOfferId && rawOfferId !== 0) {
+                return false;
+            }
+
+            const stringId = String(rawOfferId);
+            const normalizedId = stringId.replace(/^E/i, '');
+            const candidateValues = [stringId, normalizedId, 'E' + normalizedId].filter(Boolean);
+            const selectors = [
+                'input[type="checkbox"][name="ID[]"]',
+                'input[type="checkbox"][name="SUB_ID[]"]',
+            ];
+
+            const offersContainer = this.findOffersTabContainer();
+            let checkbox = null;
+
+            selectors.forEach(function(selector) {
+                if (checkbox) {
+                    return;
+                }
+
+                candidateValues.forEach(function(value) {
+                    if (checkbox) {
+                        return;
+                    }
+
+                    const localSelector = selector + '[value="' + value + '"]';
+                    checkbox = offersContainer.querySelector(localSelector) || document.querySelector(localSelector);
+                });
+            });
+
+            if (!checkbox) {
+                return false;
+            }
+
+            if (!checkbox.checked) {
+                return true;
+            }
+
+            checkbox.click();
+
+            return !checkbox.checked;
         }
 
         openElementSelectionDialog({ iblockId, iblockType, lang }) {
