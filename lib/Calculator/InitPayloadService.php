@@ -521,60 +521,7 @@ class InitPayloadService
         $sections = $this->getSections($iblockId);
         $elements = $this->getElements($iblockId);
 
-        // Распределяем элементы по разделам
-        $sectionElements = [];
-        $rootElements = [];
-
-        foreach ($elements as $element) {
-            $sectionId = $element['sectionId'];
-            if ($sectionId > 0) {
-                if (!isset($sectionElements[$sectionId])) {
-                    $sectionElements[$sectionId] = [];
-                }
-                $sectionElements[$sectionId][] = $element;
-            } else {
-                $rootElements[] = $element;
-            }
-        }
-
-        // Функция для построения дерева рекурсивно
-        $buildTree = function ($parentId) use (&$buildTree, &$sections, &$sectionElements) {
-            $result = [];
-
-            // Добавляем разделы текущего уровня
-            foreach ($sections as $section) {
-                if ($section['parentId'] === $parentId) {
-                    $sectionNode = $section;
-                    
-                    // Добавляем дочерние разделы и элементы
-                    $children = $buildTree($section['id']);
-                    
-                    // Добавляем элементы текущего раздела
-                    if (!empty($sectionElements[$section['id']])) {
-                        foreach ($sectionElements[$section['id']] as $element) {
-                            $children[] = $element;
-                        }
-                    }
-                    
-                    if (!empty($children)) {
-                        $sectionNode['children'] = $children;
-                    }
-                    
-                    $result[] = $sectionNode;
-                }
-            }
-
-            return $result;
-        };
-
-        $tree = $buildTree(null);
-
-        // Добавляем элементы без раздела в конец
-        if (!empty($rootElements)) {
-            $tree = array_merge($tree, $rootElements);
-        }
-
-        return $tree;
+        return $this->assembleTree($sections, $elements);
     }
 
     /**
@@ -632,56 +579,7 @@ class InitPayloadService
         }
         unset($element);
 
-        // Распределяем элементы по разделам
-        $sectionElements = [];
-        $rootElements = [];
-
-        foreach ($elements as $element) {
-            $sectionId = $element['sectionId'];
-            if ($sectionId > 0) {
-                if (!isset($sectionElements[$sectionId])) {
-                    $sectionElements[$sectionId] = [];
-                }
-                $sectionElements[$sectionId][] = $element;
-            } else {
-                $rootElements[] = $element;
-            }
-        }
-
-        // Функция для построения дерева рекурсивно
-        $buildTree = function ($parentId) use (&$buildTree, &$sections, &$sectionElements) {
-            $result = [];
-
-            foreach ($sections as $section) {
-                if ($section['parentId'] === $parentId) {
-                    $sectionNode = $section;
-                    
-                    $children = $buildTree($section['id']);
-                    
-                    if (!empty($sectionElements[$section['id']])) {
-                        foreach ($sectionElements[$section['id']] as $element) {
-                            $children[] = $element;
-                        }
-                    }
-                    
-                    if (!empty($children)) {
-                        $sectionNode['children'] = $children;
-                    }
-                    
-                    $result[] = $sectionNode;
-                }
-            }
-
-            return $result;
-        };
-
-        $tree = $buildTree(null);
-
-        if (!empty($rootElements)) {
-            $tree = array_merge($tree, $rootElements);
-        }
-
-        return $tree;
+        return $this->assembleTree($sections, $elements);
     }
 
     /**
@@ -724,56 +622,7 @@ class InitPayloadService
         }
         unset($element);
 
-        // Распределяем элементы по разделам
-        $sectionElements = [];
-        $rootElements = [];
-
-        foreach ($elements as $element) {
-            $sectionId = $element['sectionId'];
-            if ($sectionId > 0) {
-                if (!isset($sectionElements[$sectionId])) {
-                    $sectionElements[$sectionId] = [];
-                }
-                $sectionElements[$sectionId][] = $element;
-            } else {
-                $rootElements[] = $element;
-            }
-        }
-
-        // Функция для построения дерева рекурсивно
-        $buildTree = function ($parentId) use (&$buildTree, &$sections, &$sectionElements) {
-            $result = [];
-
-            foreach ($sections as $section) {
-                if ($section['parentId'] === $parentId) {
-                    $sectionNode = $section;
-                    
-                    $children = $buildTree($section['id']);
-                    
-                    if (!empty($sectionElements[$section['id']])) {
-                        foreach ($sectionElements[$section['id']] as $element) {
-                            $children[] = $element;
-                        }
-                    }
-                    
-                    if (!empty($children)) {
-                        $sectionNode['children'] = $children;
-                    }
-                    
-                    $result[] = $sectionNode;
-                }
-            }
-
-            return $result;
-        };
-
-        $tree = $buildTree(null);
-
-        if (!empty($rootElements)) {
-            $tree = array_merge($tree, $rootElements);
-        }
-
-        return $tree;
+        return $this->assembleTree($sections, $elements);
     }
 
     /**
@@ -917,5 +766,69 @@ class InitPayloadService
         }
 
         return $variants;
+    }
+
+    /**
+     * Собирает дерево из разделов и элементов
+     *
+     * @param array $sections Массив разделов
+     * @param array $elements Массив элементов
+     * @return array
+     */
+    private function assembleTree(array $sections, array $elements): array
+    {
+        // Распределяем элементы по разделам
+        $sectionElements = [];
+        $rootElements = [];
+
+        foreach ($elements as $element) {
+            $sectionId = $element['sectionId'];
+            if ($sectionId > 0) {
+                if (!isset($sectionElements[$sectionId])) {
+                    $sectionElements[$sectionId] = [];
+                }
+                $sectionElements[$sectionId][] = $element;
+            } else {
+                $rootElements[] = $element;
+            }
+        }
+
+        // Функция для построения дерева рекурсивно
+        $buildTree = function ($parentId) use (&$buildTree, &$sections, &$sectionElements) {
+            $result = [];
+
+            foreach ($sections as $section) {
+                if ($section['parentId'] === $parentId) {
+                    $sectionNode = $section;
+                    
+                    // Добавляем дочерние разделы
+                    $children = $buildTree($section['id']);
+                    
+                    // Добавляем элементы текущего раздела
+                    if (!empty($sectionElements[$section['id']])) {
+                        foreach ($sectionElements[$section['id']] as $element) {
+                            $children[] = $element;
+                        }
+                    }
+                    
+                    if (!empty($children)) {
+                        $sectionNode['children'] = $children;
+                    }
+                    
+                    $result[] = $sectionNode;
+                }
+            }
+
+            return $result;
+        };
+
+        $tree = $buildTree(null);
+
+        // Добавляем элементы без раздела в конец
+        if (!empty($rootElements)) {
+            $tree = array_merge($tree, $rootElements);
+        }
+
+        return $tree;
     }
 }
