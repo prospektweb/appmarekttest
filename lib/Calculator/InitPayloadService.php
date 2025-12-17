@@ -102,13 +102,13 @@ class InitPayloadService
 
             foreach ($propertiesRaw as $prop) {
                 $code = $prop['CODE'] ?: (string)$prop['ID'];
-                $value = $prop['MULTIPLE'] === 'Y' ? (array)$prop['VALUE'] : $prop['VALUE'];
+                $valueForConfig = $prop['MULTIPLE'] === 'Y' ? (array)$prop['VALUE'] : $prop['VALUE'];
 
                 if ($code === $propertyConfigId && $configIdValue === null) {
-                    $configIdValue = is_array($value) ? (int)reset($value) : (int)$value;
+                    $configIdValue = is_array($valueForConfig) ? (int)reset($valueForConfig) : (int)$valueForConfig;
                 }
 
-                $properties[$code] = $value;
+                $properties[$code] = $prop;
             }
 
             $productData = \CCatalogProduct::GetByID($offerId) ?: [];
