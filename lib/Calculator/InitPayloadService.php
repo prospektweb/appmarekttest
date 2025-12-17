@@ -50,6 +50,7 @@ class InitPayloadService
             'context' => $context,
             'iblocks' => $iblocks,
             'iblocksTypes' => $iblocksTypes,
+            'iblocksTree' => $this->buildIblocksTree(),
             'selectedOffers' => $selectedOffers,
         ];
 
@@ -432,5 +433,489 @@ class InitPayloadService
             'name' => $element['NAME'] ?? '',
             'data' => $data,
         ];
+    }
+
+    /**
+     * Собрать дерево данных всех инфоблоков модуля для MultiLevelSelect
+     * 
+     * @return array Массив деревьев по ключам инфоблоков
+     */
+    private function buildIblocksTree(): array
+    {
+        $iblocks = $this->getIblocks();
+        $trees = [];
+        
+        // Товары с ТП
+        if (!empty($iblocks['products'])) {
+            $trees['products'] = $this->buildProductsTree(
+                $iblocks['products'], 
+                $iblocks['offers'] ?? 0
+            );
+        }
+        
+        // CALC_SETTINGS
+        if (!empty($iblocks['calcSettings'])) {
+            $trees['calcSettings'] = $this->buildIblockTree($iblocks['calcSettings']);
+        }
+        
+        // CALC_CONFIG
+        if (!empty($iblocks['calcConfig'])) {
+            $trees['calcConfig'] = $this->buildIblockTree($iblocks['calcConfig']);
+        }
+        
+        // CALC_EQUIPMENT
+        if (!empty($iblocks['calcEquipment'])) {
+            $trees['calcEquipment'] = $this->buildIblockTree($iblocks['calcEquipment']);
+        }
+        
+        // CALC_MATERIALS с variants
+        if (!empty($iblocks['calcMaterials'])) {
+            $trees['calcMaterials'] = $this->buildCatalogTree(
+                $iblocks['calcMaterials'],
+                $iblocks['calcMaterialsVariants'] ?? 0
+            );
+        }
+        
+        // CALC_OPERATIONS с variants
+        if (!empty($iblocks['calcOperations'])) {
+            $trees['calcOperations'] = $this->buildCatalogTree(
+                $iblocks['calcOperations'],
+                $iblocks['calcOperationsVariants'] ?? 0
+            );
+        }
+        
+        // CALC_DETAILS с variants
+        if (!empty($iblocks['calcDetails'])) {
+            $trees['calcDetails'] = $this->buildCatalogTree(
+                $iblocks['calcDetails'],
+                $iblocks['calcDetailsVariants'] ?? 0
+            );
+        }
+        
+        // Отдельно variants (если нужны без родителей)
+        if (!empty($iblocks['calcMaterialsVariants'])) {
+            $trees['calcMaterialsVariants'] = $this->buildIblockTree($iblocks['calcMaterialsVariants']);
+        }
+        if (!empty($iblocks['calcOperationsVariants'])) {
+            $trees['calcOperationsVariants'] = $this->buildIblockTree($iblocks['calcOperationsVariants']);
+        }
+        if (!empty($iblocks['calcDetailsVariants'])) {
+            $trees['calcDetailsVariants'] = $this->buildIblockTree($iblocks['calcDetailsVariants']);
+        }
+        
+        return $trees;
+    }
+
+    /**
+     * Строит дерево разделов и элементов для одного инфоблока (без дочерних элементов)
+     *
+     * @param int $iblockId ID инфоблока
+     * @return array
+     */
+    private function buildIblockTree(int $iblockId): array
+    {
+        if ($iblockId <= 0) {
+            return [];
+        }
+
+        $sections = $this->getSections($iblockId);
+        $elements = $this->getElements($iblockId);
+
+        // Распределяем элементы по разделам
+        $sectionElements = [];
+        $rootElements = [];
+
+        foreach ($elements as $element) {
+            $sectionId = $element['sectionId'];
+            if ($sectionId > 0) {
+                if (!isset($sectionElements[$sectionId])) {
+                    $sectionElements[$sectionId] = [];
+                }
+                $sectionElements[$sectionId][] = $element;
+            } else {
+                $rootElements[] = $element;
+            }
+        }
+
+        // Функция для построения дерева рекурсивно
+        $buildTree = function ($parentId) use (&$buildTree, &$sections, &$sectionElements) {
+            $result = [];
+
+            // Добавляем разделы текущего уровня
+            foreach ($sections as $section) {
+                if ($section['parentId'] === $parentId) {
+                    $sectionNode = $section;
+                    
+                    // Добавляем дочерние разделы и элементы
+                    $children = $buildTree($section['id']);
+                    
+                    // Добавляем элементы текущего раздела
+                    if (!empty($sectionElements[$section['id']])) {
+                        foreach ($sectionElements[$section['id']] as $element) {
+                            $children[] = $element;
+                        }
+                    }
+                    
+                    if (!empty($children)) {
+                        $sectionNode['children'] = $children;
+                    }
+                    
+                    $result[] = $sectionNode;
+                }
+            }
+
+            return $result;
+        };
+
+        $tree = $buildTree(null);
+
+        // Добавляем элементы без раздела в конец
+        if (!empty($rootElements)) {
+            $tree = array_merge($tree, $rootElements);
+        }
+
+        return $tree;
+    }
+
+    /**
+     * Строит дерево товаров с торговыми предложениями
+     *
+     * @param int $productIblockId ID инфоблока товаров
+     * @param int $offersIblockId ID инфоблока торговых предложений
+     * @return array
+     */
+    private function buildProductsTree(int $productIblockId, int $offersIblockId): array
+    {
+        if ($productIblockId <= 0) {
+            return [];
+        }
+
+        $sections = $this->getSections($productIblockId);
+        $elements = $this->getElements($productIblockId);
+
+        // Получаем торговые предложения для товаров
+        $productIds = array_column($elements, 'id');
+        $offers = [];
+        
+        if ($offersIblockId > 0 && !empty($productIds)) {
+            $offersData = \CCatalogSKU::getOffersList(
+                $productIds,
+                $productIblockId,
+                [],
+                ['ID', 'NAME', 'CODE'],
+                ['ID', 'NAME', 'CODE']
+            );
+            
+            if (is_array($offersData)) {
+                foreach ($offersData as $productId => $productOffers) {
+                    $offers[$productId] = [];
+                    foreach ($productOffers as $offer) {
+                        $offers[$productId][] = [
+                            'type' => 'child',
+                            'id' => (int)$offer['ID'],
+                            'name' => $offer['NAME'] ?? '',
+                            'code' => $offer['CODE'] ?? '',
+                            'iblockId' => $offersIblockId,
+                            'parentId' => $productId,
+                            'properties' => [],
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Добавляем торговые предложения к элементам
+        foreach ($elements as &$element) {
+            if (!empty($offers[$element['id']])) {
+                $element['children'] = $offers[$element['id']];
+            }
+        }
+        unset($element);
+
+        // Распределяем элементы по разделам
+        $sectionElements = [];
+        $rootElements = [];
+
+        foreach ($elements as $element) {
+            $sectionId = $element['sectionId'];
+            if ($sectionId > 0) {
+                if (!isset($sectionElements[$sectionId])) {
+                    $sectionElements[$sectionId] = [];
+                }
+                $sectionElements[$sectionId][] = $element;
+            } else {
+                $rootElements[] = $element;
+            }
+        }
+
+        // Функция для построения дерева рекурсивно
+        $buildTree = function ($parentId) use (&$buildTree, &$sections, &$sectionElements) {
+            $result = [];
+
+            foreach ($sections as $section) {
+                if ($section['parentId'] === $parentId) {
+                    $sectionNode = $section;
+                    
+                    $children = $buildTree($section['id']);
+                    
+                    if (!empty($sectionElements[$section['id']])) {
+                        foreach ($sectionElements[$section['id']] as $element) {
+                            $children[] = $element;
+                        }
+                    }
+                    
+                    if (!empty($children)) {
+                        $sectionNode['children'] = $children;
+                    }
+                    
+                    $result[] = $sectionNode;
+                }
+            }
+
+            return $result;
+        };
+
+        $tree = $buildTree(null);
+
+        if (!empty($rootElements)) {
+            $tree = array_merge($tree, $rootElements);
+        }
+
+        return $tree;
+    }
+
+    /**
+     * Строит дерево для каталогов со SKU-связью (materials, operations, details)
+     *
+     * @param int $parentIblockId ID основного инфоблока
+     * @param int $variantsIblockId ID инфоблока вариантов
+     * @return array
+     */
+    private function buildCatalogTree(int $parentIblockId, int $variantsIblockId): array
+    {
+        if ($parentIblockId <= 0) {
+            return [];
+        }
+
+        $sections = $this->getSections($parentIblockId);
+        $elements = $this->getElements($parentIblockId);
+
+        // Получаем варианты для элементов
+        $parentIds = array_column($elements, 'id');
+        $variants = [];
+        
+        if ($variantsIblockId > 0 && !empty($parentIds)) {
+            $variantsData = $this->getVariants($variantsIblockId, $parentIds);
+            
+            foreach ($variantsData as $variant) {
+                $parentId = $variant['parentId'];
+                if (!isset($variants[$parentId])) {
+                    $variants[$parentId] = [];
+                }
+                $variants[$parentId][] = $variant;
+            }
+        }
+
+        // Добавляем варианты к элементам
+        foreach ($elements as &$element) {
+            if (!empty($variants[$element['id']])) {
+                $element['children'] = $variants[$element['id']];
+            }
+        }
+        unset($element);
+
+        // Распределяем элементы по разделам
+        $sectionElements = [];
+        $rootElements = [];
+
+        foreach ($elements as $element) {
+            $sectionId = $element['sectionId'];
+            if ($sectionId > 0) {
+                if (!isset($sectionElements[$sectionId])) {
+                    $sectionElements[$sectionId] = [];
+                }
+                $sectionElements[$sectionId][] = $element;
+            } else {
+                $rootElements[] = $element;
+            }
+        }
+
+        // Функция для построения дерева рекурсивно
+        $buildTree = function ($parentId) use (&$buildTree, &$sections, &$sectionElements) {
+            $result = [];
+
+            foreach ($sections as $section) {
+                if ($section['parentId'] === $parentId) {
+                    $sectionNode = $section;
+                    
+                    $children = $buildTree($section['id']);
+                    
+                    if (!empty($sectionElements[$section['id']])) {
+                        foreach ($sectionElements[$section['id']] as $element) {
+                            $children[] = $element;
+                        }
+                    }
+                    
+                    if (!empty($children)) {
+                        $sectionNode['children'] = $children;
+                    }
+                    
+                    $result[] = $sectionNode;
+                }
+            }
+
+            return $result;
+        };
+
+        $tree = $buildTree(null);
+
+        if (!empty($rootElements)) {
+            $tree = array_merge($tree, $rootElements);
+        }
+
+        return $tree;
+    }
+
+    /**
+     * Получает разделы и строит иерархию
+     *
+     * @param int $iblockId ID инфоблока
+     * @return array
+     */
+    private function getSections(int $iblockId): array
+    {
+        if ($iblockId <= 0) {
+            return [];
+        }
+
+        $sections = [];
+        $res = \CIBlockSection::GetList(
+            ['SORT' => 'ASC', 'NAME' => 'ASC'],
+            ['IBLOCK_ID' => $iblockId, 'ACTIVE' => 'Y'],
+            false,
+            ['ID', 'NAME', 'CODE', 'IBLOCK_SECTION_ID', 'IBLOCK_ID', 'SORT', 'DEPTH_LEVEL']
+        );
+
+        while ($section = $res->Fetch()) {
+            $sections[] = [
+                'type' => 'section',
+                'id' => (int)$section['ID'],
+                'name' => $section['NAME'] ?? '',
+                'code' => $section['CODE'] ?? '',
+                'iblockId' => (int)$section['IBLOCK_ID'],
+                'parentId' => !empty($section['IBLOCK_SECTION_ID']) ? (int)$section['IBLOCK_SECTION_ID'] : null,
+                'depth' => (int)($section['DEPTH_LEVEL'] ?? 1),
+            ];
+        }
+
+        return $sections;
+    }
+
+    /**
+     * Получает элементы с их свойствами
+     *
+     * @param int $iblockId ID инфоблока
+     * @return array
+     */
+    private function getElements(int $iblockId): array
+    {
+        if ($iblockId <= 0) {
+            return [];
+        }
+
+        $elements = [];
+        $res = \CIBlockElement::GetList(
+            ['SORT' => 'ASC', 'NAME' => 'ASC'],
+            ['IBLOCK_ID' => $iblockId, 'ACTIVE' => 'Y'],
+            false,
+            false,
+            ['ID', 'NAME', 'CODE', 'IBLOCK_SECTION_ID', 'IBLOCK_ID']
+        );
+
+        while ($elementObject = $res->GetNextElement()) {
+            $fields = $elementObject->GetFields();
+            $propsRaw = $elementObject->GetProperties();
+
+            $properties = [];
+            foreach ($propsRaw as $prop) {
+                $code = $prop['CODE'] ?: (string)$prop['ID'];
+                $value = $prop['MULTIPLE'] === 'Y' ? (array)$prop['VALUE'] : $prop['VALUE'];
+                $properties[$code] = $value;
+            }
+
+            $elements[] = [
+                'type' => 'element',
+                'id' => (int)$fields['ID'],
+                'name' => $fields['NAME'] ?? '',
+                'code' => $fields['CODE'] ?? '',
+                'iblockId' => (int)$fields['IBLOCK_ID'],
+                'sectionId' => !empty($fields['IBLOCK_SECTION_ID']) ? (int)$fields['IBLOCK_SECTION_ID'] : 0,
+                'properties' => $properties,
+            ];
+        }
+
+        return $elements;
+    }
+
+    /**
+     * Получает варианты для списка родительских элементов
+     *
+     * @param int $variantsIblockId ID инфоблока вариантов
+     * @param array $parentIds Массив ID родительских элементов
+     * @return array
+     */
+    private function getVariants(int $variantsIblockId, array $parentIds): array
+    {
+        if ($variantsIblockId <= 0 || empty($parentIds)) {
+            return [];
+        }
+
+        $variants = [];
+        $res = \CIBlockElement::GetList(
+            ['SORT' => 'ASC', 'NAME' => 'ASC'],
+            [
+                'IBLOCK_ID' => $variantsIblockId,
+                'ACTIVE' => 'Y',
+                'PROPERTY_CML2_LINK' => $parentIds,
+            ],
+            false,
+            false,
+            ['ID', 'NAME', 'CODE', 'IBLOCK_ID', 'PROPERTY_CML2_LINK']
+        );
+
+        while ($elementObject = $res->GetNextElement()) {
+            $fields = $elementObject->GetFields();
+            $propsRaw = $elementObject->GetProperties();
+
+            $properties = [];
+            $parentId = 0;
+
+            foreach ($propsRaw as $prop) {
+                $code = $prop['CODE'] ?: (string)$prop['ID'];
+                $value = $prop['MULTIPLE'] === 'Y' ? (array)$prop['VALUE'] : $prop['VALUE'];
+                
+                if ($code === 'CML2_LINK') {
+                    $parentId = is_array($value) ? (int)reset($value) : (int)$value;
+                }
+                
+                $properties[$code] = $value;
+            }
+
+            if ($parentId <= 0 && !empty($fields['PROPERTY_CML2_LINK_VALUE'])) {
+                $parentId = (int)$fields['PROPERTY_CML2_LINK_VALUE'];
+            }
+
+            $variants[] = [
+                'type' => 'child',
+                'id' => (int)$fields['ID'],
+                'name' => $fields['NAME'] ?? '',
+                'code' => $fields['CODE'] ?? '',
+                'iblockId' => $variantsIblockId,
+                'parentId' => $parentId,
+                'properties' => $properties,
+            ];
+        }
+
+        return $variants;
     }
 }
