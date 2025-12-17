@@ -184,6 +184,24 @@ class AdminHandler
         $debugLog['isListPage'] = $isListPage;
         $debugLog['isEditPage'] = $isEditPage;
 
+        $iblockCode = null;
+        $iblockType = null;
+
+        if (Loader::includeModule('iblock')) {
+            $iblockData = \CIBlock::GetByID($iblockId)->Fetch();
+            if ($iblockData) {
+                $iblockCode = $iblockData['CODE'] ?? null;
+                $iblockType = $iblockData['IBLOCK_TYPE_ID'] ?? null;
+            } else {
+                $debugLog['iblockLookupReason'] = 'CIBlock::GetByID returned no data';
+            }
+        } else {
+            $debugLog['iblockLookupReason'] = 'iblock module is not installed';
+        }
+
+        $debugLog['iblockCode'] = $iblockCode;
+        $debugLog['iblockType'] = $iblockType;
+
         // Список типов сущностей, для которых показываем кнопку в списке
         // Варианты и оборудование
         $variantEntityTypes = [
@@ -201,10 +219,36 @@ class AdminHandler
             'operations',
         ];
 
+        $allowedCodesForList = [
+            'CALC_DETAILS_VARIANTS',
+            'CALC_MATERIALS_VARIANTS',
+            'CALC_OPERATIONS_VARIANTS',
+            'CALC_EQUIPMENT',
+        ];
+
+        $allowedCodesForEdit = [
+            'CALC_DETAILS',
+            'CALC_MATERIALS',
+            'CALC_OPERATIONS',
+        ];
+
         $showButton = false;
 
         if ($isListPage) {
             // В списке показываем только для вариантов и оборудования
+            $isAllowedIblock = in_array($iblockCode, $allowedCodesForList, true)
+                || in_array($iblockType, $allowedCodesForList, true);
+
+            if (!$isAllowedIblock) {
+                $debugLog['exitReason'] = 'List page - iblock code/type is not allowed';
+                $asset->addString(
+                    '<script>console.group("ProspektwebCalc Debug - addHeaderTabsAction"); console.log(' . json_encode($debugLog, self::JSON_ENCODE_FLAGS) . '); console.groupEnd();</script>',
+                    false,
+                    AssetLocation::AFTER_JS
+                );
+                return;
+            }
+
             $showButton = in_array($currentEntity, $variantEntityTypes, true);
             if ($showButton) {
                 $debugLog['showButtonReason'] = 'List page - entity is variant or equipment';
@@ -214,6 +258,19 @@ class AdminHandler
         } elseif ($isEditPage) {
             // На странице редактирования показываем для родительских сущностей
             // (кнопка будет во вкладке "Торговые предложения")
+            $isAllowedIblock = in_array($iblockCode, $allowedCodesForEdit, true)
+                || in_array($iblockType, $allowedCodesForEdit, true);
+
+            if (!$isAllowedIblock) {
+                $debugLog['exitReason'] = 'Edit page - iblock code/type is not allowed';
+                $asset->addString(
+                    '<script>console.group("ProspektwebCalc Debug - addHeaderTabsAction"); console.log(' . json_encode($debugLog, self::JSON_ENCODE_FLAGS) . '); console.groupEnd();</script>',
+                    false,
+                    AssetLocation::AFTER_JS
+                );
+                return;
+            }
+
             $showButton = in_array($currentEntity, $parentEntityTypes, true);
             if ($showButton) {
                 $debugLog['showButtonReason'] = 'Edit page - entity is parent (show for SKU tab)';
