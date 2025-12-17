@@ -204,6 +204,9 @@
                 case 'REMOVE_OFFER_REQUEST':
                     this.handleRemoveOfferRequest(message, origin);
                     break;
+                case 'CALC_SETTINGS_REQUEST':
+                    await this.handleCalcSettingsRequest(message, origin);
+                    break;
                 case 'CLOSE_REQUEST':
                     this.handleCloseRequest(message);
                     break;
@@ -323,6 +326,70 @@
                 requestId: message.requestId,
                 origin: origin,
             });
+        }
+
+        async handleCalcSettingsRequest(message, origin) {
+            const requestPayload = message.payload || {};
+            const iblockId = requestPayload.iblockId ? parseInt(requestPayload.iblockId, 10) : null;
+            const iblockType = requestPayload.iblockType || null;
+            const lang = requestPayload.lang || null;
+            const id = requestPayload.id ? parseInt(requestPayload.id, 10) : null;
+
+            const basePayload = {
+                id: id,
+                iblockId: iblockId,
+                iblockType: iblockType,
+                lang: lang,
+            };
+
+            if (!id || !iblockId) {
+                this.sendPwrtMessage(
+                    'CALC_SETTINGS_RESPONSE',
+                    { ...basePayload, status: 'error', message: 'Invalid id or iblockId' },
+                    message.requestId,
+                    origin
+                );
+                return;
+            }
+
+            try {
+                const refreshResult = await this.fetchRefreshData([
+                    {
+                        iblockId: iblockId,
+                        iblockType: iblockType,
+                        ids: [id],
+                    },
+                ]);
+
+                const element = Array.isArray(refreshResult)
+                    && refreshResult[0]
+                    && Array.isArray(refreshResult[0].data)
+                    ? refreshResult[0].data[0] || null
+                    : null;
+
+                this.sendPwrtMessage(
+                    'CALC_SETTINGS_RESPONSE',
+                    {
+                        ...basePayload,
+                        status: element ? 'ok' : 'not_found',
+                        item: element,
+                    },
+                    message.requestId,
+                    origin
+                );
+            } catch (error) {
+                console.error('[CalcIntegration] Failed to process CALC_SETTINGS_REQUEST', error);
+                this.sendPwrtMessage(
+                    'CALC_SETTINGS_RESPONSE',
+                    {
+                        ...basePayload,
+                        status: 'error',
+                        message: error && error.message ? error.message : 'Unknown error',
+                    },
+                    message.requestId,
+                    origin
+                );
+            }
         }
 
         async sendSelectDone({ ids, iblockId, iblockType, lang, requestId, origin }) {
