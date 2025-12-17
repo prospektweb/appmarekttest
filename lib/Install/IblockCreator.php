@@ -252,7 +252,8 @@ class IblockCreator
     {
         $properties = [
             'CALCULATOR_CODE' => ['NAME' => 'Код калькулятора', 'TYPE' => 'S'],
-            'DEFAULT_EQUIPMENT' => ['NAME' => 'Оборудование по умолчанию', 'TYPE' => 'E'],
+            'SUPPORTED_EQUIPMENT_LIST' => ['NAME' => 'Список поддерживаемого оборудования', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'PATH_TO_SCRIPT' => ['NAME' => 'Путь к скрипту расчёта', 'TYPE' => 'S', 'USER_TYPE' => 'FileMan'],
             'DEFAULT_MATERIAL' => ['NAME' => 'Материал по умолчанию', 'TYPE' => 'E'],
             'DEFAULT_OPTIONS' => ['NAME' => 'Опции по умолчанию', 'TYPE' => 'S', 'USER_TYPE' => 'HTML'],
             'CAN_BE_FIRST' => [

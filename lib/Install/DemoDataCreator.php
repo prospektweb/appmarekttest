@@ -69,6 +69,9 @@ class DemoDataCreator
         // Создаём операции (бывшие работы)
         $this->createOperations($iblockIds);
 
+        // Создаём настройки калькуляторов (после оборудования)
+        $this->createCalcSettings($iblockIds);
+
         return $this->getResult();
     }
 
@@ -202,7 +205,7 @@ class DemoDataCreator
                     ],
                 ],
                 'Ламинаторы' => [
-                    'Burlos' => [
+                    'GMP' => [
                         ['NAME' => 'PD480C', 'CODE' => 'pd480c'],
                     ],
                 ],
@@ -594,6 +597,187 @@ class DemoDataCreator
                 ],
             ],
         ]);
+    }
+
+    /**
+     * Создаёт настройки калькуляторов (CALC_SETTINGS).
+     *
+     * @param array $iblockIds ID инфоблоков.
+     */
+    protected function createCalcSettings(array $iblockIds): void
+    {
+        $settingsIblockId = $iblockIds['CALC_SETTINGS'] ?? 0;
+        $equipmentIblockId = $iblockIds['CALC_EQUIPMENT'] ?? 0;
+
+        if ($settingsIblockId <= 0 || $equipmentIblockId <= 0) {
+            return;
+        }
+
+        // Получаем ID оборудования по кодам
+        $equipmentIds = [];
+        $equipmentCodes = ['3070L', '2060L', 'ryoby_b2', 'pd480c'];
+        
+        foreach ($equipmentCodes as $code) {
+            if (isset($this->elementCache[$code])) {
+                $equipmentIds[$code] = $this->elementCache[$code];
+            } else {
+                // Ищем в базе, если не в кэше
+                $rsElement = \CIBlockElement::GetList(
+                    [],
+                    ['IBLOCK_ID' => $equipmentIblockId, 'CODE' => $code],
+                    false,
+                    ['nTopCount' => 1],
+                    ['ID']
+                );
+                if ($arElement = $rsElement->Fetch()) {
+                    $equipmentIds[$code] = (int)$arElement['ID'];
+                }
+            }
+        }
+
+        // Раздел "Цифровая лазерная"
+        $digitalLaserSection = $this->getOrCreateSection($settingsIblockId, 'Цифровая лазерная', 0);
+        
+        // Элемент "Листовая печать" для цифровой лазерной
+        $digitalEquipment = [];
+        if (isset($equipmentIds['3070L'])) {
+            $digitalEquipment[] = $equipmentIds['3070L'];
+        }
+        if (isset($equipmentIds['2060L'])) {
+            $digitalEquipment[] = $equipmentIds['2060L'];
+        }
+        
+        if (!empty($digitalEquipment)) {
+            $elementId = $this->createOrUpdateElement(
+                $settingsIblockId,
+                'digital_laser_sheet',
+                'Листовая печать',
+                $digitalLaserSection,
+                [
+                    'SUPPORTED_EQUIPMENT_LIST' => $digitalEquipment,
+                    'PATH_TO_SCRIPT' => '/local/php_interface/prospektweb.calc/calculators/digital_laser_sheet.php',
+                ]
+            );
+            
+            if ($elementId) {
+                $this->created[] = "Настройка калькулятора: Цифровая лазерная → Листовая печать (ID: {$elementId})";
+            }
+        }
+
+        // Раздел "Офсетная"
+        $offsetSection = $this->getOrCreateSection($settingsIblockId, 'Офсетная', 0);
+        
+        // Элемент "Листовая печать" для офсетной
+        $offsetEquipment = [];
+        if (isset($equipmentIds['ryoby_b2'])) {
+            $offsetEquipment[] = $equipmentIds['ryoby_b2'];
+        }
+        
+        if (!empty($offsetEquipment)) {
+            $elementId = $this->createOrUpdateElement(
+                $settingsIblockId,
+                'offset_sheet',
+                'Листовая печать',
+                $offsetSection,
+                [
+                    'SUPPORTED_EQUIPMENT_LIST' => $offsetEquipment,
+                    'PATH_TO_SCRIPT' => '/local/php_interface/prospektweb.calc/calculators/offset_sheet.php',
+                ]
+            );
+            
+            if ($elementId) {
+                $this->created[] = "Настройка калькулятора: Офсетная → Листовая печать (ID: {$elementId})";
+            }
+        }
+
+        // Раздел "Ламинация"
+        $laminationSection = $this->getOrCreateSection($settingsIblockId, 'Ламинация', 0);
+        
+        // Элемент "Рулонное ламинирование" для ламинации
+        $laminationEquipment = [];
+        if (isset($equipmentIds['pd480c'])) {
+            $laminationEquipment[] = $equipmentIds['pd480c'];
+        }
+        
+        if (!empty($laminationEquipment)) {
+            $elementId = $this->createOrUpdateElement(
+                $settingsIblockId,
+                'roll_lamination',
+                'Рулонное ламинирование',
+                $laminationSection,
+                [
+                    'SUPPORTED_EQUIPMENT_LIST' => $laminationEquipment,
+                    'PATH_TO_SCRIPT' => '/local/php_interface/prospektweb.calc/calculators/roll_lamination.php',
+                ]
+            );
+            
+            if ($elementId) {
+                $this->created[] = "Настройка калькулятора: Ламинация → Рулонное ламинирование (ID: {$elementId})";
+            }
+        }
+    }
+
+    /**
+     * Создаёт или обновляет элемент инфоблока (без каталога).
+     */
+    protected function createOrUpdateElement(
+        int $iblockId,
+        string $code,
+        string $name,
+        int $sectionId,
+        array $properties = []
+    ): int {
+        // Ищем существующий элемент
+        $rsElement = \CIBlockElement::GetList(
+            [],
+            ['IBLOCK_ID' => $iblockId, 'CODE' => $code],
+            false,
+            ['nTopCount' => 1],
+            ['ID']
+        );
+
+        $el = new \CIBlockElement();
+
+        if ($arElement = $rsElement->Fetch()) {
+            // Обновляем существующий
+            $elementId = (int)$arElement['ID'];
+            
+            $fields = [
+                'NAME' => $name,
+                'IBLOCK_SECTION_ID' => $sectionId,
+                'ACTIVE' => 'Y',
+            ];
+
+            if (!empty($properties)) {
+                $fields['PROPERTY_VALUES'] = $properties;
+            }
+
+            $el->Update($elementId, $fields);
+        } else {
+            // Создаём новый
+            $fields = [
+                'IBLOCK_ID' => $iblockId,
+                'NAME' => $name,
+                'CODE' => $code,
+                'IBLOCK_SECTION_ID' => $sectionId,
+                'ACTIVE' => 'Y',
+            ];
+
+            if (!empty($properties)) {
+                $fields['PROPERTY_VALUES'] = $properties;
+            }
+
+            $elementId = $el->Add($fields);
+            
+            if (!$elementId) {
+                $this->errors[] = "Ошибка создания элемента '{$name}': " . $el->LAST_ERROR;
+                return 0;
+            }
+
+            $elementId = (int)$elementId;
+        }
+
+        return $elementId;
     }
 
     /**
