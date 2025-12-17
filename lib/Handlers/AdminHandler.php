@@ -201,31 +201,25 @@ class AdminHandler
             'operations',
         ];
 
-        // Используем shouldShowCalcButton для более точной проверки по кодам инфоблоков
-        $showButton = self::shouldShowCalcButton($iblockId);
+        $showButton = false;
 
-        // Для обратной совместимости также проверяем entity types
-        if (!$showButton) {
-            if ($isListPage) {
-                // В списке показываем только для вариантов и оборудования
-                $showButton = in_array($currentEntity, $variantEntityTypes, true);
-                if ($showButton) {
-                    $debugLog['showButtonReason'] = 'List page - entity is variant or equipment (fallback)';
-                } else {
-                    $debugLog['showButtonReason'] = 'List page - entity is parent (not showing)';
-                }
-            } elseif ($isEditPage) {
-                // На странице редактирования показываем для родительских сущностей
-                // (кнопка будет во вкладке "Торговые предложения")
-                $showButton = in_array($currentEntity, $parentEntityTypes, true);
-                if ($showButton) {
-                    $debugLog['showButtonReason'] = 'Edit page - entity is parent (show for SKU tab, fallback)';
-                } else {
-                    $debugLog['showButtonReason'] = 'Edit page - entity is not parent';
-                }
+        if ($isListPage) {
+            // В списке показываем только для вариантов и оборудования
+            $showButton = in_array($currentEntity, $variantEntityTypes, true);
+            if ($showButton) {
+                $debugLog['showButtonReason'] = 'List page - entity is variant or equipment';
+            } else {
+                $debugLog['showButtonReason'] = 'List page - entity is parent (not showing)';
             }
-        } else {
-            $debugLog['showButtonReason'] = 'shouldShowCalcButton returned true (by iblock code)';
+        } elseif ($isEditPage) {
+            // На странице редактирования показываем для родительских сущностей
+            // (кнопка будет во вкладке "Торговые предложения")
+            $showButton = in_array($currentEntity, $parentEntityTypes, true);
+            if ($showButton) {
+                $debugLog['showButtonReason'] = 'Edit page - entity is parent (show for SKU tab)';
+            } else {
+                $debugLog['showButtonReason'] = 'Edit page - entity is not parent';
+            }
         }
 
         $debugLog['showButton'] = $showButton;
@@ -340,64 +334,6 @@ class AdminHandler
     public static function onAdminListDisplay(\CAdminList &$adminList): void
     {
         // Можно добавить кнопку массовой калькуляции в список элементов
-    }
-
-    /**
-     * Определяет, нужно ли показывать кнопку калькуляции для данного инфоблока.
-     *
-     * @param int $iblockId ID инфоблока
-     * @return bool
-     */
-    protected static function shouldShowCalcButton(int $iblockId): bool
-    {
-        if (!Loader::includeModule('iblock')) {
-            return false;
-        }
-
-        // Получаем код инфоблока
-        $iblockResult = \Bitrix\Iblock\IblockTable::getById($iblockId);
-        if (!$iblockResult) {
-            return false;
-        }
-        
-        $iblock = $iblockResult->fetch();
-        if (!$iblock || !is_array($iblock)) {
-            return false;
-        }
-        
-        $iblockCode = $iblock['CODE'] ?? '';
-        
-        // Определяем текущую страницу
-        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-        $isListPage = strpos($scriptName, 'iblock_list_admin.php') !== false;
-        $isEditPage = strpos($scriptName, 'iblock_element_edit.php') !== false;
-        
-        // Коды инфоблоков вариантов (показываем в списке)
-        $variantCodes = [
-            'calc_details_variants',
-            'calc_materials_variants', 
-            'calc_operations_variants',
-            'calc_equipment',
-        ];
-        
-        // Коды родительских инфоблоков (показываем только во вкладке ТП)
-        $parentCodes = [
-            'calc_details',
-            'calc_materials',
-            'calc_operations',
-        ];
-        
-        if ($isListPage) {
-            // В списке показываем только для вариантов
-            return in_array($iblockCode, $variantCodes, true);
-        }
-        
-        if ($isEditPage) {
-            // На странице редактирования показываем для родителей (вкладка ТП)
-            return in_array($iblockCode, $parentCodes, true);
-        }
-        
-        return false;
     }
 
     /**
