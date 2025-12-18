@@ -205,7 +205,10 @@
                     this.handleRemoveOfferRequest(message, origin);
                     break;
                 case 'CALC_SETTINGS_REQUEST':
-                    await this.handleCalcSettingsRequest(message, origin);
+                case 'CALC_EQUIPMENT_REQUEST':
+                case 'CALC_MATERIALS_VARIANTS_REQUEST':
+                case 'CALC_OPERATIONS_VARIANTS_REQUEST':
+                    await this.handleCalcItemRequest(message, origin);
                     break;
                 case 'CLOSE_REQUEST':
                     this.handleCloseRequest(message);
@@ -328,7 +331,8 @@
             });
         }
 
-        async handleCalcSettingsRequest(message, origin) {
+        async handleCalcItemRequest(message, origin) {
+            const responseType = message.type.replace('_REQUEST', '_RESPONSE');
             const requestPayload = message.payload || {};
             const iblockId = requestPayload.iblockId ? parseInt(requestPayload.iblockId, 10) : null;
             const iblockType = requestPayload.iblockType || null;
@@ -344,7 +348,7 @@
 
             if (!id || !iblockId) {
                 this.sendPwrtMessage(
-                    'CALC_SETTINGS_RESPONSE',
+                    responseType,
                     { ...basePayload, status: 'error', message: 'Invalid id or iblockId' },
                     message.requestId,
                     origin
@@ -368,7 +372,7 @@
                     : null;
 
                 this.sendPwrtMessage(
-                    'CALC_SETTINGS_RESPONSE',
+                    responseType,
                     {
                         ...basePayload,
                         status: element ? 'ok' : 'not_found',
@@ -378,9 +382,9 @@
                     origin
                 );
             } catch (error) {
-                console.error('[CalcIntegration] Failed to process CALC_SETTINGS_REQUEST', error);
+                console.error('[CalcIntegration] Failed to process ' + message.type, error);
                 this.sendPwrtMessage(
-                    'CALC_SETTINGS_RESPONSE',
+                    responseType,
                     {
                         ...basePayload,
                         status: 'error',
