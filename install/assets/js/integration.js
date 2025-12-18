@@ -6,7 +6,7 @@
 (function (window) {
     'use strict';
 
-    var INTEGRATION_VERSION = '2.2.0';
+    var INTEGRATION_VERSION = '2.3.0-debug';
     console.log('[BitrixBridge] integration.js loaded, version=' + INTEGRATION_VERSION);
 
     /**
@@ -174,7 +174,21 @@
          * Обработка сообщений протокола pwrt-v1
          */
         async handlePwrtMessage(message, event) {
+            console.log('[BitrixBridge][DEBUG] handlePwrtMessage called', {
+                messageType: message.type,
+                messageTarget: message.target,
+                expectedTarget: MODULE_SOURCE,
+                hasPayload: !!message.payload,
+                payload: message.payload,
+                protocol: message.protocol,
+                requestId: message.requestId,
+            });
+
             if (message.target !== MODULE_SOURCE) {
+                console.warn('[BitrixBridge][DEBUG] Message target mismatch', {
+                    received: message.target,
+                    expected: MODULE_SOURCE,
+                });
                 return;
             }
 
@@ -190,6 +204,8 @@
                 requestId: message.requestId,
                 payload: message.payload,
             });
+
+            console.log('[BitrixBridge][DEBUG] Routing message type:', message.type);
 
             switch (message.type) {
                 case 'SELECT_REQUEST':
@@ -208,13 +224,22 @@
                 case 'CALC_EQUIPMENT_REQUEST':
                 case 'CALC_MATERIAL_VARIANT_REQUEST':
                 case 'CALC_OPERATION_VARIANT_REQUEST':
+                    console.log('[BitrixBridge][DEBUG] Matched CALC_*_REQUEST, calling handleCalcItemRequest', {
+                        type: message.type,
+                        payload: message.payload,
+                    });
                     await this.handleCalcItemRequest(message, origin);
                     break;
                 case 'CLOSE_REQUEST':
                     this.handleCloseRequest(message);
                     break;
                 default:
-                    console.warn('[CalcIntegration] Unknown pwrt message type:', message.type);
+                    console.warn('[BitrixBridge][DEBUG] Unknown pwrt message type:', message.type);
+                    console.warn('[BitrixBridge][DEBUG] Known types:', [
+                        'SELECT_REQUEST', 'REFRESH_REQUEST', 'ADD_OFFER_REQUEST', 
+                        'REMOVE_OFFER_REQUEST', 'CALC_SETTINGS_REQUEST', 'CALC_EQUIPMENT_REQUEST',
+                        'CALC_MATERIAL_VARIANT_REQUEST', 'CALC_OPERATION_VARIANT_REQUEST', 'CLOSE_REQUEST'
+                    ]);
             }
         }
 
@@ -222,8 +247,17 @@
          * Отправка сообщения по протоколу pwrt-v1
          */
         sendPwrtMessage(type, payload, requestId, targetOrigin) {
+            console.log('[BitrixBridge][DEBUG] sendPwrtMessage called', {
+                type: type,
+                requestId: requestId,
+                targetOrigin: targetOrigin,
+                hasPayload: !!payload,
+                payloadStatus: payload ? payload.status : undefined,
+                payloadHasItem: payload ? !!payload.item : undefined,
+            });
+
             if (!this.iframeWindow) {
-                console.error('[CalcIntegration] Iframe window not available');
+                console.log('[BitrixBridge][DEBUG] sendPwrtMessage FAILED - Iframe window not available');
                 return;
             }
 
@@ -251,6 +285,13 @@
             if (type === 'SELECT_DONE') {
                 console.info('[TO_IFRAME_SELECT_DONE]', message);
             }
+
+            console.log('[BitrixBridge][DEBUG] sendPwrtMessage SENT', {
+                type: type,
+                requestId: requestId,
+                origin: origin,
+                messageKeys: Object.keys(message),
+            });
 
             this.iframeWindow.postMessage(message, origin);
         }
@@ -332,12 +373,27 @@
         }
 
         async handleCalcItemRequest(message, origin) {
+            console.log('[BitrixBridge][DEBUG] handleCalcItemRequest START', {
+                messageType: message.type,
+                payload: message.payload,
+                origin: origin,
+            });
+
             const responseType = message.type.replace('_REQUEST', '_RESPONSE');
+            console.log('[BitrixBridge][DEBUG] Response type will be:', responseType);
+
             const requestPayload = message.payload || {};
             const iblockId = requestPayload.iblockId ? parseInt(requestPayload.iblockId, 10) : null;
             const iblockType = requestPayload.iblockType || null;
             const lang = requestPayload.lang || null;
             const id = requestPayload.id ? parseInt(requestPayload.id, 10) : null;
+
+            console.log('[BitrixBridge][DEBUG] Parsed request params', {
+                id: id,
+                iblockId: iblockId,
+                iblockType: iblockType,
+                lang: lang,
+            });
 
             const basePayload = {
                 id: id,
@@ -347,6 +403,7 @@
             };
 
             if (!id || !iblockId) {
+                console.error('[BitrixBridge][DEBUG] Invalid id or iblockId', { id, iblockId });
                 this.sendPwrtMessage(
                     responseType,
                     { ...basePayload, status: 'error', message: 'Invalid id or iblockId' },
@@ -357,6 +414,12 @@
             }
 
             try {
+                console.log('[BitrixBridge][DEBUG] Calling fetchRefreshData with:', {
+                    iblockId: iblockId,
+                    iblockType: iblockType,
+                    ids: [id],
+                });
+
                 const refreshResult = await this.fetchRefreshData([
                     {
                         iblockId: iblockId,
@@ -365,24 +428,54 @@
                     },
                 ]);
 
+                console.log('[BitrixBridge][DEBUG] fetchRefreshData result:', {
+                    isArray: Array.isArray(refreshResult),
+                    length: Array.isArray(refreshResult) ? refreshResult.length : 0,
+                    firstItem: Array.isArray(refreshResult) && refreshResult[0] ? refreshResult[0] : null,
+                    rawResult: refreshResult,
+                });
+
                 const element = Array.isArray(refreshResult)
                     && refreshResult[0]
                     && Array.isArray(refreshResult[0].data)
                     ? refreshResult[0].data[0] || null
                     : null;
 
+                console.log('[BitrixBridge][DEBUG] Extracted element:', {
+                    hasElement: !!element,
+                    elementId: element ? element.id : null,
+                    elementName: element ? element.name : null,
+                    elementProperties: element ? Object.keys(element.properties || {}) : [],
+                });
+
+                const responsePayload = {
+                    ...basePayload,
+                    status: element ? 'ok' : 'not_found',
+                    item: element,
+                };
+
+                console.log('[BitrixBridge][DEBUG] Sending response', {
+                    type: responseType,
+                    requestId: message.requestId,
+                    status: responsePayload.status,
+                    hasItem: !!responsePayload.item,
+                });
+
                 this.sendPwrtMessage(
                     responseType,
-                    {
-                        ...basePayload,
-                        status: element ? 'ok' : 'not_found',
-                        item: element,
-                    },
+                    responsePayload,
                     message.requestId,
                     origin
                 );
+
+                console.log('[BitrixBridge][DEBUG] handleCalcItemRequest END - success');
+
             } catch (error) {
-                console.error(`[CalcIntegration] Failed to process ${message.type}`, error);
+                console.error('[BitrixBridge][DEBUG] handleCalcItemRequest ERROR', {
+                    error: error,
+                    message: error.message,
+                    stack: error.stack,
+                });
                 this.sendPwrtMessage(
                     responseType,
                     {
@@ -740,30 +833,61 @@
         }
 
         async fetchRefreshData(items) {
-            const formData = new FormData();
-            formData.append('action', 'refreshData');
-            formData.append('payload', JSON.stringify(items));
-            formData.append('sessid', this.config.sessid);
-
-            const response = await fetch(this.config.ajaxEndpoint, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: formData,
+            console.log('[BitrixBridge][DEBUG] fetchRefreshData START', {
+                items: items,
+                ajaxEndpoint: this.config.ajaxEndpoint,
             });
 
-            if (!response.ok) {
-                throw new Error('HTTP error ' + response.status);
+            const payloadJson = JSON.stringify(items);
+            const formData = new FormData();
+            formData.append('action', 'refreshData');
+            formData.append('payload', payloadJson);
+            formData.append('sessid', this.config.sessid);
+
+            console.log('[BitrixBridge][DEBUG] fetchRefreshData request', {
+                action: 'refreshData',
+                payload: payloadJson,
+                hasSessid: !!this.config.sessid,
+            });
+
+            try {
+                const response = await fetch(this.config.ajaxEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: formData,
+                });
+
+                console.log('[BitrixBridge][DEBUG] fetchRefreshData response status:', response.status, response.ok);
+
+                if (!response.ok) {
+                    throw new Error('HTTP error ' + response.status);
+                }
+
+                const data = await response.json();
+
+                const dataLength = Array.isArray(data.data) ? data.data.length : 0;
+                console.log('[BitrixBridge][DEBUG] fetchRefreshData response data', {
+                    success: data.success,
+                    hasData: !!data.data,
+                    dataLength: dataLength,
+                    error: data.error || data.message,
+                    rawData: dataLength <= 5 ? data : '[Large response - omitted]',
+                });
+
+                if (!data.success) {
+                    throw new Error(data.message || data.error || 'Ошибка обновления данных');
+                }
+
+                return data.data || [];
+            } catch (error) {
+                console.error('[BitrixBridge][DEBUG] fetchRefreshData ERROR', {
+                    error: error,
+                    message: error.message,
+                });
+                throw error;
             }
-
-            const data = await response.json();
-
-            if (!data.success) {
-                throw new Error(data.message || data.error || 'Ошибка обновления данных');
-            }
-
-            return data.data || [];
         }
 
         /**
