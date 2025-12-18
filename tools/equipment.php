@@ -74,6 +74,7 @@ try {
     foreach ($equipment as $id => $item) {
         $result[] = [
             'id' => $id,
+            'code' => $item['FIELDS']['CODE'] ?? null,
             'name' => $item['FIELDS']['NAME'] ?? '',
             'active' => ($item['FIELDS']['ACTIVE'] ?? '') === 'Y',
             'startCost' => (float)($item['PROPERTIES']['START_COST']['VALUE'] ?? 0),

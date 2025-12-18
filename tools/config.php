@@ -62,7 +62,7 @@ try {
             ],
             false,
             ['nTopCount' => 1],
-            ['ID', 'NAME', 'PROPERTY_STATUS', 'PROPERTY_TOTAL_COST', 'PROPERTY_STRUCTURE', 'PROPERTY_LAST_CALC_DATE']
+            ['ID', 'CODE', 'NAME', 'PROPERTY_STATUS', 'PROPERTY_TOTAL_COST', 'PROPERTY_STRUCTURE', 'PROPERTY_LAST_CALC_DATE']
         );
 
         if ($arElement = $rsElements->Fetch()) {
@@ -79,6 +79,7 @@ try {
             echo json_encode([
                 'config' => [
                     'id' => (int)$arElement['ID'],
+                    'code' => $arElement['CODE'] ?? null,
                     'variantId' => $variantId,
                     'status' => $arElement['PROPERTY_STATUS_VALUE'] ?? 'draft',
                     'totalCost' => (float)($arElement['PROPERTY_TOTAL_COST_VALUE'] ?? 0),

@@ -449,13 +449,66 @@ switch ($currentStep) {
         ];
         
         $settingsProps = [
-            'CALCULATOR_CODE' => ['NAME' => 'Код калькулятора', 'TYPE' => 'S'],
-            'SUPPORTED_EQUIPMENT_LIST' => ['NAME' => 'Список поддерживаемого оборудования', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'PATH_TO_SCRIPT' => ['NAME' => 'Путь к скрипту расчёта', 'TYPE' => 'S', 'USER_TYPE' => 'FileMan'],
-            'DEFAULT_MATERIAL' => ['NAME' => 'Материал по умолчанию', 'TYPE' => 'E'],
-            'DEFAULT_OPTIONS' => ['NAME' => 'Опции по умолчанию', 'TYPE' => 'S', 'USER_TYPE' => 'HTML'],
-            'CAN_BE_FIRST' => ['NAME' => 'Может быть первым', 'TYPE' => 'L', 'VALUES' => [['VALUE' => 'Y'], ['VALUE' => 'N']]],
-            'REQUIRES_BEFORE' => ['NAME' => 'Требует перед собой', 'TYPE' => 'S'],
+            'PATH_TO_SCRIPT' => [
+                'NAME' => 'Путь к скрипту расчёта',
+                'TYPE' => 'S',
+                'USER_TYPE' => 'FileMan',
+                'SORT' => 100,
+            ],
+            'USE_OPERATION' => [
+                'NAME' => 'Активировать Операцию',
+                'TYPE' => 'L',
+                'SORT' => 200,
+                'VALUES' => [
+                    ['VALUE' => 'Да', 'XML_ID' => 'Y'],
+                    ['VALUE' => 'Нет', 'XML_ID' => 'N'],
+                ],
+            ],
+            'DEFAULT_OPERATION' => [
+                'NAME' => 'Операция по умолчанию',
+                'TYPE' => 'E',
+                'SORT' => 250,
+            ],
+            'SUPPORTED_EQUIPMENT_LIST' => [
+                'NAME' => 'Поддерживаемое оборудование',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'SORT' => 300,
+            ],
+            'USE_MATERIAL' => [
+                'NAME' => 'Активировать Материал',
+                'TYPE' => 'L',
+                'SORT' => 400,
+                'VALUES' => [
+                    ['VALUE' => 'Да', 'XML_ID' => 'Y'],
+                    ['VALUE' => 'Нет', 'XML_ID' => 'N'],
+                ],
+            ],
+            'DEFAULT_MATERIAL' => [
+                'NAME' => 'Материал по умолчанию',
+                'TYPE' => 'E',
+                'SORT' => 450,
+            ],
+            'CAN_BE_FIRST' => [
+                'NAME' => 'Может быть добавлен на первом этапе',
+                'TYPE' => 'L',
+                'SORT' => 500,
+                'VALUES' => [
+                    ['VALUE' => 'Да', 'XML_ID' => 'Y'],
+                    ['VALUE' => 'Нет', 'XML_ID' => 'N'],
+                ],
+            ],
+            'REQUIRES_BEFORE' => [
+                'NAME' => 'Используется после калькулятора',
+                'TYPE' => 'E',
+                'SORT' => 550,
+            ],
+            'DEFAULT_OPTIONS' => [
+                'NAME' => 'Опции по умолчанию',
+                'TYPE' => 'S',
+                'USER_TYPE' => 'HTML',
+                'SORT' => 600,
+            ],
         ];
         
         $materialsProps = [
@@ -511,6 +564,48 @@ switch ($currentStep) {
 
         $created = count(array_filter($installData['iblock_ids'], fn($id) => $id > 0));
         installLog("Создано инфоблоков: {$created}/9", $created === 9 ? 'success' : 'warning');
+        
+        // Обновление свойств CALC_SETTINGS с привязками к инфоблокам
+        if ($installData['iblock_ids']['CALC_SETTINGS'] > 0) {
+            installLog("");
+            installLog("Обновление свойств CALC_SETTINGS с привязками к инфоблокам...", 'header');
+            
+            $settingsIblockId = $installData['iblock_ids']['CALC_SETTINGS'];
+            
+            // Обновляем DEFAULT_OPERATION
+            if ($installData['iblock_ids']['CALC_OPERATIONS'] > 0) {
+                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'DEFAULT_OPERATION']);
+                if ($arProperty = $rsProperty->Fetch()) {
+                    \CIBlockProperty::Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_OPERATIONS']]);
+                    installLog("  → Обновлено свойство DEFAULT_OPERATION", 'success');
+                }
+            }
+            
+            // Обновляем SUPPORTED_EQUIPMENT_LIST
+            if ($installData['iblock_ids']['CALC_EQUIPMENT'] > 0) {
+                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'SUPPORTED_EQUIPMENT_LIST']);
+                if ($arProperty = $rsProperty->Fetch()) {
+                    \CIBlockProperty::Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_EQUIPMENT']]);
+                    installLog("  → Обновлено свойство SUPPORTED_EQUIPMENT_LIST", 'success');
+                }
+            }
+            
+            // Обновляем DEFAULT_MATERIAL
+            if ($installData['iblock_ids']['CALC_MATERIALS'] > 0) {
+                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'DEFAULT_MATERIAL']);
+                if ($arProperty = $rsProperty->Fetch()) {
+                    \CIBlockProperty::Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_MATERIALS']]);
+                    installLog("  → Обновлено свойство DEFAULT_MATERIAL", 'success');
+                }
+            }
+            
+            // Обновляем REQUIRES_BEFORE
+            $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'REQUIRES_BEFORE']);
+            if ($arProperty = $rsProperty->Fetch()) {
+                \CIBlockProperty::Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $settingsIblockId]);
+                installLog("  → Обновлено свойство REQUIRES_BEFORE", 'success');
+            }
+        }
         
         // Создание единиц измерения
         installLog("");
