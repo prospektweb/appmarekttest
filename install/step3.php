@@ -571,12 +571,13 @@ switch ($currentStep) {
             installLog("Обновление свойств CALC_SETTINGS с привязками к инфоблокам...", 'header');
             
             $settingsIblockId = $installData['iblock_ids']['CALC_SETTINGS'];
+            $ibp = new \CIBlockProperty();
             
             // Обновляем DEFAULT_OPERATION
             if ($installData['iblock_ids']['CALC_OPERATIONS'] > 0) {
                 $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'DEFAULT_OPERATION']);
                 if ($arProperty = $rsProperty->Fetch()) {
-                    \CIBlockProperty::Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_OPERATIONS']]);
+                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_OPERATIONS']]);
                     installLog("  → Обновлено свойство DEFAULT_OPERATION", 'success');
                 }
             }
@@ -585,7 +586,7 @@ switch ($currentStep) {
             if ($installData['iblock_ids']['CALC_EQUIPMENT'] > 0) {
                 $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'SUPPORTED_EQUIPMENT_LIST']);
                 if ($arProperty = $rsProperty->Fetch()) {
-                    \CIBlockProperty::Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_EQUIPMENT']]);
+                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_EQUIPMENT']]);
                     installLog("  → Обновлено свойство SUPPORTED_EQUIPMENT_LIST", 'success');
                 }
             }
@@ -594,7 +595,7 @@ switch ($currentStep) {
             if ($installData['iblock_ids']['CALC_MATERIALS'] > 0) {
                 $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'DEFAULT_MATERIAL']);
                 if ($arProperty = $rsProperty->Fetch()) {
-                    \CIBlockProperty::Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_MATERIALS']]);
+                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_MATERIALS']]);
                     installLog("  → Обновлено свойство DEFAULT_MATERIAL", 'success');
                 }
             }
@@ -602,7 +603,7 @@ switch ($currentStep) {
             // Обновляем REQUIRES_BEFORE
             $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'REQUIRES_BEFORE']);
             if ($arProperty = $rsProperty->Fetch()) {
-                \CIBlockProperty::Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $settingsIblockId]);
+                $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $settingsIblockId]);
                 installLog("  → Обновлено свойство REQUIRES_BEFORE", 'success');
             }
         }
