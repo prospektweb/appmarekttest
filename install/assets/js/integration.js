@@ -382,7 +382,7 @@
                     origin
                 );
             } catch (error) {
-                console.error('[CalcIntegration] Failed to process ' + message.type, error);
+                console.error(`[CalcIntegration] Failed to process ${message.type}`, error);
                 this.sendPwrtMessage(
                     responseType,
                     {
