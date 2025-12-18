@@ -206,8 +206,8 @@
                     break;
                 case 'CALC_SETTINGS_REQUEST':
                 case 'CALC_EQUIPMENT_REQUEST':
-                case 'CALC_MATERIALS_VARIANTS_REQUEST':
-                case 'CALC_OPERATIONS_VARIANTS_REQUEST':
+                case 'CALC_MATERIAL_VARIANT_REQUEST':
+                case 'CALC_OPERATION_VARIANT_REQUEST':
                     await this.handleCalcItemRequest(message, origin);
                     break;
                 case 'CLOSE_REQUEST':
