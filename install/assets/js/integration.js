@@ -174,7 +174,6 @@
          * Обработка сообщений протокола pwrt-v1
          */
         async handlePwrtMessage(message, event) {
-            // Добавить в начало метода:
             console.log('[BitrixBridge][DEBUG] handlePwrtMessage called', {
                 messageType: message.type,
                 messageTarget: message.target,
@@ -206,7 +205,6 @@
                 payload: message.payload,
             });
 
-            // Перед switch добавить:
             console.log('[BitrixBridge][DEBUG] Routing message type:', message.type);
 
             switch (message.type) {
@@ -840,14 +838,15 @@
                 ajaxEndpoint: this.config.ajaxEndpoint,
             });
 
+            const payloadJson = JSON.stringify(items);
             const formData = new FormData();
             formData.append('action', 'refreshData');
-            formData.append('payload', JSON.stringify(items));
+            formData.append('payload', payloadJson);
             formData.append('sessid', this.config.sessid);
 
             console.log('[BitrixBridge][DEBUG] fetchRefreshData request', {
                 action: 'refreshData',
-                payload: JSON.stringify(items),
+                payload: payloadJson,
                 hasSessid: !!this.config.sessid,
             });
 
@@ -868,12 +867,13 @@
 
                 const data = await response.json();
 
+                const dataLength = Array.isArray(data.data) ? data.data.length : 0;
                 console.log('[BitrixBridge][DEBUG] fetchRefreshData response data', {
                     success: data.success,
                     hasData: !!data.data,
-                    dataLength: Array.isArray(data.data) ? data.data.length : 0,
+                    dataLength: dataLength,
                     error: data.error || data.message,
-                    rawData: data,
+                    rawData: dataLength <= 5 ? data : '[Large response - omitted]',
                 });
 
                 if (!data.success) {
