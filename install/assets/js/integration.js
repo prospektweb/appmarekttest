@@ -234,8 +234,8 @@
                     this.handleCloseRequest(message);
                     break;
                 default:
-                    console.warn('[CalcIntegration][DEBUG] Unknown pwrt message type:', message.type);
-                    console.warn('[CalcIntegration][DEBUG] Known types:', [
+                    console.warn('[BitrixBridge][DEBUG] Unknown pwrt message type:', message.type);
+                    console.warn('[BitrixBridge][DEBUG] Known types:', [
                         'SELECT_REQUEST', 'REFRESH_REQUEST', 'ADD_OFFER_REQUEST', 
                         'REMOVE_OFFER_REQUEST', 'CALC_SETTINGS_REQUEST', 'CALC_EQUIPMENT_REQUEST',
                         'CALC_MATERIAL_VARIANT_REQUEST', 'CALC_OPERATION_VARIANT_REQUEST', 'CLOSE_REQUEST'
@@ -257,7 +257,7 @@
             });
 
             if (!this.iframeWindow) {
-                console.error('[BitrixBridge][DEBUG] sendPwrtMessage FAILED - Iframe window not available');
+                console.log('[BitrixBridge][DEBUG] sendPwrtMessage FAILED - Iframe window not available');
                 return;
             }
 
