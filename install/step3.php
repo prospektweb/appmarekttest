@@ -442,10 +442,10 @@ switch ($currentStep) {
             'LAST_CALC_DATE' => ['NAME' => 'Дата последнего расчёта', 'TYPE' => 'S', 'USER_TYPE' => 'DateTime'],
             'TOTAL_COST' => ['NAME' => 'Итоговая себестоимость', 'TYPE' => 'N'],
             'STRUCTURE' => ['NAME' => 'Структура', 'TYPE' => 'S', 'USER_TYPE' => 'HTML'],
-            'USED_MATERIALS' => ['NAME' => 'Использованные материалы', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'USED_WORKS' => ['NAME' => 'Использованные операции', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'USED_MATERIALS_VARIANTS' => ['NAME' => 'Использованные варианты материалов', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'USED_OPERATIONS_VARIANTS' => ['NAME' => 'Использованные варианты операций', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'USED_EQUIPMENT' => ['NAME' => 'Использованное оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'USED_DETAILS' => ['NAME' => 'Использованные детали', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'USED_DETAILS_VARIANTS' => ['NAME' => 'Использованные варианты деталей', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
         ];
         
         $settingsProps = [
@@ -455,8 +455,8 @@ switch ($currentStep) {
                 'USER_TYPE' => 'FileMan',
                 'SORT' => 100,
             ],
-            'USE_OPERATION' => [
-                'NAME' => 'Активировать Операцию',
+            'USE_OPERATION_VARIANT' => [
+                'NAME' => 'Активировать выбор варианта Операции',
                 'TYPE' => 'L',
                 'SORT' => 200,
                 'VALUES' => [
@@ -464,13 +464,13 @@ switch ($currentStep) {
                     ['VALUE' => 'Нет', 'XML_ID' => 'N'],
                 ],
             ],
-            'DEFAULT_OPERATION' => [
-                'NAME' => 'Операция по умолчанию',
+            'DEFAULT_OPERATION_VARIANT' => [
+                'NAME' => 'Вариант операции по умолчанию',
                 'TYPE' => 'E',
                 'SORT' => 250,
             ],
-            'USE_MATERIAL' => [
-                'NAME' => 'Активировать Материал',
+            'USE_MATERIAL_VARIANT' => [
+                'NAME' => 'Активировать выбор варианта Материал',
                 'TYPE' => 'L',
                 'SORT' => 400,
                 'VALUES' => [
@@ -478,8 +478,8 @@ switch ($currentStep) {
                     ['VALUE' => 'Нет', 'XML_ID' => 'N'],
                 ],
             ],
-            'DEFAULT_MATERIAL' => [
-                'NAME' => 'Материал по умолчанию',
+            'DEFAULT_MATERIAL_VARIANT' => [
+                'NAME' => 'Вариант Материала по умолчанию',
                 'TYPE' => 'E',
                 'SORT' => 450,
             ],
@@ -497,8 +497,8 @@ switch ($currentStep) {
                 'TYPE' => 'E',
                 'SORT' => 550,
             ],
-            'DEFAULT_OPTIONS' => [
-                'NAME' => 'Опции по умолчанию',
+            'OTHER_OPTIONS' => [
+                'NAME' => 'Прочие опции',
                 'TYPE' => 'S',
                 'USER_TYPE' => 'HTML',
                 'SORT' => 600,
@@ -510,9 +510,6 @@ switch ($currentStep) {
         ];
 
         $materialsVariantsProps = [
-            'WIDTH' => ['NAME' => 'Ширина, мм', 'TYPE' => 'N'],
-            'LENGTH' => ['NAME' => 'Длина, мм', 'TYPE' => 'N'],
-            'HEIGHT' => ['NAME' => 'Высота, мм', 'TYPE' => 'N'],
             'DENSITY' => ['NAME' => 'Плотность', 'TYPE' => 'N'],
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
         ];
@@ -534,15 +531,16 @@ switch ($currentStep) {
         ];
 
         $operationsVariantsProps = [
-            'MEASURE_UNIT' => ['NAME' => 'Единица измерения', 'TYPE' => 'S', 'SORT' => 100],
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'SORT' => 500],
         ];
 
         $equipmentProps = [
             'FIELDS' => ['NAME' => 'Поля печатной машины', 'TYPE' => 'S'],
+            'MIN_WIDTH' => ['NAME' => 'Мин. ширина, мм', 'TYPE' => 'N'],
+            'MIN_LENGTH' => ['NAME' => 'Мин. длина, мм', 'TYPE' => 'N'],
             'MAX_WIDTH' => ['NAME' => 'Макс. ширина, мм', 'TYPE' => 'N'],
             'MAX_LENGTH' => ['NAME' => 'Макс. длина, мм', 'TYPE' => 'N'],
-            'START_COST' => ['NAME' => 'Стоимость приладки', 'TYPE' => 'N'],
+            'START_COST' => ['NAME' => 'Стоимость старта', 'TYPE' => 'N'],
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
         ];
 
@@ -551,9 +549,6 @@ switch ($currentStep) {
         ];
 
         $detailsVariantsProps = [
-            'WIDTH' => ['NAME' => 'Ширина, мм', 'TYPE' => 'N'],
-            'LENGTH' => ['NAME' => 'Длина, мм', 'TYPE' => 'N'],
-            'HEIGHT' => ['NAME' => 'Высота, мм', 'TYPE' => 'N'],
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
         ];
 
@@ -578,21 +573,21 @@ switch ($currentStep) {
             $settingsIblockId = $installData['iblock_ids']['CALC_SETTINGS'];
             $ibp = new \CIBlockProperty();
             
-            // Обновляем DEFAULT_OPERATION
+            // Обновляем DEFAULT_OPERATION_VARIANT
             if ($installData['iblock_ids']['CALC_OPERATIONS'] > 0) {
-                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'DEFAULT_OPERATION']);
+                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'DEFAULT_OPERATION_VARIANT']);
                 if ($arProperty = $rsProperty->Fetch()) {
                     $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_OPERATIONS']]);
-                    installLog("  → Обновлено свойство DEFAULT_OPERATION", 'success');
+                    installLog("  → Обновлено свойство DEFAULT_OPERATION_VARIANT", 'success');
                 }
             }
             
-            // Обновляем DEFAULT_MATERIAL
+            // Обновляем DEFAULT_MATERIAL_VARIANT
             if ($installData['iblock_ids']['CALC_MATERIALS'] > 0) {
-                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'DEFAULT_MATERIAL']);
+                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'DEFAULT_MATERIAL_VARIANT']);
                 if ($arProperty = $rsProperty->Fetch()) {
                     $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_MATERIALS']]);
-                    installLog("  → Обновлено свойство DEFAULT_MATERIAL", 'success');
+                    installLog("  → Обновлено свойство DEFAULT_MATERIAL_VARIANT", 'success');
                 }
             }
             
@@ -643,37 +638,8 @@ switch ($currentStep) {
 
         $ids = $installData['iblock_ids'];
         createSkuRelationWithLog($ids['CALC_MATERIALS'] ??  0, $ids['CALC_MATERIALS_VARIANTS'] ??  0, 'Материалы');
-        createSkuRelationWithLog($ids['CALC_WORKS'] ?? 0, $ids['CALC_WORKS_VARIANTS'] ?? 0, 'Операции');
+        createSkuRelationWithLog($ids['CALC_OPERATIONS'] ?? 0, $ids['CALC_OPERATIONS_VARIANTS'] ?? 0, 'Операции');
         createSkuRelationWithLog($ids['CALC_DETAILS'] ?? 0, $ids['CALC_DETAILS_VARIANTS'] ?? 0, 'Детали');
-        
-        // Создание SKU-связи между CALC_OPERATIONS и CALC_OPERATIONS_VARIANTS
-        if (($ids['CALC_OPERATIONS'] ?? 0) > 0 && ($ids['CALC_OPERATIONS_VARIANTS'] ?? 0) > 0) {
-            installLog("");
-            installLog("Создание SKU-связи CALC_OPERATIONS → CALC_OPERATIONS_VARIANTS...", 'header');
-            
-            $iblockCreatorPath = __DIR__ . '/../lib/Install/IblockCreator.php';
-            if (file_exists($iblockCreatorPath)) {
-                require_once $iblockCreatorPath;
-                
-                if (class_exists('\\Prospektweb\\Calc\\Install\\IblockCreator')) {
-                    $iblockCreator = new \Prospektweb\Calc\Install\IblockCreator();
-                    $result = $iblockCreator->createOperationsSkuRelation(
-                        $ids['CALC_OPERATIONS'],
-                        $ids['CALC_OPERATIONS_VARIANTS']
-                    );
-                    
-                    if ($result) {
-                        installLog("Создана SKU-связь CALC_OPERATIONS → CALC_OPERATIONS_VARIANTS", 'success');
-                    } else {
-                        installLog("Ошибка создания SKU-связи CALC_OPERATIONS → CALC_OPERATIONS_VARIANTS", 'error');
-                    }
-                } else {
-                    installLog("Класс IblockCreator не найден", 'error');
-                }
-            } else {
-                installLog("Файл IblockCreator.php не найден", 'error');
-            }
-        }
         
         installLog("--- Шаг 3 выполнен ---", 'header');
         break;
@@ -697,57 +663,6 @@ switch ($currentStep) {
         if ($installData['create_demo_data']) {
             installLog("");
             installLog("Создание демо-данных...", 'header');
-            
-            // Создание демо-оборудования
-            $demoEquipment = [
-                ['NAME' => '3070L', 'CODE' => '3070L'],
-                ['NAME' => '2060L', 'CODE' => '2060L'],
-                ['NAME' => 'PD480C', 'CODE' => 'PD480C'],
-            ];
-
-            if (($installData['iblock_ids']['CALC_EQUIPMENT'] ?? 0) > 0) {
-                installLog("Создание демо-оборудования...", 'header');
-                foreach ($demoEquipment as $equipment) {
-                    $el = new \CIBlockElement();
-                    $addResult = $el->Add([
-                        'IBLOCK_ID' => $installData['iblock_ids']['CALC_EQUIPMENT'],
-                        'NAME' => $equipment['NAME'],
-                        'CODE' => $equipment['CODE'],
-                        'ACTIVE' => 'Y',
-                    ]);
-                    if ($addResult) {
-                        installLog("  → Оборудование: {$equipment['NAME']}", 'success');
-                    } else {
-                        installLog("  → Ошибка создания оборудования: {$equipment['NAME']}", 'error');
-                    }
-                }
-                installLog("Создано демо-оборудование: " . count($demoEquipment) . " шт.", 'success');
-            }
-
-            // Создание демо-материалов вариантов
-            $demoMaterialsVariants = [
-                ['NAME' => 'Пленка глянцевая 30 мкм 305 мм', 'CODE' => 'film_lamination_gloss_30_305'],
-                ['NAME' => 'Пленка матовая 30 мкм 305 мм', 'CODE' => 'film_lamination_matte_30_305'],
-            ];
-
-            if (($installData['iblock_ids']['CALC_MATERIALS_VARIANTS'] ?? 0) > 0) {
-                installLog("Создание демо-материалов вариантов...", 'header');
-                foreach ($demoMaterialsVariants as $material) {
-                    $el = new \CIBlockElement();
-                    $addResult = $el->Add([
-                        'IBLOCK_ID' => $installData['iblock_ids']['CALC_MATERIALS_VARIANTS'],
-                        'NAME' => $material['NAME'],
-                        'CODE' => $material['CODE'],
-                        'ACTIVE' => 'Y',
-                    ]);
-                    if ($addResult) {
-                        installLog("  → Материал: {$material['NAME']}", 'success');
-                    } else {
-                        installLog("  → Ошибка создания материала: {$material['NAME']}", 'error');
-                    }
-                }
-                installLog("Создано демо-материалов вариантов: " . count($demoMaterialsVariants) . " шт.", 'success');
-            }
             
             // Добавляем прямой require для DemoDataCreator перед использованием
             $demoDataCreatorPath = __DIR__ . '/../lib/Install/DemoDataCreator.php';
