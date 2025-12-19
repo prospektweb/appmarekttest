@@ -331,8 +331,8 @@ class IblockCreator
                 'FILE_TYPE' => 'php',
                 'DEFAULT_VALUE' => '/bitrix/modules/prospektweb.calc/lib/Calculator/Calculators/',
             ],
-            'USE_OPERATION' => [
-                'NAME' => 'Активировать Операцию',
+            'USE_OPERATION_VARIANT' => [
+                'NAME' => 'Активировать выбор варианта Операции',
                 'TYPE' => 'L',
                 'SORT' => 200,
                 'VALUES' => [
@@ -340,15 +340,15 @@ class IblockCreator
                     ['VALUE' => 'Нет', 'XML_ID' => 'N'],
                 ],
             ],
-            'DEFAULT_OPERATION' => [
-                'NAME' => 'Операция по умолчанию',
+            'DEFAULT_OPERATION_VARIANT' => [
+                'NAME' => 'Вариант операции по умолчанию',
                 'TYPE' => 'E',
                 'SORT' => 250,
                 'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
                 'LINK_IBLOCK_CODE' => 'CALC_OPERATIONS',
             ],
-            'USE_MATERIAL' => [
-                'NAME' => 'Активировать Материал',
+            'USE_MATERIAL_VARIANT' => [
+                'NAME' => 'Активировать выбор варианта Материала',
                 'TYPE' => 'L',
                 'SORT' => 400,
                 'VALUES' => [
@@ -356,8 +356,8 @@ class IblockCreator
                     ['VALUE' => 'Нет', 'XML_ID' => 'N'],
                 ],
             ],
-            'DEFAULT_MATERIAL' => [
-                'NAME' => 'Материал по умолчанию',
+            'DEFAULT_MATERIAL_VARIANT' => [
+                'NAME' => 'Вариант материала по умолчанию',
                 'TYPE' => 'E',
                 'SORT' => 450,
                 'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
@@ -379,8 +379,8 @@ class IblockCreator
                 'LINK_IBLOCK_TYPE_ID' => 'calculator',
                 'LINK_IBLOCK_CODE' => 'CALC_SETTINGS',
             ],
-            'DEFAULT_OPTIONS' => [
-                'NAME' => 'Опции по умолчанию',
+            'OTHER_OPTIONS' => [
+                'NAME' => 'Прочие опции',
                 'TYPE' => 'S',
                 'USER_TYPE' => 'HTML',
                 'SORT' => 600,
