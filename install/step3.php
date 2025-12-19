@@ -469,12 +469,6 @@ switch ($currentStep) {
                 'TYPE' => 'E',
                 'SORT' => 250,
             ],
-            'SUPPORTED_EQUIPMENT_LIST' => [
-                'NAME' => 'Поддерживаемое оборудование',
-                'TYPE' => 'E',
-                'MULTIPLE' => 'Y',
-                'SORT' => 300,
-            ],
             'USE_MATERIAL' => [
                 'NAME' => 'Активировать Материал',
                 'TYPE' => 'L',
@@ -524,13 +518,24 @@ switch ($currentStep) {
         ];
 
         $operationsProps = [
-            'EQUIPMENTS' => ['NAME' => 'Оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+            'SUPPORTED_EQUIPMENT_LIST' => [
+                'NAME' => 'Поддерживаемое оборудование',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'SORT' => 100,
+            ],
+            'SUPPORTED_MATERIALS_VARIANTS_LIST' => [
+                'NAME' => 'Поддерживаемые варианты материалов',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'SORT' => 200,
+            ],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'SORT' => 500],
         ];
 
         $operationsVariantsProps = [
-            'EQUIPMENTS' => ['NAME' => 'Оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+            'MEASURE_UNIT' => ['NAME' => 'Единица измерения', 'TYPE' => 'S', 'SORT' => 100],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'SORT' => 500],
         ];
 
         $equipmentProps = [
@@ -582,15 +587,6 @@ switch ($currentStep) {
                 }
             }
             
-            // Обновляем SUPPORTED_EQUIPMENT_LIST
-            if ($installData['iblock_ids']['CALC_EQUIPMENT'] > 0) {
-                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'SUPPORTED_EQUIPMENT_LIST']);
-                if ($arProperty = $rsProperty->Fetch()) {
-                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_EQUIPMENT']]);
-                    installLog("  → Обновлено свойство SUPPORTED_EQUIPMENT_LIST", 'success');
-                }
-            }
-            
             // Обновляем DEFAULT_MATERIAL
             if ($installData['iblock_ids']['CALC_MATERIALS'] > 0) {
                 $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'DEFAULT_MATERIAL']);
@@ -608,6 +604,33 @@ switch ($currentStep) {
             }
         }
         
+        // Обновление свойств CALC_OPERATIONS с привязками к инфоблокам
+        if ($installData['iblock_ids']['CALC_OPERATIONS'] > 0) {
+            installLog("");
+            installLog("Обновление свойств CALC_OPERATIONS с привязками к инфоблокам...", 'header');
+            
+            $operationsIblockId = $installData['iblock_ids']['CALC_OPERATIONS'];
+            $ibp = new \CIBlockProperty();
+            
+            // Обновляем SUPPORTED_EQUIPMENT_LIST
+            if ($installData['iblock_ids']['CALC_EQUIPMENT'] > 0) {
+                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $operationsIblockId, 'CODE' => 'SUPPORTED_EQUIPMENT_LIST']);
+                if ($arProperty = $rsProperty->Fetch()) {
+                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_EQUIPMENT']]);
+                    installLog("  → Обновлено свойство SUPPORTED_EQUIPMENT_LIST", 'success');
+                }
+            }
+            
+            // Обновляем SUPPORTED_MATERIALS_VARIANTS_LIST
+            if ($installData['iblock_ids']['CALC_MATERIALS_VARIANTS'] > 0) {
+                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $operationsIblockId, 'CODE' => 'SUPPORTED_MATERIALS_VARIANTS_LIST']);
+                if ($arProperty = $rsProperty->Fetch()) {
+                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_MATERIALS_VARIANTS']]);
+                    installLog("  → Обновлено свойство SUPPORTED_MATERIALS_VARIANTS_LIST", 'success');
+                }
+            }
+        }
+        
         // Создание единиц измерения
         installLog("");
         createMeasuresWithLog();
@@ -622,6 +645,35 @@ switch ($currentStep) {
         createSkuRelationWithLog($ids['CALC_MATERIALS'] ??  0, $ids['CALC_MATERIALS_VARIANTS'] ??  0, 'Материалы');
         createSkuRelationWithLog($ids['CALC_WORKS'] ?? 0, $ids['CALC_WORKS_VARIANTS'] ?? 0, 'Операции');
         createSkuRelationWithLog($ids['CALC_DETAILS'] ?? 0, $ids['CALC_DETAILS_VARIANTS'] ?? 0, 'Детали');
+        
+        // Создание SKU-связи между CALC_OPERATIONS и CALC_OPERATIONS_VARIANTS
+        if (($ids['CALC_OPERATIONS'] ?? 0) > 0 && ($ids['CALC_OPERATIONS_VARIANTS'] ?? 0) > 0) {
+            installLog("");
+            installLog("Создание SKU-связи CALC_OPERATIONS → CALC_OPERATIONS_VARIANTS...", 'header');
+            
+            $iblockCreatorPath = __DIR__ . '/../lib/Install/IblockCreator.php';
+            if (file_exists($iblockCreatorPath)) {
+                require_once $iblockCreatorPath;
+                
+                if (class_exists('\\Prospektweb\\Calc\\Install\\IblockCreator')) {
+                    $iblockCreator = new \Prospektweb\Calc\Install\IblockCreator();
+                    $result = $iblockCreator->createOperationsSkuRelation(
+                        $ids['CALC_OPERATIONS'],
+                        $ids['CALC_OPERATIONS_VARIANTS']
+                    );
+                    
+                    if ($result) {
+                        installLog("Создана SKU-связь CALC_OPERATIONS → CALC_OPERATIONS_VARIANTS", 'success');
+                    } else {
+                        installLog("Ошибка создания SKU-связи CALC_OPERATIONS → CALC_OPERATIONS_VARIANTS", 'error');
+                    }
+                } else {
+                    installLog("Класс IblockCreator не найден", 'error');
+                }
+            } else {
+                installLog("Файл IblockCreator.php не найден", 'error');
+            }
+        }
         
         installLog("--- Шаг 3 выполнен ---", 'header');
         break;
@@ -645,6 +697,57 @@ switch ($currentStep) {
         if ($installData['create_demo_data']) {
             installLog("");
             installLog("Создание демо-данных...", 'header');
+            
+            // Создание демо-оборудования
+            $demoEquipment = [
+                ['NAME' => '3070L', 'CODE' => '3070L'],
+                ['NAME' => '2060L', 'CODE' => '2060L'],
+                ['NAME' => 'PD480C', 'CODE' => 'PD480C'],
+            ];
+
+            if (($installData['iblock_ids']['CALC_EQUIPMENT'] ?? 0) > 0) {
+                installLog("Создание демо-оборудования...", 'header');
+                foreach ($demoEquipment as $equipment) {
+                    $el = new \CIBlockElement();
+                    $addResult = $el->Add([
+                        'IBLOCK_ID' => $installData['iblock_ids']['CALC_EQUIPMENT'],
+                        'NAME' => $equipment['NAME'],
+                        'CODE' => $equipment['CODE'],
+                        'ACTIVE' => 'Y',
+                    ]);
+                    if ($addResult) {
+                        installLog("  → Оборудование: {$equipment['NAME']}", 'success');
+                    } else {
+                        installLog("  → Ошибка создания оборудования: {$equipment['NAME']}", 'error');
+                    }
+                }
+                installLog("Создано демо-оборудование: " . count($demoEquipment) . " шт.", 'success');
+            }
+
+            // Создание демо-материалов вариантов
+            $demoMaterialsVariants = [
+                ['NAME' => 'Пленка глянцевая 30 мкм 305 мм', 'CODE' => 'film_lamination_gloss_30_305'],
+                ['NAME' => 'Пленка матовая 30 мкм 305 мм', 'CODE' => 'film_lamination_matte_30_305'],
+            ];
+
+            if (($installData['iblock_ids']['CALC_MATERIALS_VARIANTS'] ?? 0) > 0) {
+                installLog("Создание демо-материалов вариантов...", 'header');
+                foreach ($demoMaterialsVariants as $material) {
+                    $el = new \CIBlockElement();
+                    $addResult = $el->Add([
+                        'IBLOCK_ID' => $installData['iblock_ids']['CALC_MATERIALS_VARIANTS'],
+                        'NAME' => $material['NAME'],
+                        'CODE' => $material['CODE'],
+                        'ACTIVE' => 'Y',
+                    ]);
+                    if ($addResult) {
+                        installLog("  → Материал: {$material['NAME']}", 'success');
+                    } else {
+                        installLog("  → Ошибка создания материала: {$material['NAME']}", 'error');
+                    }
+                }
+                installLog("Создано демо-материалов вариантов: " . count($demoMaterialsVariants) . " шт.", 'success');
+            }
             
             // Добавляем прямой require для DemoDataCreator перед использованием
             $demoDataCreatorPath = __DIR__ . '/../lib/Install/DemoDataCreator.php';

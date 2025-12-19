@@ -69,6 +69,9 @@ class DemoDataCreator
         // Создаём операции (бывшие работы)
         $this->createOperations($iblockIds);
 
+        // Создаём демо-операции с новой структурой
+        $this->createDemoOperations($iblockIds);
+
         // Создаём настройки калькуляторов (после оборудования)
         $this->createCalcSettings($iblockIds);
 
@@ -1141,5 +1144,178 @@ class DemoDataCreator
             'created' => $this->created,
             'errors' => $this->errors,
         ];
+    }
+
+    /**
+     * Создаёт демо-данные для операций
+     */
+    public function createDemoOperations(array $iblockIds): array
+    {
+        $operationsIblockId = $iblockIds['CALC_OPERATIONS'] ?? 0;
+        $operationsVariantsIblockId = $iblockIds['CALC_OPERATIONS_VARIANTS'] ?? 0;
+        $equipmentIblockId = $iblockIds['CALC_EQUIPMENT'] ?? 0;
+        $materialsVariantsIblockId = $iblockIds['CALC_MATERIALS_VARIANTS'] ?? 0;
+        
+        if ($operationsIblockId <= 0) {
+            return [];
+        }
+
+        $createdIds = [];
+
+        // 1. Создать разделы для Печать → Цифровая лазерная
+        $printSectionId = $this->createSection($operationsIblockId, 'Печать', null);
+        $digitalLaserSectionId = $this->createSection($operationsIblockId, 'Цифровая лазерная', $printSectionId);
+
+        // 2. Создать элемент "Листовая печать"
+        // Сначала нужно получить ID оборудования 3070L и 2060L
+        $equipment3070L = $this->findElementByCode($equipmentIblockId, '3070L');
+        $equipment2060L = $this->findElementByCode($equipmentIblockId, '2060L');
+        
+        $supportedEquipment = array_filter([$equipment3070L, $equipment2060L]);
+        
+        $sheetPrintingId = $this->createElement($operationsIblockId, [
+            'NAME' => 'Листовая печать',
+            'CODE' => 'sheet_printing',
+            'IBLOCK_SECTION_ID' => $digitalLaserSectionId,
+            'PROPERTY_VALUES' => [
+                'SUPPORTED_EQUIPMENT_LIST' => $supportedEquipment,
+            ],
+        ]);
+        $createdIds['sheet_printing'] = $sheetPrintingId;
+
+        if ($sheetPrintingId) {
+            $this->created[] = "Операция: Листовая печать (ID: {$sheetPrintingId})";
+        }
+
+        // 3. Создать варианты для "Листовая печать": 4+0, 4+4, 4+1, 1+0, 1+1
+        if ($operationsVariantsIblockId > 0 && $sheetPrintingId > 0) {
+            $variants = ['4+0', '4+4', '4+1', '1+0', '1+1'];
+            foreach ($variants as $variant) {
+                $variantId = $this->createElement($operationsVariantsIblockId, [
+                    'NAME' => $variant,
+                    'CODE' => 'sheet_printing_' . str_replace('+', '_', $variant),
+                    'PROPERTY_VALUES' => [
+                        'CML2_LINK' => $sheetPrintingId,
+                    ],
+                ]);
+                if ($variantId) {
+                    $this->created[] = "  → Вариант: {$variant} (ID: {$variantId})";
+                }
+            }
+        }
+
+        // 4. Создать разделы для Постпечать → Ламинирование → Рулонное
+        $postpressSectionId = $this->createSection($operationsIblockId, 'Постпечать', null);
+        $laminationSectionId = $this->createSection($operationsIblockId, 'Ламинирование', $postpressSectionId);
+        $rollLaminationSectionId = $this->createSection($operationsIblockId, 'Рулонное', $laminationSectionId);
+
+        // 5. Создать элемент "A4+"
+        $equipmentPD480C = $this->findElementByCode($equipmentIblockId, 'PD480C');
+        $filmGloss = $this->findElementByCode($materialsVariantsIblockId, 'film_lamination_gloss_30_305');
+        $filmMatte = $this->findElementByCode($materialsVariantsIblockId, 'film_lamination_matte_30_305');
+        
+        $a4PlusId = $this->createElement($operationsIblockId, [
+            'NAME' => 'A4+',
+            'CODE' => 'a4_plus_lamination',
+            'IBLOCK_SECTION_ID' => $rollLaminationSectionId,
+            'PROPERTY_VALUES' => [
+                'SUPPORTED_EQUIPMENT_LIST' => array_filter([$equipmentPD480C]),
+                'SUPPORTED_MATERIALS_VARIANTS_LIST' => array_filter([$filmGloss, $filmMatte]),
+            ],
+        ]);
+        $createdIds['a4_plus_lamination'] = $a4PlusId;
+
+        if ($a4PlusId) {
+            $this->created[] = "Операция: A4+ (ID: {$a4PlusId})";
+        }
+
+        // 6. Создать варианты для "A4+": для толщин до 60 мкм, для толщин до 120 мкм
+        if ($operationsVariantsIblockId > 0 && $a4PlusId > 0) {
+            $variant60Id = $this->createElement($operationsVariantsIblockId, [
+                'NAME' => 'для толщин до 60 мкм',
+                'CODE' => 'a4_plus_60',
+                'PROPERTY_VALUES' => [
+                    'CML2_LINK' => $a4PlusId,
+                ],
+            ]);
+            if ($variant60Id) {
+                $this->created[] = "  → Вариант: для толщин до 60 мкм (ID: {$variant60Id})";
+            }
+
+            $variant120Id = $this->createElement($operationsVariantsIblockId, [
+                'NAME' => 'для толщин до 120 мкм',
+                'CODE' => 'a4_plus_120',
+                'PROPERTY_VALUES' => [
+                    'CML2_LINK' => $a4PlusId,
+                ],
+            ]);
+            if ($variant120Id) {
+                $this->created[] = "  → Вариант: для толщин до 120 мкм (ID: {$variant120Id})";
+            }
+        }
+
+        return $createdIds;
+    }
+
+    private function createSection(int $iblockId, string $name, ?int $parentId): int
+    {
+        $bs = new \CIBlockSection();
+        $arFields = [
+            'IBLOCK_ID' => $iblockId,
+            'NAME' => $name,
+            'ACTIVE' => 'Y',
+        ];
+        
+        if ($parentId !== null) {
+            $arFields['IBLOCK_SECTION_ID'] = $parentId;
+        }
+        
+        $sectionId = $bs->Add($arFields);
+        
+        if (!$sectionId) {
+            $this->errors[] = "Ошибка создания раздела '{$name}': " . $bs->LAST_ERROR;
+            return 0;
+        }
+        
+        return (int)$sectionId;
+    }
+
+    private function createElement(int $iblockId, array $fields): int
+    {
+        $el = new \CIBlockElement();
+        $arFields = array_merge([
+            'IBLOCK_ID' => $iblockId,
+            'ACTIVE' => 'Y',
+        ], $fields);
+        
+        $elementId = $el->Add($arFields);
+        
+        if (!$elementId) {
+            $this->errors[] = "Ошибка создания элемента: " . $el->LAST_ERROR;
+            return 0;
+        }
+        
+        return (int)$elementId;
+    }
+
+    private function findElementByCode(int $iblockId, string $code): ?int
+    {
+        if ($iblockId <= 0) {
+            return null;
+        }
+        
+        $rsElement = \CIBlockElement::GetList(
+            [],
+            ['IBLOCK_ID' => $iblockId, 'CODE' => $code],
+            false,
+            ['nTopCount' => 1],
+            ['ID']
+        );
+        
+        if ($arElement = $rsElement->Fetch()) {
+            return (int)$arElement['ID'];
+        }
+        
+        return null;
     }
 }

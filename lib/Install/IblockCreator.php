@@ -235,6 +235,54 @@ class IblockCreator
         return (bool)\CCatalog::Update($offersIblockId, $arCatalog);
     }
 
+    /**
+     * Создаёт SKU-связь между инфоблоками операций.
+     *
+     * @param int $operationsIblockId ID инфоблока операций.
+     * @param int $variantsIblockId   ID инфоблока вариантов операций.
+     *
+     * @return bool
+     */
+    public function createOperationsSkuRelation(int $operationsIblockId, int $variantsIblockId): bool
+    {
+        if (!Loader::includeModule('iblock')) {
+            return false;
+        }
+
+        if ($operationsIblockId <= 0 || $variantsIblockId <= 0) {
+            return false;
+        }
+
+        // Создаём свойство привязки CML2_LINK в вариантах
+        $propertyCode = 'CML2_LINK';
+        $rsProperty = \CIBlockProperty::GetList(
+            [],
+            ['IBLOCK_ID' => $variantsIblockId, 'CODE' => $propertyCode]
+        );
+
+        $propId = 0;
+
+        if ($arProperty = $rsProperty->Fetch()) {
+            $propId = (int)$arProperty['ID'];
+        } else {
+            $arNewProperty = [
+                'IBLOCK_ID' => $variantsIblockId,
+                'ACTIVE' => 'Y',
+                'CODE' => $propertyCode,
+                'NAME' => 'Операция',
+                'PROPERTY_TYPE' => 'E',
+                'MULTIPLE' => 'N',
+                'LINK_IBLOCK_ID' => $operationsIblockId,
+                'SORT' => 5,
+            ];
+
+            $ibp = new \CIBlockProperty();
+            $propId = (int)$ibp->Add($arNewProperty);
+        }
+
+        return $propId > 0;
+    }
+
     // ============= Создание конкретных инфоблоков =============
 
     /**
@@ -298,14 +346,6 @@ class IblockCreator
                 'SORT' => 250,
                 'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
                 'LINK_IBLOCK_CODE' => 'CALC_OPERATIONS',
-            ],
-            'SUPPORTED_EQUIPMENT_LIST' => [
-                'NAME' => 'Поддерживаемое оборудование',
-                'TYPE' => 'E',
-                'MULTIPLE' => 'Y',
-                'SORT' => 300,
-                'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
-                'LINK_IBLOCK_CODE' => 'CALC_EQUIPMENT',
             ],
             'USE_MATERIAL' => [
                 'NAME' => 'Активировать Материал',
@@ -390,8 +430,23 @@ class IblockCreator
     public function createOperationsIblock(): int
     {
         $properties = [
-            'EQUIPMENTS' => ['NAME' => 'Оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+            'SUPPORTED_EQUIPMENT_LIST' => [
+                'NAME' => 'Поддерживаемое оборудование',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'SORT' => 100,
+                'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
+                'LINK_IBLOCK_CODE' => 'CALC_EQUIPMENT',
+            ],
+            'SUPPORTED_MATERIALS_VARIANTS_LIST' => [
+                'NAME' => 'Поддерживаемые варианты материалов',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'SORT' => 200,
+                'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
+                'LINK_IBLOCK_CODE' => 'CALC_MATERIALS_VARIANTS',
+            ],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'SORT' => 500],
         ];
 
         return $this->createIblock('calculator_catalog', 'CALC_OPERATIONS', 'Операции', $properties);
@@ -405,8 +460,8 @@ class IblockCreator
     public function createOperationsVariantsIblock(): int
     {
         $properties = [
-            'EQUIPMENTS' => ['NAME' => 'Оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+            'MEASURE_UNIT' => ['NAME' => 'Единица измерения', 'TYPE' => 'S', 'SORT' => 100],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'SORT' => 500],
         ];
 
         return $this->createIblock('calculator_catalog', 'CALC_OPERATIONS_VARIANTS', 'Варианты операций', $properties);
