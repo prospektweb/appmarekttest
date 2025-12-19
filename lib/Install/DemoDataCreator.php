@@ -1171,7 +1171,7 @@ class DemoDataCreator
         $equipment3070L = $this->findElementByCode($equipmentIblockId, '3070L');
         $equipment2060L = $this->findElementByCode($equipmentIblockId, '2060L');
         
-        $supportedEquipment = array_filter([$equipment3070L, $equipment2060L]);
+        $supportedEquipment = array_filter([$equipment3070L, $equipment2060L], fn($id) => $id > 0);
         
         $sheetPrintingId = $this->createElement($operationsIblockId, [
             'NAME' => 'Листовая печать',
@@ -1219,8 +1219,8 @@ class DemoDataCreator
             'CODE' => 'a4_plus_lamination',
             'IBLOCK_SECTION_ID' => $rollLaminationSectionId,
             'PROPERTY_VALUES' => [
-                'SUPPORTED_EQUIPMENT_LIST' => array_filter([$equipmentPD480C]),
-                'SUPPORTED_MATERIALS_VARIANTS_LIST' => array_filter([$filmGloss, $filmMatte]),
+                'SUPPORTED_EQUIPMENT_LIST' => array_filter([$equipmentPD480C], fn($id) => $id > 0),
+                'SUPPORTED_MATERIALS_VARIANTS_LIST' => array_filter([$filmGloss, $filmMatte], fn($id) => $id > 0),
             ],
         ]);
         $createdIds['a4_plus_lamination'] = $a4PlusId;
