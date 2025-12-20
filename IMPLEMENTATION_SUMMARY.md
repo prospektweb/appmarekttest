@@ -187,6 +187,128 @@ const integration = new ProspektwebCalcIntegration({
 4. Add progress indicators for long operations
 5. Support batch operations for multiple offers
 
+## CALC_SETTINGS Properties
+
+### Other Options Field (OTHER_OPTIONS)
+
+The `OTHER_OPTIONS` property in CALC_SETTINGS infoblock stores additional calculator-specific fields in JSON format. This field uses HTML user type and contains a JSON object with a `fields` array.
+
+#### JSON Structure
+
+```json
+{
+  "fields": [
+    {
+      "code": "BLEED",
+      "name": "Вылеты",
+      "type": "number",
+      "unit": "мм",
+      "default": 3,
+      "min": 0,
+      "max": 20,
+      "step": 0.5,
+      "required": false
+    },
+    {
+      "code": "COPIES_PER_SHEET",
+      "name": "Копий на листе",
+      "type": "number",
+      "unit": "шт",
+      "default": 1,
+      "min": 1,
+      "max": 100,
+      "required": false
+    },
+    {
+      "code": "DOUBLE_SIDED",
+      "name": "Двусторонняя печать",
+      "type": "checkbox",
+      "default": false,
+      "required": false
+    },
+    {
+      "code": "COMMENT",
+      "name": "Комментарий",
+      "type": "text",
+      "default": "",
+      "maxLength": 500,
+      "required": false
+    }
+  ]
+}
+```
+
+#### Supported Field Types
+
+1. **number** — Numeric input field
+   - `unit` (string) — Unit of measurement (e.g., "мм", "шт")
+   - `default` (number) — Default value
+   - `min` (number) — Minimum value
+   - `max` (number) — Maximum value
+   - `step` (number) — Step for increment/decrement
+
+2. **checkbox** — Boolean checkbox
+   - `default` (boolean) — Default checked state
+
+3. **text** — Text input field
+   - `default` (string) — Default text value
+   - `maxLength` (number) — Maximum character count
+
+4. **select** — Dropdown list
+   - `options` (array) — Array of option objects
+   - `default` (string) — Default selected value
+   
+   Example:
+   ```json
+   {
+     "code": "PAPER_TYPE",
+     "name": "Тип бумаги",
+     "type": "select",
+     "options": [
+       {"value": "glossy", "label": "Глянцевая"},
+       {"value": "matte", "label": "Матовая"}
+     ],
+     "default": "glossy",
+     "required": true
+   }
+   ```
+
+#### Common Properties
+
+All field types support these properties:
+
+- `code` (string, required) — Unique field identifier
+- `name` (string, required) — Display label
+- `type` (string, required) — Field type (number, checkbox, text, select)
+- `required` (boolean) — Whether the field is mandatory
+- `default` — Default value (type depends on field type)
+
+### New Properties Added
+
+#### USE_OPERATION_QUANTITY
+- **Type:** List (L)
+- **Required:** Yes
+- **Default:** Yes (Y)
+- **Sort:** 700
+- **Description:** Activates quantity input for operations
+
+#### USE_MATERIAL_QUANTITY
+- **Type:** List (L)
+- **Required:** Yes
+- **Default:** Yes (Y)
+- **Sort:** 750
+- **Description:** Activates quantity input for materials
+
+### Updated Properties
+
+#### USE_OPERATION_VARIANT
+- **Changed:** Now required with default value 'Y'
+- **Sort:** 200
+
+#### USE_MATERIAL_VARIANT
+- **Changed:** Now required with default value 'Y'
+- **Sort:** 400
+
 ## Notes
 
 - The React application bundle should be placed in `/local/apps/prospektweb.calc/`
