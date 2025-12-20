@@ -353,6 +353,16 @@ class IblockCreator
                 'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
                 'LINK_IBLOCK_CODE' => 'CALC_OPERATIONS',
             ],
+            'USE_OPERATION_QUANTITY' => [
+                'NAME' => 'Активировать количество для операций',
+                'TYPE' => 'L',
+                'SORT' => 300,
+                'IS_REQUIRED' => 'Y',
+                'VALUES' => [
+                    ['VALUE' => 'Да', 'XML_ID' => 'Y', 'DEF' => 'Y'],
+                    ['VALUE' => 'Нет', 'XML_ID' => 'N'],
+                ],
+            ],
             'USE_MATERIAL_VARIANT' => [
                 'NAME' => 'Активировать выбор варианта Материала',
                 'TYPE' => 'L',
@@ -370,6 +380,16 @@ class IblockCreator
                 'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
                 'LINK_IBLOCK_CODE' => 'CALC_MATERIALS',
             ],
+            'USE_MATERIAL_QUANTITY' => [
+                'NAME' => 'Активировать количество для материала',
+                'TYPE' => 'L',
+                'SORT' => 500,
+                'IS_REQUIRED' => 'Y',
+                'VALUES' => [
+                    ['VALUE' => 'Да', 'XML_ID' => 'Y', 'DEF' => 'Y'],
+                    ['VALUE' => 'Нет', 'XML_ID' => 'N'],
+                ],
+            ],
             'CAN_BE_FIRST' => [
                 'NAME' => 'Может быть добавлен на первом этапе',
                 'TYPE' => 'L',
@@ -386,31 +406,11 @@ class IblockCreator
                 'LINK_IBLOCK_TYPE_ID' => 'calculator',
                 'LINK_IBLOCK_CODE' => 'CALC_SETTINGS',
             ],
-            'USE_OPERATION_QUANTITY' => [
-                'NAME' => 'Активировать количество для операций',
-                'TYPE' => 'L',
-                'SORT' => 700,
-                'IS_REQUIRED' => 'Y',
-                'VALUES' => [
-                    ['VALUE' => 'Да', 'XML_ID' => 'Y', 'DEF' => 'Y'],
-                    ['VALUE' => 'Нет', 'XML_ID' => 'N'],
-                ],
-            ],
-            'USE_MATERIAL_QUANTITY' => [
-                'NAME' => 'Активировать количество для материала',
-                'TYPE' => 'L',
-                'SORT' => 750,
-                'IS_REQUIRED' => 'Y',
-                'VALUES' => [
-                    ['VALUE' => 'Да', 'XML_ID' => 'Y', 'DEF' => 'Y'],
-                    ['VALUE' => 'Нет', 'XML_ID' => 'N'],
-                ],
-            ],
             'OTHER_OPTIONS' => [
                 'NAME' => 'Прочие опции',
                 'TYPE' => 'S',
                 'USER_TYPE' => 'HTML',
-                'SORT' => 800,
+                'SORT' => 700,
             ],
         ];
 
