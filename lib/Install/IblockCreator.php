@@ -120,6 +120,11 @@ class IblockCreator
             'SORT' => $data['SORT'] ?? 500,
         ];
 
+        // Add support for IS_REQUIRED
+        if (isset($data['IS_REQUIRED'])) {
+            $arProperty['IS_REQUIRED'] = $data['IS_REQUIRED'];
+        }
+
         if (isset($data['USER_TYPE'])) {
             $arProperty['USER_TYPE'] = $data['USER_TYPE'];
         }
@@ -335,8 +340,9 @@ class IblockCreator
                 'NAME' => 'Активировать выбор варианта Операции',
                 'TYPE' => 'L',
                 'SORT' => 200,
+                'IS_REQUIRED' => 'Y',
                 'VALUES' => [
-                    ['VALUE' => 'Да', 'XML_ID' => 'Y'],
+                    ['VALUE' => 'Да', 'XML_ID' => 'Y', 'DEF' => 'Y'],
                     ['VALUE' => 'Нет', 'XML_ID' => 'N'],
                 ],
             ],
@@ -347,12 +353,23 @@ class IblockCreator
                 'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
                 'LINK_IBLOCK_CODE' => 'CALC_OPERATIONS',
             ],
+            'USE_OPERATION_QUANTITY' => [
+                'NAME' => 'Активировать количество для операций',
+                'TYPE' => 'L',
+                'SORT' => 300,
+                'IS_REQUIRED' => 'Y',
+                'VALUES' => [
+                    ['VALUE' => 'Да', 'XML_ID' => 'Y', 'DEF' => 'Y'],
+                    ['VALUE' => 'Нет', 'XML_ID' => 'N'],
+                ],
+            ],
             'USE_MATERIAL_VARIANT' => [
                 'NAME' => 'Активировать выбор варианта Материала',
                 'TYPE' => 'L',
                 'SORT' => 400,
+                'IS_REQUIRED' => 'Y',
                 'VALUES' => [
-                    ['VALUE' => 'Да', 'XML_ID' => 'Y'],
+                    ['VALUE' => 'Да', 'XML_ID' => 'Y', 'DEF' => 'Y'],
                     ['VALUE' => 'Нет', 'XML_ID' => 'N'],
                 ],
             ],
@@ -363,10 +380,20 @@ class IblockCreator
                 'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
                 'LINK_IBLOCK_CODE' => 'CALC_MATERIALS',
             ],
+            'USE_MATERIAL_QUANTITY' => [
+                'NAME' => 'Активировать количество для материала',
+                'TYPE' => 'L',
+                'SORT' => 500,
+                'IS_REQUIRED' => 'Y',
+                'VALUES' => [
+                    ['VALUE' => 'Да', 'XML_ID' => 'Y', 'DEF' => 'Y'],
+                    ['VALUE' => 'Нет', 'XML_ID' => 'N'],
+                ],
+            ],
             'CAN_BE_FIRST' => [
                 'NAME' => 'Может быть добавлен на первом этапе',
                 'TYPE' => 'L',
-                'SORT' => 500,
+                'SORT' => 550,
                 'VALUES' => [
                     ['VALUE' => 'Да', 'XML_ID' => 'Y'],
                     ['VALUE' => 'Нет', 'XML_ID' => 'N'],
@@ -375,7 +402,7 @@ class IblockCreator
             'REQUIRES_BEFORE' => [
                 'NAME' => 'Используется после калькулятора',
                 'TYPE' => 'E',
-                'SORT' => 550,
+                'SORT' => 600,
                 'LINK_IBLOCK_TYPE_ID' => 'calculator',
                 'LINK_IBLOCK_CODE' => 'CALC_SETTINGS',
             ],
@@ -383,7 +410,7 @@ class IblockCreator
                 'NAME' => 'Прочие опции',
                 'TYPE' => 'S',
                 'USER_TYPE' => 'HTML',
-                'SORT' => 600,
+                'SORT' => 700,
             ],
         ];
 
