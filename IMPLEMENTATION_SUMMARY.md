@@ -289,14 +289,14 @@ All field types support these properties:
 - **Type:** List (L)
 - **Required:** Yes
 - **Default:** Yes (Y)
-- **Sort:** 700
+- **Sort:** 300
 - **Description:** Activates quantity input for operations
 
 #### USE_MATERIAL_QUANTITY
 - **Type:** List (L)
 - **Required:** Yes
 - **Default:** Yes (Y)
-- **Sort:** 750
+- **Sort:** 500
 - **Description:** Activates quantity input for materials
 
 ### Updated Properties
