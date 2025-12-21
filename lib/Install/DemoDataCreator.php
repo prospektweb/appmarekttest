@@ -69,9 +69,6 @@ class DemoDataCreator
         // Создаём операции (бывшие работы)
         $this->createOperations($iblockIds);
 
-        // Создаём демо-операции с новой структурой
-        $this->createDemoOperations($iblockIds);
-
         // Создаём настройки калькуляторов (после оборудования)
         $this->createCalcSettings($iblockIds);
 
@@ -456,6 +453,8 @@ class DemoDataCreator
     {
         $operationsIblockId = $iblockIds['CALC_WORKS'] ?? ($iblockIds['CALC_OPERATIONS'] ?? 0);
         $variantsIblockId = $iblockIds['CALC_WORKS_VARIANTS'] ?? ($iblockIds['CALC_OPERATIONS_VARIANTS'] ?? 0);
+        $equipmentIblockId = $iblockIds['CALC_EQUIPMENT'] ?? 0;
+        $materialsVariantsIblockId = $iblockIds['CALC_MATERIALS_VARIANTS'] ?? 0;
 
         if ($operationsIblockId <= 0 || $variantsIblockId <= 0) {
             return;
@@ -465,141 +464,155 @@ class DemoDataCreator
         $this->ensureCatalog($operationsIblockId);
         $this->ensureCatalog($variantsIblockId);
 
-        // Печать
+        // Создаём единую структуру разделов
+        // Печать → Цифровая лазерная
         $printSection = $this->getOrCreateSection($operationsIblockId, 'Печать', 0);
-        
-        // Печать → Цифровая
-        $digitalSection = $this->getOrCreateSection($operationsIblockId, 'Цифровая', $printSection);
-        
-        // Печать → Цифровая → Лазерная
-        $laserSection = $this->getOrCreateSection($operationsIblockId, 'Лазерная', $digitalSection);
+        $digitalLaserSection = $this->getOrCreateSection($operationsIblockId, 'Цифровая лазерная', $printSection);
         
         // Получаем ID оборудования для привязки
-        $equipment2060L = $this->elementCache['2060L'] ?? 0;
-        $equipment3070L = $this->elementCache['3070L'] ?? 0;
+        $equipment2060L = $this->elementCache['2060L'] ?? $this->findElementByCode($equipmentIblockId, '2060L');
+        $equipment3070L = $this->elementCache['3070L'] ?? $this->findElementByCode($equipmentIblockId, '3070L');
         
         // Проверяем наличие оборудования
-        $printEquipment = [];
-        if ($equipment2060L > 0) {
-            $printEquipment[] = $equipment2060L;
-        }
-        if ($equipment3070L > 0) {
-            $printEquipment[] = $equipment3070L;
-        }
+        $printEquipment = array_filter([$equipment3070L, $equipment2060L], fn($id) => $id > 0);
         
         if (empty($printEquipment)) {
             $this->errors[] = 'Оборудование для печати не создано, операции будут созданы без привязки';
         }
         
-        $this->createOperationProduct($operationsIblockId, $variantsIblockId, $laserSection, [
-            'PRODUCT_NAME' => '4+0',
-            'PRODUCT_CODE' => 'print_digital_laser_4_0',
-            'EQUIPMENT' => $printEquipment,
-            'VARIANTS' => [
-                [
-                    'NAME' => '320x470мм',
-                    'CODE' => 'print_digital_laser_4_0_320x470',
-                    'WIDTH' => 320,
-                    'LENGTH' => 470,
-                    'HEIGHT' => 0.45,
-                    'PURCHASING_PRICE' => 10,
-                    'MARKUP' => 3.0,
-                    'MEASURE' => 'RUN',
-                ],
-            ],
-        ]);
-
-        $this->createOperationProduct($operationsIblockId, $variantsIblockId, $laserSection, [
-            'PRODUCT_NAME' => '4+4',
-            'PRODUCT_CODE' => 'print_digital_laser_4_4',
-            'EQUIPMENT' => $printEquipment,
-            'VARIANTS' => [
-                [
-                    'NAME' => '320x470мм',
-                    'CODE' => 'print_digital_laser_4_4_320x470',
-                    'WIDTH' => 320,
-                    'LENGTH' => 470,
-                    'HEIGHT' => 0.45,
-                    'PURCHASING_PRICE' => 18,
-                    'MARKUP' => 3.0,
-                    'MEASURE' => 'RUN',
-                ],
-            ],
-        ]);
-
-        $this->createOperationProduct($operationsIblockId, $variantsIblockId, $laserSection, [
-            'PRODUCT_NAME' => '1+0',
-            'PRODUCT_CODE' => 'print_digital_laser_1_0',
-            'EQUIPMENT' => $printEquipment,
-            'VARIANTS' => [
-                [
-                    'NAME' => '320x470мм',
-                    'CODE' => 'print_digital_laser_1_0_320x470',
-                    'WIDTH' => 320,
-                    'LENGTH' => 470,
-                    'HEIGHT' => 0.45,
-                    'PURCHASING_PRICE' => 3,
-                    'MARKUP' => 3.0,
-                    'MEASURE' => 'RUN',
-                ],
-            ],
-        ]);
-
-        $this->createOperationProduct($operationsIblockId, $variantsIblockId, $laserSection, [
-            'PRODUCT_NAME' => '1+1',
-            'PRODUCT_CODE' => 'print_digital_laser_1_1',
-            'EQUIPMENT' => $printEquipment,
-            'VARIANTS' => [
-                [
-                    'NAME' => '320x470мм',
-                    'CODE' => 'print_digital_laser_1_1_320x470',
-                    'WIDTH' => 320,
-                    'LENGTH' => 470,
-                    'HEIGHT' => 0.45,
-                    'PURCHASING_PRICE' => 6,
-                    'MARKUP' => 3.0,
-                    'MEASURE' => 'RUN',
-                ],
-            ],
-        ]);
-
-        // Постпечать
-        $postPrintSection = $this->getOrCreateSection($operationsIblockId, 'Постпечать', 0);
+        // Создаём элемент "Листовая печать" с привязкой к оборудованию
+        $sheetPrintingId = $this->createOrUpdateProduct(
+            $operationsIblockId,
+            'sheet_printing',
+            'Листовая печать',
+            $digitalLaserSection,
+            ['SUPPORTED_EQUIPMENT_LIST' => $printEquipment]
+        );
         
-        // Постпечать → Ламинирование
-        $laminationSection = $this->getOrCreateSection($operationsIblockId, 'Ламинирование', $postPrintSection);
-        
+        if ($sheetPrintingId) {
+            $this->elementCache['sheet_printing'] = $sheetPrintingId;
+            $this->created[] = "Операция: Листовая печать (ID: {$sheetPrintingId})";
+            
+            // Создаём варианты для "Листовая печать": 4+0, 4+4, 4+1, 1+0, 1+1
+            $variants = [
+                ['NAME' => '4+0', 'CODE' => 'sheet_printing_4_0', 'PRICE' => 10],
+                ['NAME' => '4+4', 'CODE' => 'sheet_printing_4_4', 'PRICE' => 18],
+                ['NAME' => '4+1', 'CODE' => 'sheet_printing_4_1', 'PRICE' => 14],
+                ['NAME' => '1+0', 'CODE' => 'sheet_printing_1_0', 'PRICE' => 3],
+                ['NAME' => '1+1', 'CODE' => 'sheet_printing_1_1', 'PRICE' => 6],
+            ];
+            
+            $measureId = $this->getMeasureId('RUN');
+            
+            foreach ($variants as $variant) {
+                if ($measureId === 0) {
+                    $this->errors[] = "Пропуск SKU '{$variant['NAME']}': единица измерения 'RUN' не найдена";
+                    continue;
+                }
+                
+                $variantId = $this->createOrUpdateOffer(
+                    $variantsIblockId,
+                    $variant['CODE'],
+                    $variant['NAME'],
+                    $sheetPrintingId,
+                    [
+                        'WIDTH' => 0,
+                        'LENGTH' => 0,
+                        'HEIGHT' => 0,
+                        'WEIGHT' => 0,
+                        'MEASURE' => $measureId,
+                    ],
+                    [
+                        'PURCHASING_PRICE' => $variant['PRICE'],
+                        'BASE_PRICE' => $variant['PRICE'] * 3.0,
+                    ],
+                    0,
+                    0,
+                    0
+                );
+                
+                if ($variantId) {
+                    $this->elementCache[$variant['CODE']] = $variantId;
+                    $this->created[] = "  → Вариант: {$variant['NAME']} (ID: {$variantId})";
+                }
+            }
+        }
+
         // Постпечать → Ламинирование → Рулонное
-        $rollLaminationSection = $this->getOrCreateSection($operationsIblockId, 'Рулонное', $laminationSection);
+        $postPrintSection = $this->getOrCreateSection($operationsIblockId, 'Постпечать', 0);
+        $laminationSection = $this->getOrCreateSection($operationsIblockId, 'Ламинирование', $postPrintSection);
+        $rollSection = $this->getOrCreateSection($operationsIblockId, 'Рулонное', $laminationSection);
         
-        // Получаем ID оборудования для ламинатора
-        $equipmentPD480C = $this->elementCache['pd480c'] ?? 0;
+        // Получаем ID оборудования и материалов для ламинатора
+        $equipmentPD480C = $this->elementCache['pd480c'] ?? $this->findElementByCode($equipmentIblockId, 'PD480C');
+        $filmGloss = $this->findElementByCode($materialsVariantsIblockId, 'film_lamination_gloss_30_305');
+        $filmMatte = $this->findElementByCode($materialsVariantsIblockId, 'film_lamination_matte_30_305');
         
         // Проверяем наличие оборудования
-        $laminationEquipment = [];
-        if ($equipmentPD480C > 0) {
-            $laminationEquipment[] = $equipmentPD480C;
-        } else {
+        $laminationEquipment = array_filter([$equipmentPD480C], fn($id) => $id > 0);
+        $supportedMaterials = array_filter([$filmGloss, $filmMatte], fn($id) => $id > 0);
+        
+        if (empty($laminationEquipment)) {
             $this->errors[] = 'Оборудование для ламинирования не создано, операции будут созданы без привязки';
         }
         
-        $this->createOperationProduct($operationsIblockId, $variantsIblockId, $rollLaminationSection, [
-            'PRODUCT_NAME' => 'A3+',
-            'PRODUCT_CODE' => 'post_lamination_a3plus',
-            'EQUIPMENT' => $laminationEquipment,
-            'VARIANTS' => [
-                [
-                    'NAME' => 'A3+',
-                    'CODE' => 'post_lamination_a3plus_variant',
-                    'WIDTH' => 320,
-                    'LENGTH' => 470,
-                    'HEIGHT' => 0.45,
-                    'PURCHASING_PRICE' => 4,
-                    'MARKUP' => 2.0,
-                    'MEASURE' => 'SQM',
-                ],
-            ],
-        ]);
+        // Создаём элемент "A4+" с привязкой к оборудованию и материалам
+        $a4PlusId = $this->createOrUpdateProduct(
+            $operationsIblockId,
+            'a4_plus_lamination',
+            'A4+',
+            $rollSection,
+            [
+                'SUPPORTED_EQUIPMENT_LIST' => $laminationEquipment,
+                'SUPPORTED_MATERIALS_VARIANTS_LIST' => $supportedMaterials,
+            ]
+        );
+        
+        if ($a4PlusId) {
+            $this->elementCache['a4_plus_lamination'] = $a4PlusId;
+            $this->created[] = "Операция: A4+ (ID: {$a4PlusId})";
+            
+            // Создаём варианты для "A4+": для толщин до 60 мкм, для толщин до 120 мкм
+            $laminationVariants = [
+                ['NAME' => 'для толщин до 60 мкм', 'CODE' => 'a4_plus_60', 'PRICE' => 4],
+                ['NAME' => 'для толщин до 120 мкм', 'CODE' => 'a4_plus_120', 'PRICE' => 5],
+            ];
+            
+            $measureId = $this->getMeasureId('SQM');
+            
+            foreach ($laminationVariants as $variant) {
+                if ($measureId === 0) {
+                    $this->errors[] = "Пропуск SKU '{$variant['NAME']}': единица измерения 'SQM' не найдена";
+                    continue;
+                }
+                
+                $variantId = $this->createOrUpdateOffer(
+                    $variantsIblockId,
+                    $variant['CODE'],
+                    $variant['NAME'],
+                    $a4PlusId,
+                    [
+                        'WIDTH' => 0,
+                        'LENGTH' => 0,
+                        'HEIGHT' => 0,
+                        'WEIGHT' => 0,
+                        'MEASURE' => $measureId,
+                    ],
+                    [
+                        'PURCHASING_PRICE' => $variant['PRICE'],
+                        'BASE_PRICE' => $variant['PRICE'] * 2.0,
+                    ],
+                    0,
+                    0,
+                    0
+                );
+                
+                if ($variantId) {
+                    $this->elementCache[$variant['CODE']] = $variantId;
+                    $this->created[] = "  → Вариант: {$variant['NAME']} (ID: {$variantId})";
+                }
+            }
+        }
     }
 
     /**
@@ -610,114 +623,98 @@ class DemoDataCreator
     protected function createCalcSettings(array $iblockIds): void
     {
         $settingsIblockId = $iblockIds['CALC_SETTINGS'] ?? 0;
-        $equipmentIblockId = $iblockIds['CALC_EQUIPMENT'] ?? 0;
+        $operationsVariantsIblockId = $iblockIds['CALC_OPERATIONS_VARIANTS'] ?? 0;
+        $materialsVariantsIblockId = $iblockIds['CALC_MATERIALS_VARIANTS'] ?? 0;
 
-        if ($settingsIblockId <= 0 || $equipmentIblockId <= 0) {
+        if ($settingsIblockId <= 0) {
             return;
         }
 
-        // Получаем ID оборудования по кодам
-        $equipmentIds = [];
-        $equipmentCodes = ['3070L', '2060L', 'ryoby_b2', 'pd480c'];
+        // Получаем ID варианта операции "4+0"
+        $variant4_0_Id = $this->elementCache['sheet_printing_4_0'] ?? $this->findElementByCode($operationsVariantsIblockId, 'sheet_printing_4_0');
         
-        foreach ($equipmentCodes as $code) {
-            if (isset($this->elementCache[$code])) {
-                $equipmentIds[$code] = $this->elementCache[$code];
-            } else {
-                // Ищем в базе, если не в кэше
-                $rsElement = \CIBlockElement::GetList(
-                    [],
-                    ['IBLOCK_ID' => $equipmentIblockId, 'CODE' => $code],
-                    false,
-                    ['nTopCount' => 1],
-                    ['ID']
-                );
-                if ($arElement = $rsElement->Fetch()) {
-                    $equipmentIds[$code] = (int)$arElement['ID'];
-                }
-            }
-        }
+        // Получаем ID варианта материала "200 г/м2 → 320x470мм"
+        $material200_Id = $this->findElementByCode($materialsVariantsIblockId, 'coated_gloss_200_320x470');
 
         // Раздел "Цифровая лазерная"
         $digitalLaserSection = $this->getOrCreateSection($settingsIblockId, 'Цифровая лазерная', 0);
         
         // Элемент "Листовая печать" для цифровой лазерной
-        $digitalEquipment = [];
-        if (isset($equipmentIds['3070L'])) {
-            $digitalEquipment[] = $equipmentIds['3070L'];
+        $properties = [
+            'PATH_TO_SCRIPT' => '/local/php_interface/prospektweb.calc/calculators/digital_laser_sheet.php',
+            'USE_OPERATION_VARIANT' => $this->getListPropertyValueId($settingsIblockId, 'USE_OPERATION_VARIANT', 'Y'),
+            'USE_OPERATION_QUANTITY' => $this->getListPropertyValueId($settingsIblockId, 'USE_OPERATION_QUANTITY', 'Y'),
+            'USE_MATERIAL_VARIANT' => $this->getListPropertyValueId($settingsIblockId, 'USE_MATERIAL_VARIANT', 'Y'),
+            'USE_MATERIAL_QUANTITY' => $this->getListPropertyValueId($settingsIblockId, 'USE_MATERIAL_QUANTITY', 'Y'),
+            'CAN_BE_FIRST' => $this->getListPropertyValueId($settingsIblockId, 'CAN_BE_FIRST', 'Y'),
+        ];
+        
+        // Добавляем ID вариантов, если они найдены
+        if ($variant4_0_Id) {
+            $properties['DEFAULT_OPERATION_VARIANT'] = $variant4_0_Id;
         }
-        if (isset($equipmentIds['2060L'])) {
-            $digitalEquipment[] = $equipmentIds['2060L'];
+        if ($material200_Id) {
+            $properties['DEFAULT_MATERIAL_VARIANT'] = $material200_Id;
         }
         
-        if (!empty($digitalEquipment)) {
-            $elementId = $this->createOrUpdateElement(
-                $settingsIblockId,
-                'digital_laser_sheet',
-                'Листовая печать',
-                $digitalLaserSection,
-                [
-                    'SUPPORTED_EQUIPMENT_LIST' => $digitalEquipment,
-                    'PATH_TO_SCRIPT' => '/local/php_interface/prospektweb.calc/calculators/digital_laser_sheet.php',
-                ]
-            );
-            
-            if ($elementId) {
-                $this->created[] = "Настройка калькулятора: Цифровая лазерная → Листовая печать (ID: {$elementId})";
-            }
-        }
-
-        // Раздел "Офсетная"
-        $offsetSection = $this->getOrCreateSection($settingsIblockId, 'Офсетная', 0);
+        $elementId = $this->createOrUpdateElement(
+            $settingsIblockId,
+            'digital_laser_sheet',
+            'Листовая печать',
+            $digitalLaserSection,
+            $properties
+        );
         
-        // Элемент "Листовая печать" для офсетной
-        $offsetEquipment = [];
-        if (isset($equipmentIds['ryoby_b2'])) {
-            $offsetEquipment[] = $equipmentIds['ryoby_b2'];
-        }
-        
-        if (!empty($offsetEquipment)) {
-            $elementId = $this->createOrUpdateElement(
-                $settingsIblockId,
-                'offset_sheet',
-                'Листовая печать',
-                $offsetSection,
-                [
-                    'SUPPORTED_EQUIPMENT_LIST' => $offsetEquipment,
-                    'PATH_TO_SCRIPT' => '/local/php_interface/prospektweb.calc/calculators/offset_sheet.php',
-                ]
-            );
-            
-            if ($elementId) {
-                $this->created[] = "Настройка калькулятора: Офсетная → Листовая печать (ID: {$elementId})";
-            }
+        if ($elementId) {
+            $this->created[] = "Настройка калькулятора: Цифровая лазерная → Листовая печать (ID: {$elementId})";
         }
 
         // Раздел "Ламинация"
         $laminationSection = $this->getOrCreateSection($settingsIblockId, 'Ламинация', 0);
         
         // Элемент "Рулонное ламинирование" для ламинации
-        $laminationEquipment = [];
-        if (isset($equipmentIds['pd480c'])) {
-            $laminationEquipment[] = $equipmentIds['pd480c'];
-        }
+        $elementId = $this->createOrUpdateElement(
+            $settingsIblockId,
+            'roll_lamination',
+            'Рулонное ламинирование',
+            $laminationSection,
+            [
+                'PATH_TO_SCRIPT' => '/local/php_interface/prospektweb.calc/calculators/roll_lamination.php',
+            ]
+        );
         
-        if (!empty($laminationEquipment)) {
-            $elementId = $this->createOrUpdateElement(
-                $settingsIblockId,
-                'roll_lamination',
-                'Рулонное ламинирование',
-                $laminationSection,
-                [
-                    'SUPPORTED_EQUIPMENT_LIST' => $laminationEquipment,
-                    'PATH_TO_SCRIPT' => '/local/php_interface/prospektweb.calc/calculators/roll_lamination.php',
-                ]
+        if ($elementId) {
+            $this->created[] = "Настройка калькулятора: Ламинация → Рулонное ламинирование (ID: {$elementId})";
+        }
+    }
+    
+    /**
+     * Получает ID значения списочного свойства по XML_ID.
+     *
+     * @param int $iblockId ID инфоблока.
+     * @param string $propertyCode Код свойства.
+     * @param string $xmlId XML_ID значения.
+     * @return int|null ID значения или null, если не найдено.
+     */
+    protected function getListPropertyValueId(int $iblockId, string $propertyCode, string $xmlId): ?int
+    {
+        $rsProperty = \CIBlockProperty::GetList(
+            [],
+            ['IBLOCK_ID' => $iblockId, 'CODE' => $propertyCode]
+        );
+        
+        if ($arProperty = $rsProperty->Fetch()) {
+            $rsPropertyEnum = \CIBlockPropertyEnum::GetList(
+                [],
+                ['IBLOCK_ID' => $iblockId, 'PROPERTY_ID' => $arProperty['ID'], 'XML_ID' => $xmlId]
             );
             
-            if ($elementId) {
-                $this->created[] = "Настройка калькулятора: Ламинация → Рулонное ламинирование (ID: {$elementId})";
+            if ($arEnum = $rsPropertyEnum->Fetch()) {
+                return (int)$arEnum['ID'];
             }
         }
+        
+        return null;
     }
 
     /**
@@ -1134,148 +1131,13 @@ class DemoDataCreator
     }
 
     /**
-     * Возвращает результат.
+     * Находит элемент по коду.
      *
-     * @return array
+     * @param int $iblockId ID инфоблока.
+     * @param string $code Код элемента.
+     * @return int|null ID элемента или null, если не найден.
      */
-    protected function getResult(): array
-    {
-        return [
-            'created' => $this->created,
-            'errors' => $this->errors,
-        ];
-    }
-
-    /**
-     * Создаёт демо-данные для операций
-     */
-    public function createDemoOperations(array $iblockIds): array
-    {
-        $operationsIblockId = $iblockIds['CALC_OPERATIONS'] ?? 0;
-        $operationsVariantsIblockId = $iblockIds['CALC_OPERATIONS_VARIANTS'] ?? 0;
-        $equipmentIblockId = $iblockIds['CALC_EQUIPMENT'] ?? 0;
-        $materialsVariantsIblockId = $iblockIds['CALC_MATERIALS_VARIANTS'] ?? 0;
-        
-        if ($operationsIblockId <= 0) {
-            return [];
-        }
-
-        $createdIds = [];
-
-        // 1. Создать разделы для Печать → Цифровая лазерная
-        $printSectionId = $this->getOrCreateSection($operationsIblockId, 'Печать', 0);
-        $digitalLaserSectionId = $this->getOrCreateSection($operationsIblockId, 'Цифровая лазерная', $printSectionId);
-
-        // 2. Создать элемент "Листовая печать"
-        // Сначала нужно получить ID оборудования 3070L и 2060L
-        $equipment3070L = $this->findElementByCode($equipmentIblockId, '3070L');
-        $equipment2060L = $this->findElementByCode($equipmentIblockId, '2060L');
-        
-        $supportedEquipment = array_filter([$equipment3070L, $equipment2060L], fn($id) => $id > 0);
-        
-        $sheetPrintingId = $this->createElement($operationsIblockId, [
-            'NAME' => 'Листовая печать',
-            'CODE' => 'sheet_printing',
-            'IBLOCK_SECTION_ID' => $digitalLaserSectionId,
-            'PROPERTY_VALUES' => [
-                'SUPPORTED_EQUIPMENT_LIST' => $supportedEquipment,
-            ],
-        ]);
-        $createdIds['sheet_printing'] = $sheetPrintingId;
-
-        if ($sheetPrintingId) {
-            $this->created[] = "Операция: Листовая печать (ID: {$sheetPrintingId})";
-        }
-
-        // 3. Создать варианты для "Листовая печать": 4+0, 4+4, 4+1, 1+0, 1+1
-        if ($operationsVariantsIblockId > 0 && $sheetPrintingId > 0) {
-            $variants = ['4+0', '4+4', '4+1', '1+0', '1+1'];
-            foreach ($variants as $variant) {
-                $variantId = $this->createElement($operationsVariantsIblockId, [
-                    'NAME' => $variant,
-                    'CODE' => 'sheet_printing_' . str_replace('+', '_', $variant),
-                    'PROPERTY_VALUES' => [
-                        'CML2_LINK' => $sheetPrintingId,
-                    ],
-                ]);
-                if ($variantId) {
-                    $this->created[] = "  → Вариант: {$variant} (ID: {$variantId})";
-                }
-            }
-        }
-
-        // 4. Создать разделы для Постпечать → Ламинирование → Рулонное
-        $postpressSectionId = $this->getOrCreateSection($operationsIblockId, 'Постпечать', 0);
-        $laminationSectionId = $this->getOrCreateSection($operationsIblockId, 'Ламинирование', $postpressSectionId);
-        $rollSectionId = $this->getOrCreateSection($operationsIblockId, 'Рулонное', $laminationSectionId);
-
-        // 5. Создать элемент "A4+"
-        $equipmentPD480C = $this->findElementByCode($equipmentIblockId, 'PD480C');
-        $filmGloss = $this->findElementByCode($materialsVariantsIblockId, 'film_lamination_gloss_30_305');
-        $filmMatte = $this->findElementByCode($materialsVariantsIblockId, 'film_lamination_matte_30_305');
-        
-        $a4PlusId = $this->createElement($operationsIblockId, [
-            'NAME' => 'A4+',
-            'CODE' => 'a4_plus_lamination',
-            'IBLOCK_SECTION_ID' => $rollLaminationSectionId,
-            'PROPERTY_VALUES' => [
-                'SUPPORTED_EQUIPMENT_LIST' => array_filter([$equipmentPD480C], fn($id) => $id > 0),
-                'SUPPORTED_MATERIALS_VARIANTS_LIST' => array_filter([$filmGloss, $filmMatte], fn($id) => $id > 0),
-            ],
-        ]);
-        $createdIds['a4_plus_lamination'] = $a4PlusId;
-
-        if ($a4PlusId) {
-            $this->created[] = "Операция: A4+ (ID: {$a4PlusId})";
-        }
-
-        // 6. Создать варианты для "A4+": для толщин до 60 мкм, для толщин до 120 мкм
-        if ($operationsVariantsIblockId > 0 && $a4PlusId > 0) {
-            $variant60Id = $this->createElement($operationsVariantsIblockId, [
-                'NAME' => 'для толщин до 60 мкм',
-                'CODE' => 'a4_plus_60',
-                'PROPERTY_VALUES' => [
-                    'CML2_LINK' => $a4PlusId,
-                ],
-            ]);
-            if ($variant60Id) {
-                $this->created[] = "  → Вариант: для толщин до 60 мкм (ID: {$variant60Id})";
-            }
-
-            $variant120Id = $this->createElement($operationsVariantsIblockId, [
-                'NAME' => 'для толщин до 120 мкм',
-                'CODE' => 'a4_plus_120',
-                'PROPERTY_VALUES' => [
-                    'CML2_LINK' => $a4PlusId,
-                ],
-            ]);
-            if ($variant120Id) {
-                $this->created[] = "  → Вариант: для толщин до 120 мкм (ID: {$variant120Id})";
-            }
-        }
-
-        return $createdIds;
-    }
-    
-    private function createElement(int $iblockId, array $fields): int
-    {
-        $el = new \CIBlockElement();
-        $arFields = array_merge([
-            'IBLOCK_ID' => $iblockId,
-            'ACTIVE' => 'Y',
-        ], $fields);
-        
-        $elementId = $el->Add($arFields);
-        
-        if (!$elementId) {
-            $this->errors[] = "Ошибка создания элемента: " . $el->LAST_ERROR;
-            return 0;
-        }
-        
-        return (int)$elementId;
-    }
-
-    private function findElementByCode(int $iblockId, string $code): ?int
+    protected function findElementByCode(int $iblockId, string $code): ?int
     {
         if ($iblockId <= 0) {
             return null;
@@ -1294,5 +1156,18 @@ class DemoDataCreator
         }
         
         return null;
+    }
+
+    /**
+     * Возвращает результат.
+     *
+     * @return array
+     */
+    protected function getResult(): array
+    {
+        return [
+            'created' => $this->created,
+            'errors' => $this->errors,
+        ];
     }
 }
