@@ -1163,8 +1163,8 @@ class DemoDataCreator
         $createdIds = [];
 
         // 1. Создать разделы для Печать → Цифровая лазерная
-        $printSectionId = $this->createSection($operationsIblockId, 'Печать', null);
-        $digitalLaserSectionId = $this->createSection($operationsIblockId, 'Цифровая лазерная', $printSectionId);
+        $printSectionId = $this->getOrCreateSection($operationsIblockId, 'Печать', 0);
+        $digitalLaserSectionId = $this->getOrCreateSection($operationsIblockId, 'Цифровая лазерная', $printSectionId);
 
         // 2. Создать элемент "Листовая печать"
         // Сначала нужно получить ID оборудования 3070L и 2060L
@@ -1205,9 +1205,9 @@ class DemoDataCreator
         }
 
         // 4. Создать разделы для Постпечать → Ламинирование → Рулонное
-        $postpressSectionId = $this->createSection($operationsIblockId, 'Постпечать', null);
-        $laminationSectionId = $this->createSection($operationsIblockId, 'Ламинирование', $postpressSectionId);
-        $rollLaminationSectionId = $this->createSection($operationsIblockId, 'Рулонное', $laminationSectionId);
+        $postpressSectionId = $this->getOrCreateSection($operationsIblockId, 'Постпечать', 0);
+        $laminationSectionId = $this->getOrCreateSection($operationsIblockId, 'Ламинирование', $postpressSectionId);
+        $rollSectionId = $this->getOrCreateSection($operationsIblockId, 'Рулонное', $laminationSectionId);
 
         // 5. Создать элемент "A4+"
         $equipmentPD480C = $this->findElementByCode($equipmentIblockId, 'PD480C');
@@ -1256,30 +1256,7 @@ class DemoDataCreator
 
         return $createdIds;
     }
-
-    private function createSection(int $iblockId, string $name, ?int $parentId): int
-    {
-        $bs = new \CIBlockSection();
-        $arFields = [
-            'IBLOCK_ID' => $iblockId,
-            'NAME' => $name,
-            'ACTIVE' => 'Y',
-        ];
-        
-        if ($parentId !== null) {
-            $arFields['IBLOCK_SECTION_ID'] = $parentId;
-        }
-        
-        $sectionId = $bs->Add($arFields);
-        
-        if (!$sectionId) {
-            $this->errors[] = "Ошибка создания раздела '{$name}': " . $bs->LAST_ERROR;
-            return 0;
-        }
-        
-        return (int)$sectionId;
-    }
-
+    
     private function createElement(int $iblockId, array $fields): int
     {
         $el = new \CIBlockElement();
