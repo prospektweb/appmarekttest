@@ -378,98 +378,107 @@
                 payload: message.payload,
                 origin: origin,
             });
-
-            const responseType = message.type.replace('_REQUEST', '_RESPONSE');
+        
+            const responseType = message.type. replace('_REQUEST', '_RESPONSE');
             console.log('[BitrixBridge][DEBUG] Response type will be:', responseType);
-
+        
             const requestPayload = message.payload || {};
-            const iblockId = requestPayload.iblockId ? parseInt(requestPayload.iblockId, 10) : null;
+            const iblockId = requestPayload.iblockId ?  parseInt(requestPayload. iblockId, 10) : null;
             const iblockType = requestPayload.iblockType || null;
-            const lang = requestPayload.lang || null;
-            const id = requestPayload.id ? parseInt(requestPayload.id, 10) : null;
-
+            const lang = requestPayload. lang || null;
+            const id = requestPayload. id ?  parseInt(requestPayload.id, 10) : null;
+            
+            const isVariantRequest = message. type === 'CALC_OPERATION_VARIANT_REQUEST' 
+                || message. type === 'CALC_MATERIAL_VARIANT_REQUEST';
+        
             console.log('[BitrixBridge][DEBUG] Parsed request params', {
-                id: id,
+                id:  id,
                 iblockId: iblockId,
                 iblockType: iblockType,
-                lang: lang,
+                lang:  lang,
+                isVariantRequest: isVariantRequest,
             });
-
+        
             const basePayload = {
                 id: id,
-                iblockId: iblockId,
+                iblockId:  iblockId,
                 iblockType: iblockType,
                 lang: lang,
             };
-
-            if (!id || !iblockId) {
-                console.error('[BitrixBridge][DEBUG] Invalid id or iblockId', { id, iblockId });
+        
+            if (! id || !iblockId) {
+                console. error('[BitrixBridge][DEBUG] Invalid id or iblockId', { id, iblockId });
                 this.sendPwrtMessage(
                     responseType,
-                    { ...basePayload, status: 'error', message: 'Invalid id or iblockId' },
+                    { ... basePayload, status: 'error', message: 'Invalid id or iblockId' },
                     message.requestId,
                     origin
                 );
                 return;
             }
-
+        
             try {
                 console.log('[BitrixBridge][DEBUG] Calling fetchRefreshData with:', {
                     iblockId: iblockId,
                     iblockType: iblockType,
                     ids: [id],
+                    includeParent: isVariantRequest,
                 });
-
+        
                 const refreshResult = await this.fetchRefreshData([
                     {
                         iblockId: iblockId,
                         iblockType: iblockType,
-                        ids: [id],
+                        ids:  [id],
+                        includeParent:  isVariantRequest,  // <-- НОВОЕ
                     },
                 ]);
-
-                console.log('[BitrixBridge][DEBUG] fetchRefreshData result:', {
+        
+                console. log('[BitrixBridge][DEBUG] fetchRefreshData result:', {
                     isArray: Array.isArray(refreshResult),
                     length: Array.isArray(refreshResult) ? refreshResult.length : 0,
                     firstItem: Array.isArray(refreshResult) && refreshResult[0] ? refreshResult[0] : null,
                     rawResult: refreshResult,
                 });
-
+        
                 const element = Array.isArray(refreshResult)
                     && refreshResult[0]
                     && Array.isArray(refreshResult[0].data)
-                    ? refreshResult[0].data[0] || null
+                    ? refreshResult[0]. data[0] || null
                     : null;
-
-                console.log('[BitrixBridge][DEBUG] Extracted element:', {
+        
+                console. log('[BitrixBridge][DEBUG] Extracted element:', {
                     hasElement: !!element,
-                    elementId: element ? element.id : null,
-                    elementName: element ? element.name : null,
-                    elementProperties: element ? Object.keys(element.properties || {}) : [],
+                    elementId: element ?  element.id : null,
+                    elementName: element ? element. name : null,
+                    elementProperties: element ? Object.keys(element. properties || {}) : [],
+                    hasItemParent: element ?  !!element.itemParent : false,  // <-- НОВОЕ:  логируем наличие родителя
+                    itemParentId: element && element.itemParent ? element.itemParent.id : null,
                 });
-
+        
                 const responsePayload = {
                     ...basePayload,
                     status: element ? 'ok' : 'not_found',
                     item: element,
                 };
-
-                console.log('[BitrixBridge][DEBUG] Sending response', {
+        
+                console. log('[BitrixBridge][DEBUG] Sending response', {
                     type: responseType,
                     requestId: message.requestId,
-                    status: responsePayload.status,
+                    status: responsePayload. status,
                     hasItem: !!responsePayload.item,
+                    hasItemParent: responsePayload.item ?  !!responsePayload.item.itemParent : false,
                 });
-
+        
                 this.sendPwrtMessage(
                     responseType,
                     responsePayload,
                     message.requestId,
                     origin
                 );
-
+        
                 console.log('[BitrixBridge][DEBUG] handleCalcItemRequest END - success');
-
+        
             } catch (error) {
                 console.error('[BitrixBridge][DEBUG] handleCalcItemRequest ERROR', {
                     error: error,
