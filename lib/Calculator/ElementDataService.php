@@ -1,4 +1,4 @@
-<?php
+<? php
 
 namespace Prospektweb\Calc\Calculator;
 
@@ -20,8 +20,11 @@ class ElementDataService
             $iblockId = isset($request['iblockId']) ? (int)$request['iblockId'] : 0;
             $iblockType = isset($request['iblockType']) ? (string)$request['iblockType'] : null;
             $ids = $this->normalizeIds($request['ids'] ?? []);
+            
+            // Новый параметр:  включать ли данные родительского элемента
+            $includeParent = ! empty($request['includeParent']);
 
-            $data = $ids ? $this->loadElements($ids) : [];
+            $data = $ids ?  $this->loadElements($ids, $includeParent) : [];
 
             $result[] = [
                 'iblockId' => $iblockId,
@@ -34,24 +37,25 @@ class ElementDataService
         return $result;
     }
 
-    public function loadSingleElement(int $iblockId, int $id, ?string $iblockType = null): ?array
+    public function loadSingleElement(int $iblockId, int $id, ? string $iblockType = null, bool $includeParent = false): ?array
     {
         $payload = $this->prepareRefreshPayload([
             [
                 'iblockId' => $iblockId,
                 'iblockType' => $iblockType,
                 'ids' => [$id],
+                'includeParent' => $includeParent,
             ],
         ]);
 
-        if (!empty($payload[0]['data'][0])) {
+        if (! empty($payload[0]['data'][0])) {
             return $payload[0]['data'][0];
         }
 
         return null;
     }
 
-    private function loadElements(array $ids): array
+    private function loadElements(array $ids, bool $includeParent = false): array
     {
         $elements = [];
 
@@ -64,7 +68,7 @@ class ElementDataService
                 ['ID', 'IBLOCK_ID', 'NAME', 'CODE', 'PROPERTY_CML2_LINK']
             )->GetNextElement();
 
-            if (!$elementObject) {
+            if (! $elementObject) {
                 continue;
             }
 
@@ -82,22 +86,23 @@ class ElementDataService
             $measureRatio = $this->getMeasureRatio($elementId);
             $prices = $this->getPrices($elementId);
 
+            // Определяем productId (ID родительского элемента)
             $productId = (int)($fields['PROPERTY_CML2_LINK_VALUE'] ?? 0);
             if ($productId <= 0) {
                 $skuParent = \CCatalogSku::GetProductInfo($elementId);
-                if (!empty($skuParent['ID'])) {
+                if (! empty($skuParent['ID'])) {
                     $productId = (int)$skuParent['ID'];
                 }
             }
 
-            $elements[] = [
+            $elementData = [
                 'id' => (int)$fields['ID'],
                 'code' => $fields['CODE'] ?? null,
                 'productId' => $productId > 0 ? $productId : null,
                 'name' => $fields['NAME'] ?? '',
                 'fields' => [
                     'width' => isset($productData['WIDTH']) ? (float)$productData['WIDTH'] : null,
-                    'height' => isset($productData['HEIGHT']) ? (float)$productData['HEIGHT'] : null,
+                    'height' => isset($productData['HEIGHT']) ? (float)$productData['HEIGHT'] :  null,
                     'length' => isset($productData['LENGTH']) ? (float)$productData['LENGTH'] : null,
                     'weight' => isset($productData['WEIGHT']) ? (float)$productData['WEIGHT'] : null,
                 ],
@@ -106,10 +111,65 @@ class ElementDataService
                 'prices' => $prices,
                 'properties' => $properties,
             ];
+
+            // ========== НОВОЕ:  Загрузка родительского элемента ==========
+            if ($includeParent && $productId > 0) {
+                $parentData = $this->loadParentElement($productId);
+                if ($parentData !== null) {
+                    $elementData['itemParent'] = $parentData;
+                }
+            }
+            // ============================================================
+
+            $elements[] = $elementData;
         }
 
         return $elements;
     }
+
+    /**
+     * Загружает данные родительского элемента (для SKU/вариантов).
+     * 
+     * @param int $parentId ID родительского элемента
+     * @return array|null Данные родителя или null если не найден
+     */
+    private function loadParentElement(int $parentId): ?array
+    {
+        if ($parentId <= 0) {
+            return null;
+        }
+
+        $elementObject = \CIBlockElement::GetList(
+            [],
+            ['ID' => $parentId],
+            false,
+            false,
+            ['ID', 'IBLOCK_ID', 'NAME', 'CODE']
+        )->GetNextElement();
+
+        if (!$elementObject) {
+            return null;
+        }
+
+        $fields = $elementObject->GetFields();
+        $propertiesRaw = $elementObject->GetProperties();
+
+        $properties = [];
+        foreach ($propertiesRaw as $prop) {
+            $code = $prop['CODE'] ?:  (string)$prop['ID'];
+            $properties[$code] = $prop;
+        }
+
+        return [
+            'id' => (int)$fields['ID'],
+            'iblockId' => (int)$fields['IBLOCK_ID'],
+            'code' => $fields['CODE'] ?? null,
+            'name' => $fields['NAME'] ?? '',
+            'properties' => $properties,
+        ];
+    }
+
+    // ...  остальные методы без изменений (normalizeIds, getMeasureRatio, getMeasureInfo, getPrices)
 
     private function normalizeIds($ids): array
     {
@@ -163,7 +223,7 @@ class ElementDataService
                 'code' => $measure['CODE'] ?? null,
                 'symbol' => $measure['SYMBOL'] ?? null,
                 'symbolInt' => $measure['SYMBOL_INTL'] ?? null,
-                'title' => $measure['MEASURE_TITLE'] ?? null,
+                'title' => $measure['MEASURE_TITLE'] ??  null,
             ];
         }
 
