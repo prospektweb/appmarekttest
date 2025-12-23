@@ -560,12 +560,12 @@ switch ($currentStep) {
         ];
         
         $materialsProps = [
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
         ];
 
         $materialsVariantsProps = [
             'DENSITY' => ['NAME' => 'Плотность', 'TYPE' => 'N'],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
         ];
 
         $operationsProps = [
@@ -573,19 +573,21 @@ switch ($currentStep) {
                 'NAME' => 'Поддерживаемое оборудование',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
                 'SORT' => 100,
             ],
             'SUPPORTED_MATERIALS_VARIANTS_LIST' => [
                 'NAME' => 'Поддерживаемые варианты материалов',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
                 'SORT' => 200,
             ],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'SORT' => 500],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1, 'SORT' => 500],
         ];
 
         $operationsVariantsProps = [
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'SORT' => 500],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1, 'SORT' => 500],
         ];
 
         $equipmentProps = [
@@ -595,7 +597,7 @@ switch ($currentStep) {
             'MAX_WIDTH' => ['NAME' => 'Макс. ширина, мм', 'TYPE' => 'N'],
             'MAX_LENGTH' => ['NAME' => 'Макс. длина, мм', 'TYPE' => 'N'],
             'START_COST' => ['NAME' => 'Стоимость старта', 'TYPE' => 'N'],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
         ];
 
         $detailsProps = [
@@ -613,14 +615,16 @@ switch ($currentStep) {
                 'NAME' => 'Конфигурации',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
                 'SORT' => 110,
                 'COL_COUNT' => 1,
             ],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'SORT' => 120],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1, 'SORT' => 120],
             'DETAILS' => [
                 'NAME' => 'Детали группы',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
                 'SORT' => 200,
                 'COL_COUNT' => 1,
             ],
@@ -628,6 +632,7 @@ switch ($currentStep) {
                 'NAME' => 'Конфигурации | Скрепление',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
                 'SORT' => 210,
                 'COL_COUNT' => 1,
             ],
@@ -635,13 +640,14 @@ switch ($currentStep) {
                 'NAME' => 'Конфигурации | Финишная обработка',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
                 'SORT' => 220,
                 'COL_COUNT' => 1,
             ],
         ];
 
         $detailsVariantsProps = [
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
         ];
 
         $installData['iblock_ids']['CALC_CONFIG'] = createIblockWithLog('calculator', 'CALC_CONFIG', 'Конфигурации калькуляций', $configProps);
