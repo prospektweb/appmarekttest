@@ -156,6 +156,11 @@ class IblockCreator
             $arProperty['DEFAULT_VALUE'] = $data['DEFAULT_VALUE'];
         }
         
+        // Set hint if provided
+        if (isset($data['HINT'])) {
+            $arProperty['HINT'] = $data['HINT'];
+        }
+        
         // Set file type for FileMan user type
         if (isset($data['FILE_TYPE'])) {
             $arProperty['FILE_TYPE'] = $data['FILE_TYPE'];
@@ -315,6 +320,10 @@ class IblockCreator
             'USED_OPERATIONS' => ['NAME' => 'Использованные операции', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'USED_EQUIPMENT' => ['NAME' => 'Использованное оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
             'USED_DETAILS' => ['NAME' => 'Использованные детали', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'USED_OPERATION_VARIANT' => ['NAME' => 'Использованные варианты операций', 'TYPE' => 'E', 'MULTIPLE' => 'Y', 'SORT' => 620],
+            'USED_MATERIAL_VARIANT' => ['NAME' => 'Использованные варианты материалов', 'TYPE' => 'E', 'MULTIPLE' => 'Y', 'SORT' => 630],
+            'QUANTITY_OPERATION_VARIANT' => ['NAME' => 'Операция | Количество', 'TYPE' => 'N', 'MULTIPLE' => 'N', 'SORT' => 640],
+            'QUANTITY_MATERIAL_VARIANT' => ['NAME' => 'Материал | Количество', 'TYPE' => 'N', 'MULTIPLE' => 'N', 'SORT' => 650],
         ];
 
         return $this->createIblock('calculator', 'CALC_CONFIG', 'Конфигурации калькуляций', $properties);
@@ -389,6 +398,20 @@ class IblockCreator
                     ['VALUE' => 'Да', 'XML_ID' => 'Y', 'DEF' => 'Y'],
                     ['VALUE' => 'Нет', 'XML_ID' => 'N'],
                 ],
+            ],
+            'VOLUME_FIELD_CODE' => [
+                'NAME' => 'Код поля тиража',
+                'TYPE' => 'S',
+                'SORT' => 500,
+                'DEFAULT_VALUE' => 'VOLUME',
+                'HINT' => 'На основании значения свойства рассчитываются высота и вес',
+            ],
+            'FORMAT_FIELD_CODE' => [
+                'NAME' => 'Код поля формата',
+                'TYPE' => 'S',
+                'SORT' => 510,
+                'DEFAULT_VALUE' => 'FORMAT',
+                'HINT' => 'На основании значения свойства заполняются ширина и длина',
             ],
             'CAN_BE_FIRST' => [
                 'NAME' => 'Может быть добавлен на первом этапе',
