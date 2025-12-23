@@ -153,7 +153,7 @@ class PropertyCreator
             'IBLOCK_ID' => $iblockId,
             'ACTIVE' => 'Y',
             'CODE' => $code,
-            'NAME' => 'Детали группы',
+            'NAME' => 'Детали',
             'PROPERTY_TYPE' => 'E', // Привязка к элементу
             'MULTIPLE' => 'Y',
             'MULTIPLE_CNT' => 1,
