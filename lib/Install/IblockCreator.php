@@ -165,6 +165,11 @@ class IblockCreator
         if (isset($data['FILE_TYPE'])) {
             $arProperty['FILE_TYPE'] = $data['FILE_TYPE'];
         }
+        
+        // Set hint if provided
+        if (isset($data['HINT'])) {
+            $arProperty['HINT'] = $data['HINT'];
+        }
 
         $ibp = new \CIBlockProperty();
         $propId = $ibp->Add($arProperty);
