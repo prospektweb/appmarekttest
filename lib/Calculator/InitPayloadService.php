@@ -805,6 +805,11 @@ class InitPayloadService
     {
         $priceTypes = [];
 
+        // Проверяем, что модуль catalog загружен
+        if (!Loader::includeModule('catalog')) {
+            return $priceTypes;
+        }
+
         try {
             $result = \CCatalogGroup::GetListArray();
             
