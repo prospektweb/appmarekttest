@@ -95,6 +95,11 @@ class PropertyCreator
             'SORT' => $data['SORT'] ?? 500,
         ];
 
+        // Add MULTIPLE_CNT for multiple properties
+        if (($data['MULTIPLE'] ?? 'N') === 'Y') {
+            $arNewProperty['MULTIPLE_CNT'] = $data['MULTIPLE_CNT'] ?? 1;
+        }
+
         if (isset($data['USER_TYPE'])) {
             $arNewProperty['USER_TYPE'] = $data['USER_TYPE'];
         }
@@ -151,6 +156,7 @@ class PropertyCreator
             'NAME' => 'Детали группы',
             'PROPERTY_TYPE' => 'E', // Привязка к элементу
             'MULTIPLE' => 'Y',
+            'MULTIPLE_CNT' => 1,
             'IS_REQUIRED' => 'N',
             'SORT' => 999,
             'COL_COUNT' => 1,

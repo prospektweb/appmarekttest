@@ -120,6 +120,11 @@ class IblockCreator
             'SORT' => $data['SORT'] ?? 500,
         ];
 
+        // Add MULTIPLE_CNT for multiple properties
+        if (($data['MULTIPLE'] ?? 'N') === 'Y') {
+            $arProperty['MULTIPLE_CNT'] = $data['MULTIPLE_CNT'] ?? 1;
+        }
+
         // Add support for IS_REQUIRED
         if (isset($data['IS_REQUIRED'])) {
             $arProperty['IS_REQUIRED'] = $data['IS_REQUIRED'];
@@ -325,12 +330,12 @@ class IblockCreator
             'LAST_CALC_DATE' => ['NAME' => 'Дата последнего расчёта', 'TYPE' => 'S', 'USER_TYPE' => 'DateTime'],
             'TOTAL_COST' => ['NAME' => 'Итоговая себестоимость', 'TYPE' => 'N'],
             'STRUCTURE' => ['NAME' => 'Структура', 'TYPE' => 'S', 'USER_TYPE' => 'HTML'],
-            'USED_MATERIALS' => ['NAME' => 'Использованные материалы', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'USED_OPERATIONS' => ['NAME' => 'Использованные операции', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'USED_EQUIPMENT' => ['NAME' => 'Использованное оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'USED_DETAILS' => ['NAME' => 'Использованные детали', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'USED_OPERATION_VARIANT' => ['NAME' => 'Использованные варианты операций', 'TYPE' => 'E', 'MULTIPLE' => 'Y', 'SORT' => 620],
-            'USED_MATERIAL_VARIANT' => ['NAME' => 'Использованные варианты материалов', 'TYPE' => 'E', 'MULTIPLE' => 'Y', 'SORT' => 630],
+            'USED_MATERIALS' => ['NAME' => 'Использованные материалы', 'TYPE' => 'E', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
+            'USED_OPERATIONS' => ['NAME' => 'Использованные операции', 'TYPE' => 'E', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
+            'USED_EQUIPMENT' => ['NAME' => 'Использованное оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
+            'USED_DETAILS' => ['NAME' => 'Использованные детали', 'TYPE' => 'E', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
+            'USED_OPERATION_VARIANT' => ['NAME' => 'Использованные варианты операций', 'TYPE' => 'E', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1, 'SORT' => 620],
+            'USED_MATERIAL_VARIANT' => ['NAME' => 'Использованные варианты материалов', 'TYPE' => 'E', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1, 'SORT' => 630],
             'QUANTITY_OPERATION_VARIANT' => ['NAME' => 'Операция | Количество', 'TYPE' => 'N', 'MULTIPLE' => 'N', 'SORT' => 640],
             'QUANTITY_MATERIAL_VARIANT' => ['NAME' => 'Материал | Количество', 'TYPE' => 'N', 'MULTIPLE' => 'N', 'SORT' => 650],
         ];
@@ -457,7 +462,7 @@ class IblockCreator
     public function createMaterialsIblock(): int
     {
         $properties = [
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
         ];
 
         return $this->createIblock('calculator_catalog', 'CALC_MATERIALS', 'Материалы', $properties);
@@ -475,7 +480,7 @@ class IblockCreator
             'LENGTH' => ['NAME' => 'Длина, мм', 'TYPE' => 'N'],
             'HEIGHT' => ['NAME' => 'Высота, мм', 'TYPE' => 'N'],
             'DENSITY' => ['NAME' => 'Плотность', 'TYPE' => 'N'],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
         ];
 
         return $this->createIblock('calculator_catalog', 'CALC_MATERIALS_VARIANTS', 'Варианты материалов', $properties);
@@ -493,6 +498,7 @@ class IblockCreator
                 'NAME' => 'Поддерживаемое оборудование',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
                 'SORT' => 100,
                 'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
                 'LINK_IBLOCK_CODE' => 'CALC_EQUIPMENT',
@@ -501,11 +507,12 @@ class IblockCreator
                 'NAME' => 'Поддерживаемые варианты материалов',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
                 'SORT' => 200,
                 'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
                 'LINK_IBLOCK_CODE' => 'CALC_MATERIALS_VARIANTS',
             ],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'SORT' => 500],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1, 'SORT' => 500],
         ];
 
         return $this->createIblock('calculator_catalog', 'CALC_OPERATIONS', 'Операции', $properties);
@@ -520,7 +527,7 @@ class IblockCreator
     {
         $properties = [
             'MEASURE_UNIT' => ['NAME' => 'Единица измерения', 'TYPE' => 'S', 'SORT' => 100],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'SORT' => 500],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1, 'SORT' => 500],
         ];
 
         return $this->createIblock('calculator_catalog', 'CALC_OPERATIONS_VARIANTS', 'Варианты операций', $properties);
@@ -538,7 +545,7 @@ class IblockCreator
             'MAX_WIDTH' => ['NAME' => 'Макс. ширина, мм', 'TYPE' => 'N'],
             'MAX_LENGTH' => ['NAME' => 'Макс. длина, мм', 'TYPE' => 'N'],
             'START_COST' => ['NAME' => 'Стоимость приладки', 'TYPE' => 'N'],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
         ];
 
         return $this->createIblock('calculator_catalog', 'CALC_EQUIPMENT', 'Оборудование', $properties);
@@ -566,16 +573,18 @@ class IblockCreator
                 'NAME' => 'Конфигурации',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
                 'SORT' => 110,
                 'COL_COUNT' => 1,
                 'LINK_IBLOCK_TYPE_ID' => 'calculator',
                 'LINK_IBLOCK_CODE' => 'CALC_CONFIG',
             ],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'SORT' => 120],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1, 'SORT' => 120],
             'DETAILS' => [
                 'NAME' => 'Детали группы',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
                 'SORT' => 200,
                 'COL_COUNT' => 1,
                 'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
@@ -585,6 +594,7 @@ class IblockCreator
                 'NAME' => 'Конфигурации | Скрепление',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
                 'SORT' => 210,
                 'COL_COUNT' => 1,
                 'LINK_IBLOCK_TYPE_ID' => 'calculator',
@@ -594,6 +604,7 @@ class IblockCreator
                 'NAME' => 'Конфигурации | Финишная обработка',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
                 'SORT' => 220,
                 'COL_COUNT' => 1,
                 'LINK_IBLOCK_TYPE_ID' => 'calculator',
@@ -615,7 +626,7 @@ class IblockCreator
             'WIDTH' => ['NAME' => 'Ширина, мм', 'TYPE' => 'N'],
             'LENGTH' => ['NAME' => 'Длина, мм', 'TYPE' => 'N'],
             'HEIGHT' => ['NAME' => 'Высота, мм', 'TYPE' => 'N'],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
         ];
 
         return $this->createIblock('calculator_catalog', 'CALC_DETAILS_VARIANTS', 'Варианты деталей', $properties);
