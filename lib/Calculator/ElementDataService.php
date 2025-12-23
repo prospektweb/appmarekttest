@@ -17,6 +17,13 @@ class ElementDataService
         $result = [];
 
         foreach ($requests as $request) {
+            // Проверяем специальный action для syncVariants
+            if (isset($request['action']) && $request['action'] === 'syncVariants') {
+                $handler = new \Prospektweb\Calc\Services\SyncVariantsHandler();
+                $result[] = $handler->handle($request);
+                continue;
+            }
+
             $iblockId = isset($request['iblockId']) ? (int)$request['iblockId'] : 0;
             $iblockType = isset($request['iblockType']) ? (string)$request['iblockType'] : null;
             $ids = $this->normalizeIds($request['ids'] ?? []);
