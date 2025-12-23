@@ -52,6 +52,7 @@ class InitPayloadService
             'iblocksTypes' => $iblocksTypes,
             'iblocksTree' => $this->buildIblocksTree(),
             'selectedOffers' => $selectedOffers,
+            'priceTypes' => $this->getPriceTypes(),
         ];
 
         // Если режим EXISTING_CONFIG - загружаем конфигурацию
@@ -294,6 +295,7 @@ class InitPayloadService
             'lang' => $languageId,
             'timestamp' => time(),
             'url' => $siteUrl,
+            'menuLinks' => $this->buildMenuLinks($siteUrl, $languageId),
         ];
     }
 
@@ -769,5 +771,58 @@ class InitPayloadService
         }
 
         return $tree;
+    }
+
+    /**
+     * Построить массив ссылок для меню
+     *
+     * @param string $siteUrl URL сайта
+     * @param string $lang Язык интерфейса
+     * @return array
+     */
+    private function buildMenuLinks(string $siteUrl, string $lang): array
+    {
+        return [
+            [
+                'name' => 'Типы цен',
+                'url' => "{$siteUrl}/bitrix/admin/cat_group_admin.php?lang={$lang}",
+                'target' => '_blank',
+            ],
+            [
+                'name' => 'Единицы измерения',
+                'url' => "{$siteUrl}/bitrix/admin/cat_measure_list.php?lang={$lang}",
+                'target' => '_blank',
+            ],
+        ];
+    }
+
+    /**
+     * Получить список типов цен из каталога Bitrix
+     *
+     * @return array
+     */
+    private function getPriceTypes(): array
+    {
+        $priceTypes = [];
+
+        try {
+            $result = \CCatalogGroup::GetListArray();
+            
+            if (is_array($result)) {
+                foreach ($result as $type) {
+                    $priceTypes[] = [
+                        'id' => (int)$type['ID'],
+                        'name' => $type['NAME'] ?? '',
+                        'base' => ($type['BASE'] ?? 'N') === 'Y',
+                        'sort' => (int)($type['SORT'] ?? 100),
+                    ];
+                }
+            }
+        } catch (\Exception $e) {
+            // В случае ошибки возвращаем пустой массив
+            return [];
+        }
+
+        return $priceTypes;
     }
 }
