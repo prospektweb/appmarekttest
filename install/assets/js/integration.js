@@ -513,11 +513,14 @@
             });
 
             const requestPayload = message.payload || {};
+            const payloadForRequest = (typeof message.payload === 'string')
+                ? message.payload
+                : JSON.stringify(requestPayload);
 
             try {
                 const formData = new FormData();
                 formData.append('action', 'syncVariants');
-                formData.append('payload', JSON.stringify(requestPayload));
+                formData.append('payload', payloadForRequest);
                 formData.append('sessid', this.config.sessid);
 
                 console.log('[BitrixBridge][DEBUG] Sending syncVariants request to:', this.config.ajaxEndpoint);
