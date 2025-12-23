@@ -132,12 +132,17 @@ try {
             break;
 
         case 'syncVariants':
-            $payload = json_decode($_POST['payload'] ?? '{}', true);
+            $payloadRaw = $_POST['payload'] ?? '{}';
+            $payload = json_decode($payloadRaw, true);
+            
+            if (!is_array($payload)) {
+                sendJsonResponse(['error' => 'Invalid parameter', 'message' => 'Некорректный формат payload'], 400);
+            }
             
             $handler = new \Prospektweb\Calc\Services\SyncVariantsHandler();
             $result = $handler->handle($payload);
             
-            echo json_encode([
+            sendJsonResponse([
                 'success' => true,
                 'data' => $result,
             ]);
