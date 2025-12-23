@@ -154,6 +154,12 @@ function createIblockWithLog(string $typeId, string $code, string $name, array $
         if (isset($propData['VALUES'])) {
             $arProperty['VALUES'] = $propData['VALUES'];
         }
+        if (isset($propData['DEFAULT_VALUE'])) {
+            $arProperty['DEFAULT_VALUE'] = $propData['DEFAULT_VALUE'];
+        }
+        if (isset($propData['HINT'])) {
+            $arProperty['HINT'] = $propData['HINT'];
+        }
 
         $ibp = new \CIBlockProperty();
         if ($ibp->Add($arProperty)) {
@@ -452,10 +458,12 @@ switch ($currentStep) {
             'LAST_CALC_DATE' => ['NAME' => 'Дата последнего расчёта', 'TYPE' => 'S', 'USER_TYPE' => 'DateTime'],
             'TOTAL_COST' => ['NAME' => 'Итоговая себестоимость', 'TYPE' => 'N'],
             'STRUCTURE' => ['NAME' => 'Структура', 'TYPE' => 'S', 'USER_TYPE' => 'HTML'],
-            'USED_OPERATIONS_VARIANTS' => ['NAME' => 'Вариант операции', 'TYPE' => 'E', 'MULTIPLE' => 'N', 'IS_REQUIRED' => 'Y', 'SORT' => 600],
-            'USED_EQUIPMENT' => ['NAME' => 'Оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'N', 'SORT' => 610],
-            'USED_MATERIALS_VARIANTS' => ['NAME' => 'Вариант материала', 'TYPE' => 'E', 'MULTIPLE' => 'N', 'SORT' => 620],
-            'OTHER_OPTIONS_VALUES' => ['NAME' => 'Значения прочих опций', 'TYPE' => 'S', 'USER_TYPE' => 'HTML', 'MULTIPLE' => 'N', 'SORT' => 630],
+            'USED_MATERIAL_VARIANT' => ['NAME' => 'Вариант материала', 'TYPE' => 'E', 'MULTIPLE' => 'Y', 'SORT' => 630],
+            'USED_OPERATION_VARIANT' => ['NAME' => 'Вариант операции', 'TYPE' => 'E', 'MULTIPLE' => 'Y', 'SORT' => 620],
+            'USED_EQUIPMENT' => ['NAME' => 'Оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'USED_DETAILS_VARIANTS' => ['NAME' => 'Использованные варианты деталей', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'QUANTITY_OPERATION_VARIANT' => ['NAME' => 'Операция | Количество', 'TYPE' => 'N', 'SORT' => 640],
+            'QUANTITY_MATERIAL_VARIANT' => ['NAME' => 'Материал | Количество', 'TYPE' => 'N', 'SORT' => 650],
         ];
         
         $settingsProps = [
@@ -514,6 +522,20 @@ switch ($currentStep) {
                     ['VALUE' => 'Да', 'XML_ID' => 'Y', 'DEF' => 'Y'],
                     ['VALUE' => 'Нет', 'XML_ID' => 'N'],
                 ],
+            ],
+            'VOLUME_FIELD_CODE' => [
+                'NAME' => 'Код поля тиража',
+                'TYPE' => 'S',
+                'SORT' => 500,
+                'DEFAULT_VALUE' => 'VOLUME',
+                'HINT' => 'На основании значения свойства рассчитываются высота и вес',
+            ],
+            'FORMAT_FIELD_CODE' => [
+                'NAME' => 'Код поля формата',
+                'TYPE' => 'S',
+                'SORT' => 510,
+                'DEFAULT_VALUE' => 'FORMAT',
+                'HINT' => 'На основании значения свойства заполняются ширина и длина',
             ],
             'CAN_BE_FIRST' => [
                 'NAME' => 'Может быть добавлен на первом этапе',
