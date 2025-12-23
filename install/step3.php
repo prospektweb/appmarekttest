@@ -160,7 +160,10 @@ function createIblockWithLog(string $typeId, string $code, string $name, array $
         if (isset($propData['HINT'])) {
             $arProperty['HINT'] = $propData['HINT'];
         }
-
+        if (isset($propData['MULTIPLE_CNT'])) {
+         $arProperty['MULTIPLE_CNT'] = $propData['MULTIPLE_CNT'];
+        }
+        
         $ibp = new \CIBlockProperty();
         if ($ibp->Add($arProperty)) {
             $propsCreated++;
