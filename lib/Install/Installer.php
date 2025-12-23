@@ -184,22 +184,31 @@ class Installer
     protected function addPropertiesToProductIblock(int $skuIblockId, array $iblockIds): void
     {
         if ($skuIblockId <= 0) {
+            $this->errors[] = 'SKU Iblock ID is 0 or negative: ' . $skuIblockId;
             return;
         }
 
         // Добавляем свойство CONFIG_ID
-        $this->propertyCreator->addCalcConfigProperty($skuIblockId);
+        $configPropId = $this->propertyCreator->addCalcConfigProperty($skuIblockId);
+        if ($configPropId > 0) {
+            $this->log[] = "Добавлено свойство CALC_CONFIG_ID в инфоблок ТП (ID: {$configPropId})";
+        }
 
         // Добавляем свойство DETAILS_VARIANTS
-        if (!empty($iblockIds['CALC_DETAILS_VARIANTS'])) {
-            $detailsVariantsId = (int)$iblockIds['CALC_DETAILS_VARIANTS'];
+        $detailsVariantsId = (int)($iblockIds['CALC_DETAILS_VARIANTS'] ?? 0);
+        
+        $this->log[] = "Попытка создания DETAILS_VARIANTS: SKU ID={$skuIblockId}, CALC_DETAILS_VARIANTS ID={$detailsVariantsId}";
+        
+        if ($detailsVariantsId > 0) {
             $propId = $this->propertyCreator->addDetailsVariantsProperty($skuIblockId, $detailsVariantsId);
             
             if ($propId > 0) {
                 $this->log[] = "Добавлено свойство DETAILS_VARIANTS в инфоблок ТП (ID свойства: {$propId})";
             } else {
-                $this->errors[] = 'Не удалось создать свойство DETAILS_VARIANTS';
+                $this->errors[] = "Не удалось создать свойство DETAILS_VARIANTS (SKU ID={$skuIblockId}, Link ID={$detailsVariantsId})";
             }
+        } else {
+            $this->errors[] = "CALC_DETAILS_VARIANTS iblock ID is empty or 0. Available iblock_ids: " . json_encode(array_keys($iblockIds));
         }
     }
 

@@ -836,6 +836,60 @@ switch ($currentStep) {
         installLog("Сохранено: PRODUCT_IBLOCK_ID = " . $installData['product_iblock_id'], 'success');
         installLog("Сохранено: SKU_IBLOCK_ID = " . $installData['sku_iblock_id'], 'success');
         
+        // Добавление свойства DETAILS_VARIANTS в инфоблок торговых предложений
+        $skuIblockId = $installData['sku_iblock_id'];
+        $detailsVariantsIblockId = $installData['iblock_ids']['CALC_DETAILS_VARIANTS'] ?? 0;
+
+        if ($skuIblockId > 0 && $detailsVariantsIblockId > 0) {
+            installLog("");
+            installLog("Добавление свойства DETAILS_VARIANTS в инфоблок ТП...", 'header');
+            
+            $propertyCode = 'DETAILS_VARIANTS';
+            
+            // Проверяем, существует ли свойство
+            $rsProperty = \CIBlockProperty::GetList(
+                [],
+                ['IBLOCK_ID' => $skuIblockId, 'CODE' => $propertyCode]
+            );
+            
+            if ($arProperty = $rsProperty->Fetch()) {
+                installLog("  → Свойство {$propertyCode} уже существует (ID: {$arProperty['ID']})", 'warning');
+            } else {
+                // Создаём свойство
+                $arNewProperty = [
+                    'IBLOCK_ID' => $skuIblockId,
+                    'ACTIVE' => 'Y',
+                    'CODE' => $propertyCode,
+                    'NAME' => 'Детали группы',
+                    'PROPERTY_TYPE' => 'E',
+                    'MULTIPLE' => 'Y',
+                    'MULTIPLE_CNT' => 1,
+                    'IS_REQUIRED' => 'N',
+                    'SORT' => 999,
+                    'COL_COUNT' => 1,
+                    'LINK_IBLOCK_ID' => $detailsVariantsIblockId,
+                ];
+                
+                $ibp = new \CIBlockProperty();
+                $propId = $ibp->Add($arNewProperty);
+                
+                if ($propId) {
+                    installLog("  → Создано свойство {$propertyCode} (ID: {$propId})", 'success');
+                } else {
+                    $error = getBitrixError();
+                    installLog("  → Ошибка создания свойства {$propertyCode}: {$error}", 'error');
+                    $_SESSION['PROSPEKTWEB_CALC_INSTALL']['errors'][] = "Свойство {$propertyCode}: {$error}";
+                }
+            }
+        } else {
+            if ($skuIblockId <= 0) {
+                installLog("  → Пропуск создания DETAILS_VARIANTS: SKU Iblock ID не задан", 'warning');
+            }
+            if ($detailsVariantsIblockId <= 0) {
+                installLog("  → Пропуск создания DETAILS_VARIANTS: CALC_DETAILS_VARIANTS не создан", 'warning');
+            }
+        }
+        
         // Создание демо-данных (если выбрано)
         if ($installData['create_demo_data']) {
             installLog("");
