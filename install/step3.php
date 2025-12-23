@@ -453,12 +453,12 @@ switch ($currentStep) {
             'LAST_CALC_DATE' => ['NAME' => 'Дата последнего расчёта', 'TYPE' => 'S', 'USER_TYPE' => 'DateTime'],
             'TOTAL_COST' => ['NAME' => 'Итоговая себестоимость', 'TYPE' => 'N'],
             'STRUCTURE' => ['NAME' => 'Структура', 'TYPE' => 'S', 'USER_TYPE' => 'HTML'],
-            'USED_MATERIAL_VARIANT' => ['NAME' => 'Вариант материала', 'TYPE' => 'E', 'MULTIPLE' => 'N', 'SORT' => 620],
             'USED_OPERATION_VARIANT' => ['NAME' => 'Вариант операции', 'TYPE' => 'E', 'MULTIPLE' => 'N', 'IS_REQUIRED' => 'Y', 'SORT' => 600],
-            'USED_EQUIPMENT' => ['NAME' => 'Использованное оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'USED_DETAILS_VARIANTS' => ['NAME' => 'Использованные варианты деталей', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'USED_MATERIAL_VARIANT' => ['NAME' => 'Вариант материала', 'TYPE' => 'E', 'MULTIPLE' => 'N', 'SORT' => 620],
             'QUANTITY_OPERATION_VARIANT' => ['NAME' => 'Операция | Количество', 'TYPE' => 'N', 'MULTIPLE' => 'N', 'SORT' => 640],
             'QUANTITY_MATERIAL_VARIANT' => ['NAME' => 'Материал | Количество', 'TYPE' => 'N', 'MULTIPLE' => 'N', 'SORT' => 650],
+            'USED_EQUIPMENT' => ['NAME' => 'Использованное оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'USED_DETAILS_VARIANTS' => ['NAME' => 'Использованные варианты деталей', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
         ];
         
         $settingsProps = [
