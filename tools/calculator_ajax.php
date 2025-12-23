@@ -131,6 +131,18 @@ try {
             handleHeaderTabsAdd($request);
             break;
 
+        case 'syncVariants':
+            $payload = json_decode($_POST['payload'] ?? '{}', true);
+            
+            $handler = new \Prospektweb\Calc\Services\SyncVariantsHandler();
+            $result = $handler->handle($payload);
+            
+            echo json_encode([
+                'success' => true,
+                'data' => $result,
+            ]);
+            break;
+
         default:
             sendJsonResponse(['error' => 'Invalid action', 'message' => 'Неизвестное действие'], 400);
     }

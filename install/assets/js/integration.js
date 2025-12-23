@@ -6,7 +6,7 @@
 (function (window) {
     'use strict';
 
-    var INTEGRATION_VERSION = '2.3.0-debug';
+    var INTEGRATION_VERSION = '2.4.0-debug';
     console.log('[BitrixBridge] integration.js loaded, version=' + INTEGRATION_VERSION);
 
     /**
@@ -230,6 +230,9 @@
                     });
                     await this.handleCalcItemRequest(message, origin);
                     break;
+                case 'SYNC_VARIANTS_REQUEST':
+                    await this.handleSyncVariantsRequest(message, origin);
+                    break;
                 case 'CLOSE_REQUEST':
                     this.handleCloseRequest(message);
                     break;
@@ -238,7 +241,8 @@
                     console.warn('[BitrixBridge][DEBUG] Known types:', [
                         'SELECT_REQUEST', 'REFRESH_REQUEST', 'ADD_OFFER_REQUEST', 
                         'REMOVE_OFFER_REQUEST', 'CALC_SETTINGS_REQUEST', 'CALC_EQUIPMENT_REQUEST',
-                        'CALC_MATERIAL_VARIANT_REQUEST', 'CALC_OPERATION_VARIANT_REQUEST', 'CLOSE_REQUEST'
+                        'CALC_MATERIAL_VARIANT_REQUEST', 'CALC_OPERATION_VARIANT_REQUEST', 
+                        'SYNC_VARIANTS_REQUEST', 'CLOSE_REQUEST'
                     ]);
             }
         }
@@ -491,6 +495,97 @@
                         ...basePayload,
                         status: 'error',
                         message: error && error.message ? error.message : 'Unknown error',
+                    },
+                    message.requestId,
+                    origin
+                );
+            }
+        }
+
+        /**
+         * Обработка запроса синхронизации вариантов
+         */
+        async handleSyncVariantsRequest(message, origin) {
+            console.log('[BitrixBridge][DEBUG] handleSyncVariantsRequest START', {
+                messageType: message.type,
+                payload: message.payload,
+                origin: origin,
+            });
+
+            const requestPayload = message.payload || {};
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'syncVariants');
+                formData.append('payload', JSON.stringify(requestPayload));
+                formData.append('sessid', this.config.sessid);
+
+                console.log('[BitrixBridge][DEBUG] Sending syncVariants request to:', this.config.ajaxEndpoint);
+
+                const response = await fetch(this.config.ajaxEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: formData,
+                });
+
+                console.log('[BitrixBridge][DEBUG] syncVariants response status:', response.status, response.ok);
+
+                if (!response.ok) {
+                    throw new Error('HTTP error ' + response.status);
+                }
+
+                const data = await response.json();
+
+                console.log('[BitrixBridge][DEBUG] syncVariants response data', {
+                    success: data.success,
+                    hasData: !!data.data,
+                    error: data.error || data.message,
+                });
+
+                if (!data.success) {
+                    throw new Error(data.message || data.error || 'Ошибка синхронизации');
+                }
+
+                const responsePayload = data.data || {
+                    status: 'ok',
+                    items: [],
+                    canCalculate: false,
+                    stats: {},
+                };
+
+                console.log('[BitrixBridge][DEBUG] Sending SYNC_VARIANTS_RESPONSE', {
+                    requestId: message.requestId,
+                    status: responsePayload.status,
+                    itemsCount: responsePayload.items ? responsePayload.items.length : 0,
+                    canCalculate: responsePayload.canCalculate,
+                });
+
+                this.sendPwrtMessage(
+                    'SYNC_VARIANTS_RESPONSE',
+                    responsePayload,
+                    message.requestId,
+                    origin
+                );
+
+                console.log('[BitrixBridge][DEBUG] handleSyncVariantsRequest END - success');
+
+            } catch (error) {
+                console.error('[BitrixBridge][DEBUG] handleSyncVariantsRequest ERROR', {
+                    error: error,
+                    message: error.message,
+                    stack: error.stack,
+                });
+
+                this.sendPwrtMessage(
+                    'SYNC_VARIANTS_RESPONSE',
+                    {
+                        status: 'error',
+                        message: error && error.message ? error.message : 'Unknown error',
+                        items: [],
+                        canCalculate: false,
+                        stats: {},
                     },
                     message.requestId,
                     origin
