@@ -143,14 +143,16 @@ function createIblockWithLog(string $typeId, string $code, string $name, array $
         if (isset($propData['USER_TYPE'])) {
             $arProperty['USER_TYPE'] = $propData['USER_TYPE'];
         }
+        
+        if (isset($propData['COL_COUNT'])) {
+            $arProperty['COL_COUNT'] = $propData['COL_COUNT'];
+        }
+        
         if (isset($propData['LINK_IBLOCK_ID'])) {
             $arProperty['LINK_IBLOCK_ID'] = $propData['LINK_IBLOCK_ID'];
         }
         if (isset($propData['VALUES'])) {
             $arProperty['VALUES'] = $propData['VALUES'];
-        }
-        if (isset($propData['COL_COUNT'])) {
-            $arProperty['COL_COUNT'] = $propData['COL_COUNT'];
         }
 
         $ibp = new \CIBlockProperty();

@@ -128,6 +128,10 @@ class IblockCreator
         if (isset($data['USER_TYPE'])) {
             $arProperty['USER_TYPE'] = $data['USER_TYPE'];
         }
+        
+        if (isset($data['COL_COUNT'])) {
+            $arProperty['COL_COUNT'] = $data['COL_COUNT'];
+        }
 
         if (isset($data['LINK_IBLOCK_ID'])) {
             $arProperty['LINK_IBLOCK_ID'] = $data['LINK_IBLOCK_ID'];
@@ -159,11 +163,6 @@ class IblockCreator
         // Set file type for FileMan user type
         if (isset($data['FILE_TYPE'])) {
             $arProperty['FILE_TYPE'] = $data['FILE_TYPE'];
-        }
-        
-        // Set COL_COUNT for properties
-        if (isset($data['COL_COUNT'])) {
-            $arProperty['COL_COUNT'] = $data['COL_COUNT'];
         }
 
         $ibp = new \CIBlockProperty();
