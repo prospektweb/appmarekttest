@@ -448,6 +448,7 @@ switch ($currentStep) {
         installLog("ШАГ 2 из {$totalSteps}: СОЗДАНИЕ ИНФОБЛОКОВ", 'header');
         
         $configProps = [
+            'PRODUCT_ID' => ['NAME' => 'ID товара', 'TYPE' => 'N'],
             'STATUS' => [
                 'NAME' => 'Статус',
                 'TYPE' => 'L',
@@ -457,7 +458,42 @@ switch ($currentStep) {
                     ['VALUE' => 'recalc', 'XML_ID' => 'recalc'],
                 ],
             ],
-            'PRODUCT_ID' => ['NAME' => 'ID товара', 'TYPE' => 'N'],
+            'CALCULATOR_SETTINGS' => [
+                'NAME' => 'Настройки калькулятора',
+                'TYPE' => 'E',
+                'SORT' => 100,
+            ],
+            'OPERATION_VARIANT' => [
+                'NAME' => 'Вариант операции',
+                'TYPE' => 'E',
+                'SORT' => 200,
+            ],
+            'MATERIAL_VARIANT' => [
+                'NAME' => 'Вариант материала',
+                'TYPE' => 'E',
+                'SORT' => 300,
+            ],
+            'EQUIPMENT' => [
+                'NAME' => 'Оборудование',
+                'TYPE' => 'E',
+                'SORT' => 400,
+            ],
+            'OPERATION_QUANTITY' => [
+                'NAME' => 'Количество операций',
+                'TYPE' => 'N',
+                'SORT' => 500,
+            ],
+            'MATERIAL_QUANTITY' => [
+                'NAME' => 'Количество материала',
+                'TYPE' => 'N',
+                'SORT' => 600,
+            ],
+            'OTHER_OPTIONS' => [
+                'NAME' => 'Прочие опции (JSON)',
+                'TYPE' => 'S',
+                'USER_TYPE' => 'HTML',
+                'SORT' => 700,
+            ],
             'LAST_CALC_DATE' => ['NAME' => 'Дата последнего расчёта', 'TYPE' => 'S', 'USER_TYPE' => 'DateTime'],
             'TOTAL_COST' => ['NAME' => 'Итоговая себестоимость', 'TYPE' => 'N'],
             'STRUCTURE' => ['NAME' => 'Структура', 'TYPE' => 'S', 'USER_TYPE' => 'HTML'],
@@ -720,6 +756,42 @@ switch ($currentStep) {
             
             $configIblockId = $installData['iblock_ids']['CALC_CONFIG'];
             $ibp = new \CIBlockProperty();
+            
+            // Обновляем CALCULATOR_SETTINGS
+            if ($installData['iblock_ids']['CALC_SETTINGS'] > 0) {
+                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $configIblockId, 'CODE' => 'CALCULATOR_SETTINGS']);
+                if ($arProperty = $rsProperty->Fetch()) {
+                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_SETTINGS']]);
+                    installLog("  → Обновлено свойство CALCULATOR_SETTINGS", 'success');
+                }
+            }
+            
+            // Обновляем OPERATION_VARIANT
+            if ($installData['iblock_ids']['CALC_OPERATIONS_VARIANTS'] > 0) {
+                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $configIblockId, 'CODE' => 'OPERATION_VARIANT']);
+                if ($arProperty = $rsProperty->Fetch()) {
+                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_OPERATIONS_VARIANTS']]);
+                    installLog("  → Обновлено свойство OPERATION_VARIANT", 'success');
+                }
+            }
+            
+            // Обновляем MATERIAL_VARIANT
+            if ($installData['iblock_ids']['CALC_MATERIALS_VARIANTS'] > 0) {
+                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $configIblockId, 'CODE' => 'MATERIAL_VARIANT']);
+                if ($arProperty = $rsProperty->Fetch()) {
+                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_MATERIALS_VARIANTS']]);
+                    installLog("  → Обновлено свойство MATERIAL_VARIANT", 'success');
+                }
+            }
+            
+            // Обновляем EQUIPMENT
+            if ($installData['iblock_ids']['CALC_EQUIPMENT'] > 0) {
+                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $configIblockId, 'CODE' => 'EQUIPMENT']);
+                if ($arProperty = $rsProperty->Fetch()) {
+                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_EQUIPMENT']]);
+                    installLog("  → Обновлено свойство EQUIPMENT", 'success');
+                }
+            }
             
             // Обновляем USED_OPERATION_VARIANT
             if ($installData['iblock_ids']['CALC_OPERATIONS_VARIANTS'] > 0) {
