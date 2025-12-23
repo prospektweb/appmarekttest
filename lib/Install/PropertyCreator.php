@@ -133,6 +133,8 @@ class PropertyCreator
         }
 
         if ($iblockId <= 0 || $detailsVariantsIblockId <= 0) {
+            // Логируем для отладки
+            error_log("PROSPEKTWEB_CALC: addDetailsVariantsProperty - Invalid IDs: iblockId={$iblockId}, detailsVariantsIblockId={$detailsVariantsIblockId}");
             return 0;
         }
 
@@ -153,7 +155,7 @@ class PropertyCreator
             'IBLOCK_ID' => $iblockId,
             'ACTIVE' => 'Y',
             'CODE' => $code,
-            'NAME' => 'Детали',
+            'NAME' => 'Детали группы',
             'PROPERTY_TYPE' => 'E', // Привязка к элементу
             'MULTIPLE' => 'Y',
             'MULTIPLE_CNT' => 1,
@@ -165,6 +167,11 @@ class PropertyCreator
 
         $ibp = new \CIBlockProperty();
         $propId = $ibp->Add($arNewProperty);
+
+        if (!$propId) {
+            // Логируем ошибку
+            error_log("PROSPEKTWEB_CALC: addDetailsVariantsProperty - Failed to create property. Error: " . $ibp->LAST_ERROR);
+        }
 
         return $propId ? (int)$propId : 0;
     }
