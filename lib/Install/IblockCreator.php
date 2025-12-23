@@ -160,6 +160,11 @@ class IblockCreator
         if (isset($data['FILE_TYPE'])) {
             $arProperty['FILE_TYPE'] = $data['FILE_TYPE'];
         }
+        
+        // Set COL_COUNT for element properties
+        if (isset($data['COL_COUNT'])) {
+            $arProperty['COL_COUNT'] = $data['COL_COUNT'];
+        }
 
         $ibp = new \CIBlockProperty();
         $propId = $ibp->Add($arProperty);
@@ -311,10 +316,32 @@ class IblockCreator
             'LAST_CALC_DATE' => ['NAME' => 'Дата последнего расчёта', 'TYPE' => 'S', 'USER_TYPE' => 'DateTime'],
             'TOTAL_COST' => ['NAME' => 'Итоговая себестоимость', 'TYPE' => 'N'],
             'STRUCTURE' => ['NAME' => 'Структура', 'TYPE' => 'S', 'USER_TYPE' => 'HTML'],
-            'USED_MATERIALS' => ['NAME' => 'Использованные материалы', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'USED_OPERATIONS' => ['NAME' => 'Использованные операции', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'USED_EQUIPMENT' => ['NAME' => 'Использованное оборудование', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
-            'USED_DETAILS' => ['NAME' => 'Использованные детали', 'TYPE' => 'E', 'MULTIPLE' => 'Y'],
+            'USED_OPERATIONS_VARIANTS' => [
+                'NAME' => 'Вариант операции',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'N',
+                'IS_REQUIRED' => 'Y',
+                'SORT' => 600,
+            ],
+            'USED_EQUIPMENT' => [
+                'NAME' => 'Оборудование',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'N',
+                'SORT' => 610,
+            ],
+            'USED_MATERIALS_VARIANTS' => [
+                'NAME' => 'Вариант материала',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'N',
+                'SORT' => 620,
+            ],
+            'OTHER_OPTIONS_VALUES' => [
+                'NAME' => 'Значения прочих опций',
+                'TYPE' => 'S',
+                'USER_TYPE' => 'HTML',
+                'MULTIPLE' => 'N',
+                'SORT' => 630,
+            ],
         ];
 
         return $this->createIblock('calculator', 'CALC_CONFIG', 'Конфигурации калькуляций', $properties);
@@ -520,7 +547,53 @@ class IblockCreator
     public function createDetailsIblock(): int
     {
         $properties = [
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+            'TYPE' => [
+                'NAME' => 'Тип',
+                'TYPE' => 'L',
+                'IS_REQUIRED' => 'Y',
+                'SORT' => 100,
+                'VALUES' => [
+                    ['XML_ID' => 'DETAIL', 'VALUE' => 'Деталь'],
+                    ['XML_ID' => 'BINDING', 'VALUE' => 'Скрепление'],
+                ],
+            ],
+            'CALC_CONFIG' => [
+                'NAME' => 'Конфигурации',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'SORT' => 110,
+                'COL_COUNT' => 1,
+                'LINK_IBLOCK_TYPE_ID' => 'calculator',
+                'LINK_IBLOCK_CODE' => 'CALC_CONFIG',
+            ],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'SORT' => 120],
+            'DETAILS' => [
+                'NAME' => 'Детали группы',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'SORT' => 200,
+                'COL_COUNT' => 1,
+                'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
+                'LINK_IBLOCK_CODE' => 'CALC_DETAILS',
+            ],
+            'CALC_CONFIG_BINDINGS' => [
+                'NAME' => 'Конфигурации | Скрепление',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'SORT' => 210,
+                'COL_COUNT' => 1,
+                'LINK_IBLOCK_TYPE_ID' => 'calculator',
+                'LINK_IBLOCK_CODE' => 'CALC_CONFIG',
+            ],
+            'CALC_CONFIG_BINDINGS_FINISHING' => [
+                'NAME' => 'Конфигурации | Финишная обработка',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'SORT' => 220,
+                'COL_COUNT' => 1,
+                'LINK_IBLOCK_TYPE_ID' => 'calculator',
+                'LINK_IBLOCK_CODE' => 'CALC_CONFIG',
+            ],
         ];
 
         return $this->createIblock('calculator_catalog', 'CALC_DETAILS', 'Детали', $properties);
