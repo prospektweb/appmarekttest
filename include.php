@@ -21,6 +21,7 @@ Loader::registerAutoloadClasses('prospektweb.calc', [
     'Prospektweb\\Calc\\Services\\ValidationService' => 'lib/Services/ValidationService.php',
     'Prospektweb\\Calc\\Services\\DependencyTracker' => 'lib/Services/DependencyTracker.php',
     'Prospektweb\\Calc\\Services\\HeaderTabsService' => 'lib/Services/HeaderTabsService.php',
+    'Prospektweb\\Calc\\Services\\SyncVariantsHandler' => 'lib/Services/SyncVariantsHandler.php',
     'Prospektweb\\Calc\\Handlers\\AdminHandler' => 'lib/Handlers/AdminHandler.php',
     'Prospektweb\\Calc\\Handlers\\DependencyHandler' => 'lib/Handlers/DependencyHandler.php',
 ]);

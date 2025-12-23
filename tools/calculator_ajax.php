@@ -15,6 +15,7 @@ use Prospektweb\Calc\Calculator\InitPayloadService;
 use Prospektweb\Calc\Calculator\ElementDataService;
 use Prospektweb\Calc\Calculator\SaveHandler;
 use Prospektweb\Calc\Services\HeaderTabsService;
+use Prospektweb\Calc\Services\SyncVariantsHandler;
 
 // Constants
 const LOG_FILE = '/local/logs/prospektweb.calc.ajax.log';
@@ -42,10 +43,75 @@ if (!Loader::includeModule('prospektweb.calc')) {
 
 // Получаем данные запроса
 $request = Application::getInstance()->getContext()->getRequest();
-$action = $request->get('action') ?? '';
 
-// Логирование запроса
-logRequest($action, $request->toArray());
+// Проверяем, является ли это PWRT протокол сообщением
+$rawInput = file_get_contents('php://input');
+$pwrtMessage = null;
+if (!empty($rawInput)) {
+    $decoded = json_decode($rawInput, true);
+    if (is_array($decoded) && isset($decoded['protocol']) && $decoded['protocol'] === 'pwrt-v1') {
+        $pwrtMessage = $decoded;
+    }
+}
+
+// Определяем тип запроса
+if ($pwrtMessage) {
+    // Обработка PWRT протокола
+    $messageType = $pwrtMessage['type'] ?? '';
+    $requestId = $pwrtMessage['requestId'] ?? '';
+    $payload = $pwrtMessage['payload'] ?? [];
+    
+    logRequest($messageType, $pwrtMessage);
+    
+    try {
+        switch ($messageType) {
+            case 'SYNC_VARIANTS_REQUEST':
+                $handler = new SyncVariantsHandler();
+                $result = $handler->handle($payload);
+                
+                $response = [
+                    'protocol' => 'pwrt-v1',
+                    'source' => 'bitrix',
+                    'target' => 'prospektweb.calc',
+                    'type' => 'SYNC_VARIANTS_RESPONSE',
+                    'requestId' => $requestId,
+                    'payload' => $result,
+                    'timestamp' => time(),
+                ];
+                
+                sendJsonResponse($response);
+                break;
+            
+            default:
+                sendJsonResponse([
+                    'protocol' => 'pwrt-v1',
+                    'source' => 'bitrix',
+                    'target' => 'prospektweb.calc',
+                    'type' => 'ERROR',
+                    'requestId' => $requestId,
+                    'payload' => ['error' => 'Unknown message type', 'message' => 'Неизвестный тип сообщения'],
+                    'timestamp' => time(),
+                ], 400);
+        }
+    } catch (\Exception $e) {
+        logError('Exception in PWRT message handler: ' . $e->getMessage());
+        sendJsonResponse([
+            'protocol' => 'pwrt-v1',
+            'source' => 'bitrix',
+            'target' => 'prospektweb.calc',
+            'type' => 'ERROR',
+            'requestId' => $requestId,
+            'payload' => ['error' => 'Server error', 'message' => $e->getMessage()],
+            'timestamp' => time(),
+        ], 500);
+    }
+} else {
+    // Обработка старых action-based запросов
+    $action = $request->get('action') ?? '';
+    
+    // Логирование запроса
+    logRequest($action, $request->toArray());
+
 
 try {
     switch ($action) {
@@ -71,6 +137,7 @@ try {
 } catch (\Exception $e) {
     logError('Exception in calculator_ajax.php: ' . $e->getMessage());
     sendJsonResponse(['error' => 'Server error', 'message' => $e->getMessage()], 500);
+}
 }
 
 /**
