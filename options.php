@@ -3,6 +3,8 @@
  * Страница настроек модуля prospektweb.calc
  */
 
+require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_admin_before.php';
+
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Config\Option;
@@ -17,14 +19,17 @@ if (!Loader::includeModule($module_id)) {
 }
 
 use Prospektweb\Calc\Config\SettingsManager;
+use Prospektweb\Calc\Config\ConfigManager;
 
-global $USER;
+global $USER, $APPLICATION;
 
+// Проверка прав доступа
 if (!$USER->IsAdmin()) {
-    return;
+    $APPLICATION->AuthForm(Loc::getMessage('ACCESS_DENIED'));
 }
 
 $settingsManager = new SettingsManager();
+$configManager = new ConfigManager();
 
 // Обработка сохранения
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && check_bitrix_sessid()) {
@@ -44,6 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && check_bitrix_sessid()) {
     Option::set($module_id, 'IBLOCK_CALCULATORS', (int)($_POST['IBLOCK_CALCULATORS'] ?? 0));
     Option::set($module_id, 'IBLOCK_CONFIGURATIONS', (int)($_POST['IBLOCK_CONFIGURATIONS'] ?? 0));
     Option::set($module_id, 'PROPERTY_CONFIG_ID', (string)($_POST['PROPERTY_CONFIG_ID'] ?? 'CONFIG_ID'));
+
+    // Сохраняем настройки связей ТП
+    Option::set($module_id, 'FORMAT_FIELD_CODE', (string)($_POST['FORMAT_FIELD_CODE'] ?? 'FORMAT'));
+    Option::set($module_id, 'VOLUME_FIELD_CODE', (string)($_POST['VOLUME_FIELD_CODE'] ?? 'VOLUME'));
 
     LocalRedirect($APPLICATION->GetCurPage() . '?mid=' . urlencode($module_id) . '&lang=' . LANGUAGE_ID . '&saved=Y');
 }
@@ -71,6 +80,21 @@ if (Loader::includeModule('currency')) {
     $currencies = ['RUB' => 'Рубль', 'USD' => 'Доллар США', 'EUR' => 'Евро'];
 }
 
+// Получаем список свойств типа "список" из инфоблока ТП
+$skuIblockId = $configManager->getSkuIblockId();
+$listProperties = [];
+if ($skuIblockId > 0 && Loader::includeModule('iblock')) {
+    $rsProperties = \CIBlockProperty::GetList(
+        ['SORT' => 'ASC', 'NAME' => 'ASC'],
+        ['IBLOCK_ID' => $skuIblockId, 'PROPERTY_TYPE' => 'L', 'ACTIVE' => 'Y']
+    );
+    while ($arProperty = $rsProperties->Fetch()) {
+        $listProperties[$arProperty['CODE']] = $arProperty['NAME'] . ' [' . $arProperty['CODE'] . ']';
+    }
+}
+
+require $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_admin_after.php';
+
 // Вывод сообщения об успешном сохранении
 if ($_GET['saved'] === 'Y') {
     CAdminMessage::ShowMessage([
@@ -82,8 +106,9 @@ if ($_GET['saved'] === 'Y') {
 // Создаём вкладки
 $tabControl = new CAdminTabControl('tabControl', [
     ['DIV' => 'edit1', 'TAB' => Loc::getMessage('PROSPEKTWEB_CALC_TAB_MAIN'), 'TITLE' => Loc::getMessage('PROSPEKTWEB_CALC_TAB_MAIN_TITLE')],
-    ['DIV' => 'edit2', 'TAB' => Loc::getMessage('PROSPEKTWEB_CALC_TAB_IBLOCKS'), 'TITLE' => Loc::getMessage('PROSPEKTWEB_CALC_TAB_IBLOCKS_TITLE')],
-    ['DIV' => 'edit3', 'TAB' => Loc::getMessage('PROSPEKTWEB_CALC_TAB_INTEGRATION'), 'TITLE' => Loc::getMessage('PROSPEKTWEB_CALC_TAB_INTEGRATION_TITLE')],
+    ['DIV' => 'edit2', 'TAB' => Loc::getMessage('PROSPEKTWEB_CALC_TAB_OFFERS'), 'TITLE' => Loc::getMessage('PROSPEKTWEB_CALC_TAB_OFFERS_TITLE')],
+    ['DIV' => 'edit3', 'TAB' => Loc::getMessage('PROSPEKTWEB_CALC_TAB_IBLOCKS'), 'TITLE' => Loc::getMessage('PROSPEKTWEB_CALC_TAB_IBLOCKS_TITLE')],
+    ['DIV' => 'edit4', 'TAB' => Loc::getMessage('PROSPEKTWEB_CALC_TAB_INTEGRATION'), 'TITLE' => Loc::getMessage('PROSPEKTWEB_CALC_TAB_INTEGRATION_TITLE')],
 ]);
 
 $tabControl->Begin();
@@ -124,6 +149,62 @@ $tabControl->Begin();
         <td><?= Loc::getMessage('PROSPEKTWEB_CALC_LOGGING_ENABLED') ?></td>
         <td>
             <input type="checkbox" name="LOGGING_ENABLED" value="Y" <?= $currentSettings['loggingEnabled'] ? 'checked' : '' ?>>
+        </td>
+    </tr>
+
+    <?php $tabControl->BeginNextTab(); ?>
+
+    <tr class="heading">
+        <td colspan="2"><?= Loc::getMessage('PROSPEKTWEB_CALC_OFFERS_PROPERTIES_HEADING') ?></td>
+    </tr>
+
+    <tr>
+        <td width="40%" class="adm-detail-content-cell-l">
+            <?= Loc::getMessage('PROSPEKTWEB_CALC_FORMAT_FIELD_CODE') ?>:
+        </td>
+        <td width="60%" class="adm-detail-content-cell-r">
+            <?php if (!empty($listProperties)): ?>
+                <select name="FORMAT_FIELD_CODE" style="width: 300px;">
+                    <option value=""><?= Loc::getMessage('PROSPEKTWEB_CALC_SELECT_PROPERTY') ?></option>
+                    <?php 
+                    $currentFormatCode = Option::get($module_id, 'FORMAT_FIELD_CODE', 'FORMAT');
+                    foreach ($listProperties as $code => $name): 
+                    ?>
+                    <option value="<?= htmlspecialcharsbx($code) ?>" <?= $currentFormatCode === $code ? 'selected' : '' ?>>
+                        <?= htmlspecialcharsbx($name) ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            <?php else: ?>
+                <input type="text" name="FORMAT_FIELD_CODE" value="<?= htmlspecialcharsbx(Option::get($module_id, 'FORMAT_FIELD_CODE', 'FORMAT')) ?>" size="30">
+                <br><span class="adm-info-message"><?= Loc::getMessage('PROSPEKTWEB_CALC_NO_LIST_PROPERTIES') ?></span>
+            <?php endif; ?>
+            <br><span style="color: #777; font-size: 11px;"><?= Loc::getMessage('PROSPEKTWEB_CALC_FORMAT_FIELD_CODE_HINT') ?></span>
+        </td>
+    </tr>
+
+    <tr>
+        <td class="adm-detail-content-cell-l">
+            <?= Loc::getMessage('PROSPEKTWEB_CALC_VOLUME_FIELD_CODE') ?>:
+        </td>
+        <td class="adm-detail-content-cell-r">
+            <?php if (!empty($listProperties)): ?>
+                <select name="VOLUME_FIELD_CODE" style="width: 300px;">
+                    <option value=""><?= Loc::getMessage('PROSPEKTWEB_CALC_SELECT_PROPERTY') ?></option>
+                    <?php 
+                    $currentVolumeCode = Option::get($module_id, 'VOLUME_FIELD_CODE', 'VOLUME');
+                    foreach ($listProperties as $code => $name): 
+                    ?>
+                    <option value="<?= htmlspecialcharsbx($code) ?>" <?= $currentVolumeCode === $code ? 'selected' : '' ?>>
+                        <?= htmlspecialcharsbx($name) ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            <?php else: ?>
+                <input type="text" name="VOLUME_FIELD_CODE" value="<?= htmlspecialcharsbx(Option::get($module_id, 'VOLUME_FIELD_CODE', 'VOLUME')) ?>" size="30">
+                <br><span class="adm-info-message"><?= Loc::getMessage('PROSPEKTWEB_CALC_NO_LIST_PROPERTIES') ?></span>
+            <?php endif; ?>
+            <br><span style="color: #777; font-size: 11px;"><?= Loc::getMessage('PROSPEKTWEB_CALC_VOLUME_FIELD_CODE_HINT') ?></span>
         </td>
     </tr>
 
@@ -213,9 +294,13 @@ $tabControl->Begin();
     <?php
     $tabControl->Buttons([
         'disabled' => false,
-        'back_url' => '/bitrix/admin/module_admin.php?lang=' . LANGUAGE_ID,
+        'back_url' => '/bitrix/admin/settings.php?lang=' . LANGUAGE_ID,
     ]);
     ?>
 
     <?php $tabControl->End(); ?>
 </form>
+
+<?php
+
+require $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/epilog_admin.php';

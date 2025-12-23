@@ -33,3 +33,16 @@ $MESS['PROSPEKTWEB_CALC_IBLOCK_DETAILS_INTEGRATION'] = 'ID инфоблока д
 $MESS['PROSPEKTWEB_CALC_IBLOCK_CALCULATORS_INTEGRATION'] = 'ID инфоблока калькуляторов (для интеграции)';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_CONFIGURATIONS_INTEGRATION'] = 'ID инфоблока конфигураций (для интеграции)';
 $MESS['PROSPEKTWEB_CALC_PROPERTY_CONFIG_ID'] = 'Код свойства для привязки конфигурации';
+
+// Настройки связей торговых предложений
+$MESS['PROSPEKTWEB_CALC_TAB_OFFERS'] = 'Связи ТП';
+$MESS['PROSPEKTWEB_CALC_TAB_OFFERS_TITLE'] = 'Настройки связей торговых предложений с калькуляцией';
+$MESS['PROSPEKTWEB_CALC_OFFERS_PROPERTIES_HEADING'] = 'Свойства торговых предложений для калькуляции';
+$MESS['PROSPEKTWEB_CALC_FORMAT_FIELD_CODE'] = 'Код свойства "Формат"';
+$MESS['PROSPEKTWEB_CALC_FORMAT_FIELD_CODE_HINT'] = 'Свойство типа "список" в ТП. XML_ID значений должен содержать WIDTH и LENGTH (например: "210x297")';
+$MESS['PROSPEKTWEB_CALC_VOLUME_FIELD_CODE'] = 'Код свойства "Объём/Тираж"';
+$MESS['PROSPEKTWEB_CALC_VOLUME_FIELD_CODE_HINT'] = 'Свойство типа "список" в ТП для определения тиража/объёма';
+$MESS['PROSPEKTWEB_CALC_SELECT_PROPERTY'] = '-- Выберите свойство --';
+$MESS['PROSPEKTWEB_CALC_NO_LIST_PROPERTIES'] = 'Свойства типа "список" не найдены в инфоблоке ТП. Укажите код вручную.';
+$MESS['PROSPEKTWEB_CALC_SAVE'] = 'Сохранить';
+$MESS['PROSPEKTWEB_CALC_RESET'] = 'Сбросить';
