@@ -128,6 +128,10 @@ class IblockCreator
         if (isset($data['USER_TYPE'])) {
             $arProperty['USER_TYPE'] = $data['USER_TYPE'];
         }
+        
+        if (isset($data['COL_COUNT'])) {
+            $arProperty['COL_COUNT'] = $data['COL_COUNT'];
+        }
 
         if (isset($data['LINK_IBLOCK_ID'])) {
             $arProperty['LINK_IBLOCK_ID'] = $data['LINK_IBLOCK_ID'];
@@ -548,7 +552,53 @@ class IblockCreator
     public function createDetailsIblock(): int
     {
         $properties = [
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y'],
+            'TYPE' => [
+                'NAME' => 'Тип',
+                'TYPE' => 'L',
+                'IS_REQUIRED' => 'Y',
+                'SORT' => 100,
+                'VALUES' => [
+                    ['XML_ID' => 'DETAIL', 'VALUE' => 'Деталь'],
+                    ['XML_ID' => 'BINDING', 'VALUE' => 'Скрепление'],
+                ],
+            ],
+            'CALC_CONFIG' => [
+                'NAME' => 'Конфигурации',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'SORT' => 110,
+                'COL_COUNT' => 1,
+                'LINK_IBLOCK_TYPE_ID' => 'calculator',
+                'LINK_IBLOCK_CODE' => 'CALC_CONFIG',
+            ],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'SORT' => 120],
+            'DETAILS' => [
+                'NAME' => 'Детали группы',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'SORT' => 200,
+                'COL_COUNT' => 1,
+                'LINK_IBLOCK_TYPE_ID' => 'calculator_catalog',
+                'LINK_IBLOCK_CODE' => 'CALC_DETAILS',
+            ],
+            'CALC_CONFIG_BINDINGS' => [
+                'NAME' => 'Конфигурации | Скрепление',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'SORT' => 210,
+                'COL_COUNT' => 1,
+                'LINK_IBLOCK_TYPE_ID' => 'calculator',
+                'LINK_IBLOCK_CODE' => 'CALC_CONFIG',
+            ],
+            'CALC_CONFIG_BINDINGS_FINISHING' => [
+                'NAME' => 'Конфигурации | Финишная обработка',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'SORT' => 220,
+                'COL_COUNT' => 1,
+                'LINK_IBLOCK_TYPE_ID' => 'calculator',
+                'LINK_IBLOCK_CODE' => 'CALC_CONFIG',
+            ],
         ];
 
         return $this->createIblock('calculator_catalog', 'CALC_DETAILS', 'Детали', $properties);
