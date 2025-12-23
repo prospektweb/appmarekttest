@@ -114,6 +114,56 @@ class PropertyCreator
     }
 
     /**
+     * Добавляет свойство DETAILS_VARIANTS в инфоблок ТП.
+     *
+     * @param int $iblockId ID инфоблока ТП.
+     * @param int $detailsVariantsIblockId ID инфоблока CALC_DETAILS_VARIANTS.
+     *
+     * @return int ID свойства или 0.
+     */
+    public function addDetailsVariantsProperty(int $iblockId, int $detailsVariantsIblockId): int
+    {
+        if (!Loader::includeModule('iblock')) {
+            return 0;
+        }
+
+        if ($iblockId <= 0 || $detailsVariantsIblockId <= 0) {
+            return 0;
+        }
+
+        $code = 'DETAILS_VARIANTS';
+
+        // Проверяем, существует ли свойство
+        $rsProperty = \CIBlockProperty::GetList(
+            [],
+            ['IBLOCK_ID' => $iblockId, 'CODE' => $code]
+        );
+
+        if ($arProperty = $rsProperty->Fetch()) {
+            return (int)$arProperty['ID'];
+        }
+
+        // Создаём свойство
+        $arNewProperty = [
+            'IBLOCK_ID' => $iblockId,
+            'ACTIVE' => 'Y',
+            'CODE' => $code,
+            'NAME' => 'Детали группы',
+            'PROPERTY_TYPE' => 'E', // Привязка к элементу
+            'MULTIPLE' => 'Y',
+            'IS_REQUIRED' => 'N',
+            'SORT' => 999,
+            'COL_COUNT' => 1,
+            'LINK_IBLOCK_ID' => $detailsVariantsIblockId,
+        ];
+
+        $ibp = new \CIBlockProperty();
+        $propId = $ibp->Add($arNewProperty);
+
+        return $propId ? (int)$propId : 0;
+    }
+
+    /**
      * Удаляет свойство.
      *
      * @param int    $iblockId ID инфоблока.

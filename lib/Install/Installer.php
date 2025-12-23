@@ -81,7 +81,7 @@ class Installer
 
         // Шаг 4: Добавляем свойства в существующие инфоблоки
         $this->log[] = 'Добавление свойств в инфоблок товаров...';
-        $this->addPropertiesToProductIblock($skuIblockId);
+        $this->addPropertiesToProductIblock($skuIblockId, $iblockIds);
 
         // Шаг 5: Сохраняем настройки
         $this->log[] = 'Сохранение настроек модуля...';
@@ -179,14 +179,28 @@ class Installer
      * Добавляет свойства в инфоблок товаров.
      *
      * @param int $skuIblockId ID инфоблока ТП.
+     * @param array $iblockIds Массив ID инфоблоков модуля.
      */
-    protected function addPropertiesToProductIblock(int $skuIblockId): void
+    protected function addPropertiesToProductIblock(int $skuIblockId, array $iblockIds): void
     {
         if ($skuIblockId <= 0) {
             return;
         }
 
+        // Добавляем свойство CONFIG_ID
         $this->propertyCreator->addCalcConfigProperty($skuIblockId);
+
+        // Добавляем свойство DETAILS_VARIANTS
+        if (!empty($iblockIds['CALC_DETAILS_VARIANTS'])) {
+            $detailsVariantsId = (int)$iblockIds['CALC_DETAILS_VARIANTS'];
+            $propId = $this->propertyCreator->addDetailsVariantsProperty($skuIblockId, $detailsVariantsId);
+            
+            if ($propId > 0) {
+                $this->log[] = "Добавлено свойство DETAILS_VARIANTS в инфоблок ТП (ID свойства: {$propId})";
+            } else {
+                $this->errors[] = 'Не удалось создать свойство DETAILS_VARIANTS';
+            }
+        }
     }
 
     /**
