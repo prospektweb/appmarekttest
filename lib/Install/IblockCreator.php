@@ -413,20 +413,6 @@ class IblockCreator
                     ['VALUE' => 'Нет', 'XML_ID' => 'N'],
                 ],
             ],
-            'VOLUME_FIELD_CODE' => [
-                'NAME' => 'Код поля тиража',
-                'TYPE' => 'S',
-                'SORT' => 500,
-                'DEFAULT_VALUE' => 'VOLUME',
-                'HINT' => 'На основании значения свойства рассчитываются высота и вес',
-            ],
-            'FORMAT_FIELD_CODE' => [
-                'NAME' => 'Код поля формата',
-                'TYPE' => 'S',
-                'SORT' => 510,
-                'DEFAULT_VALUE' => 'FORMAT',
-                'HINT' => 'На основании значения свойства заполняются ширина и длина',
-            ],
             'CAN_BE_FIRST' => [
                 'NAME' => 'Может быть добавлен на первом этапе',
                 'TYPE' => 'L',
