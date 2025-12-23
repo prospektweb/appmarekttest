@@ -161,7 +161,7 @@ class IblockCreator
             $arProperty['FILE_TYPE'] = $data['FILE_TYPE'];
         }
         
-        // Set COL_COUNT for element properties
+        // Set COL_COUNT for properties
         if (isset($data['COL_COUNT'])) {
             $arProperty['COL_COUNT'] = $data['COL_COUNT'];
         }

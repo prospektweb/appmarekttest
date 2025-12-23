@@ -149,6 +149,9 @@ function createIblockWithLog(string $typeId, string $code, string $name, array $
         if (isset($propData['VALUES'])) {
             $arProperty['VALUES'] = $propData['VALUES'];
         }
+        if (isset($propData['COL_COUNT'])) {
+            $arProperty['COL_COUNT'] = $propData['COL_COUNT'];
+        }
 
         $ibp = new \CIBlockProperty();
         if ($ibp->Add($arProperty)) {
@@ -587,6 +590,7 @@ switch ($currentStep) {
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
                 'SORT' => 110,
+                'COL_COUNT' => 1,
             ],
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'SORT' => 120],
             'DETAILS' => [
@@ -594,18 +598,21 @@ switch ($currentStep) {
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
                 'SORT' => 200,
+                'COL_COUNT' => 1,
             ],
             'CALC_CONFIG_BINDINGS' => [
                 'NAME' => 'Конфигурации | Скрепление',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
                 'SORT' => 210,
+                'COL_COUNT' => 1,
             ],
             'CALC_CONFIG_BINDINGS_FINISHING' => [
                 'NAME' => 'Конфигурации | Финишная обработка',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
                 'SORT' => 220,
+                'COL_COUNT' => 1,
             ],
         ];
 
