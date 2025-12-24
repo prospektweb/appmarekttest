@@ -29,7 +29,6 @@
 - ID инфоблока деталей
 - ID инфоблока калькуляторов
 - ID инфоблока конфигураций
-- Код свойства для привязки конфигурации (по умолчанию `CONFIG_ID`)
 
 ### 2. Создание страницы с iframe
 
@@ -212,7 +211,7 @@ GET /bitrix/tools/prospektweb.calc/calculator_ajax.php?action=getInitData&offerI
 {
   "success": true,
   "data": {
-    "mode": "NEW_CONFIG" | "EXISTING_CONFIG",
+    "mode": "NEW_BUNDLE" | "EXISTING_BUNDLE",
     "context": {
       "siteId": "s1",
       "userId": "1",
@@ -234,10 +233,12 @@ GET /bitrix/tools/prospektweb.calc/calculator_ajax.php?action=getInitData&offerI
         "name": "Товар 1"
       }
     ],
-    "config": { // только для EXISTING_CONFIG
+    "bundle": { // только для EXISTING_BUNDLE
       "id": 50,
-      "name": "Конфигурация 1",
-      "data": {}
+      "name": "Сборка для визиток",
+      "code": "business_cards_bundle",
+      "structure": {},
+      "elements": {}
     }
   }
 }
@@ -247,7 +248,7 @@ GET /bitrix/tools/prospektweb.calc/calculator_ajax.php?action=getInitData&offerI
 
 ```
 POST /bitrix/tools/prospektweb.calc/calculator_ajax.php
-action=save&sessid=xxx&payload={"mode":"NEW_CONFIG","configuration":{...},"offerUpdates":[...]}
+action=save&sessid=xxx&payload={"mode":"NEW_BUNDLE","configuration":{...},"offerUpdates":[...]}
 ```
 
 Ответ:
@@ -256,7 +257,7 @@ action=save&sessid=xxx&payload={"mode":"NEW_CONFIG","configuration":{...},"offer
   "success": true,
   "data": {
     "status": "ok" | "error" | "partial",
-    "configId": 50,
+    "bundleId": 50,
     "successOffers": [123, 456],
     "errors": [],
     "message": "Данные успешно сохранены"

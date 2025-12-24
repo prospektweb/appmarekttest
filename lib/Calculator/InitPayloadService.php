@@ -55,11 +55,11 @@ class InitPayloadService
             'priceTypes' => $this->getPriceTypes(),
         ];
 
-        // Если режим EXISTING_CONFIG - загружаем конфигурацию
-        if ($mode === 'EXISTING_CONFIG' && !empty($selectedOffers[0]['configId'])) {
-            $config = $this->loadConfiguration($selectedOffers[0]['configId']);
-            if ($config) {
-                $payload['config'] = $config;
+        // Если режим EXISTING_BUNDLE - загружаем сборку
+        if ($mode === 'EXISTING_BUNDLE' && !empty($selectedOffers[0]['bundleId'])) {
+            $bundle = $this->loadBundle($selectedOffers[0]['bundleId']);
+            if ($bundle) {
+                $payload['bundle'] = $bundle;
             }
         }
 
@@ -75,7 +75,6 @@ class InitPayloadService
     private function loadOffers(array $offerIds): array
     {
         $offers = [];
-        $propertyConfigId = Option::get(self::MODULE_ID, 'PROPERTY_CONFIG_ID', 'CONFIG_ID');
 
         foreach ($offerIds as $offerId) {
             $offerId = (int)$offerId;
@@ -99,16 +98,9 @@ class InitPayloadService
             $propertiesRaw = $elementObject->GetProperties();
 
             $properties = [];
-            $configIdValue = null;
 
             foreach ($propertiesRaw as $prop) {
                 $code = $prop['CODE'] ?: (string)$prop['ID'];
-                $valueForConfig = $prop['MULTIPLE'] === 'Y' ? (array)$prop['VALUE'] : $prop['VALUE'];
-
-                if ($code === $propertyConfigId && $configIdValue === null) {
-                    $configIdValue = is_array($valueForConfig) ? (int)reset($valueForConfig) : (int)$valueForConfig;
-                }
-
                 $properties[$code] = $prop;
             }
 
@@ -143,9 +135,10 @@ class InitPayloadService
                 'properties' => $properties,
             ];
 
-            // Добавляем configId если есть
-            if (!empty($configIdValue)) {
-                $offer['configId'] = $configIdValue;
+            // Добавляем bundleId если есть
+            $bundleId = $this->extractBundleId($offer);
+            if ($bundleId !== null) {
+                $offer['bundleId'] = $bundleId;
             }
 
             $offers[] = $offer;
@@ -234,30 +227,46 @@ class InitPayloadService
      * Определить режим работы калькулятора
      *
      * @param array $offers
-     * @return string 'NEW_CONFIG' | 'EXISTING_CONFIG'
+     * @return string 'NEW_BUNDLE' | 'EXISTING_BUNDLE'
      */
     private function determineMode(array $offers): string
     {
         if (empty($offers)) {
-            return 'NEW_CONFIG';
+            return 'NEW_BUNDLE';
         }
 
-        // Проверяем наличие configId у первого элемента
-        $firstConfigId = $offers[0]['configId'] ?? null;
+        $firstBundleId = $this->extractBundleId($offers[0]);
         
-        if ($firstConfigId === null) {
-            return 'NEW_CONFIG';
+        if ($firstBundleId === null || $firstBundleId <= 0) {
+            return 'NEW_BUNDLE';
         }
 
-        // Проверяем, что у всех одинаковый configId
         foreach ($offers as $offer) {
-            $currentConfigId = $offer['configId'] ?? null;
-            if ($currentConfigId !== $firstConfigId) {
-                return 'NEW_CONFIG';
+            $currentBundleId = $this->extractBundleId($offer);
+            if ($currentBundleId !== $firstBundleId) {
+                return 'NEW_BUNDLE';
             }
         }
 
-        return 'EXISTING_CONFIG';
+        return 'EXISTING_BUNDLE';
+    }
+
+    /**
+     * Извлечь bundleId из данных ТП
+     *
+     * @param array $offer
+     * @return int|null
+     */
+    private function extractBundleId(array $offer): ?int
+    {
+        $value = $offer['properties']['BUNDLE']['VALUE'] ?? null;
+        
+        if ($value === null || $value === false || $value === '') {
+            return null;
+        }
+        
+        $intValue = (int)$value;
+        return $intValue > 0 ? $intValue : null;
     }
 
     /**
@@ -400,42 +409,133 @@ class InitPayloadService
     }
 
     /**
-     * Загрузить конфигурацию по ID
+     * Загрузить сборку по ID
      *
-     * @param int $configId
+     * @param int $bundleId
      * @return array|null
      */
-    private function loadConfiguration(int $configId): ?array
+    private function loadBundle(int $bundleId): ?array
     {
-        if ($configId <= 0) {
+        if ($bundleId <= 0) {
             return null;
         }
 
-        $iblockId = (int)Option::get(self::MODULE_ID, 'IBLOCK_CONFIGURATIONS', 0);
+        $configManager = new ConfigManager();
+        $iblockId = $configManager->getIblockId('CALC_BUNDLES');
+        
         if ($iblockId <= 0) {
             return null;
         }
 
-        $element = \CIBlockElement::GetByID($configId)->Fetch();
-        if (!$element || (int)$element['IBLOCK_ID'] !== $iblockId) {
+        $elementObject = \CIBlockElement::GetList(
+            [],
+            ['ID' => $bundleId, 'IBLOCK_ID' => $iblockId],
+            false,
+            false,
+            ['ID', 'NAME', 'CODE']
+        )->GetNextElement();
+
+        if (!$elementObject) {
             return null;
         }
 
-        // Получаем детальное описание (JSON конфигурации)
-        $detailText = $element['DETAIL_TEXT'] ?? '';
-        $data = [];
-        if (!empty($detailText)) {
-            $decoded = json_decode($detailText, true);
+        $fields = $elementObject->GetFields();
+        $propertiesRaw = $elementObject->GetProperties();
+
+        // Парсим JSON-свойство (тип HTML)
+        $jsonRaw = $propertiesRaw['JSON']['~VALUE']['TEXT'] ?? '';
+        $structure = [];
+        if (!empty($jsonRaw)) {
+            $decoded = json_decode($jsonRaw, true);
             if (is_array($decoded)) {
-                $data = $decoded;
+                $structure = $decoded;
             }
         }
 
+        // Собираем ID связанных элементов по свойствам
+        $linkedElementIds = $this->collectLinkedElementIds($propertiesRaw);
+        
+        // Загружаем данные связанных элементов через ElementDataService
+        $elements = $this->loadBundleElements($linkedElementIds);
+
         return [
-            'id' => $configId,
-            'name' => $element['NAME'] ?? '',
-            'data' => $data,
+            'id' => $bundleId,
+            'name' => $fields['NAME'] ?? '',
+            'code' => $fields['CODE'] ?? null,
+            'structure' => $structure,
+            'elements' => $elements,
         ];
+    }
+
+    /**
+     * Собрать ID связанных элементов из свойств сборки
+     *
+     * @param array $propertiesRaw
+     * @return array Массив с ключами по типам связанных элементов
+     */
+    private function collectLinkedElementIds(array $propertiesRaw): array
+    {
+        $linkedIds = [];
+
+        $propertyMap = [
+            'CALC_CONFIG' => 'calcConfig',
+            'CALC_SETTINGS' => 'calcSettings',
+            'CALC_MATERIALS' => 'materials',
+            'CALC_MATERIALS_VARIANTS' => 'materialsVariants',
+            'CALC_OPERATIONS' => 'operations',
+            'CALC_OPERATIONS_VARIANTS' => 'operationsVariants',
+            'CALC_EQUIPMENT' => 'equipment',
+            'CALC_DETAILS' => 'details',
+            'CALC_DETAILS_VARIANTS' => 'detailsVariants',
+        ];
+
+        foreach ($propertyMap as $propertyCode => $key) {
+            $values = $propertiesRaw[$propertyCode]['VALUE'] ?? null;
+            
+            if ($values === null || $values === false || $values === '') {
+                $linkedIds[$key] = [];
+                continue;
+            }
+
+            // Преобразуем в массив, если это не массив
+            if (!is_array($values)) {
+                $values = [$values];
+            }
+
+            // Фильтруем и преобразуем в int
+            $linkedIds[$key] = array_values(array_filter(array_map('intval', $values), function($id) {
+                return $id > 0;
+            }));
+        }
+
+        return $linkedIds;
+    }
+
+    /**
+     * Загрузить связанные элементы через ElementDataService
+     *
+     * @param array $linkedIds
+     * @return array
+     */
+    private function loadBundleElements(array $linkedIds): array
+    {
+        $elementDataService = new ElementDataService();
+        $elements = [];
+
+        foreach ($linkedIds as $key => $ids) {
+            if (empty($ids)) {
+                $elements[$key] = [];
+                continue;
+            }
+
+            // Определяем, нужно ли включать данные родителя (для вариантов)
+            $includeParent = in_array($key, ['materialsVariants', 'operationsVariants', 'detailsVariants'], true);
+
+            // Загружаем элементы
+            $elements[$key] = $elementDataService->loadElements($ids, $includeParent);
+        }
+
+        return $elements;
     }
 
     /**

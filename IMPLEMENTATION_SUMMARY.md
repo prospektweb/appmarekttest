@@ -18,8 +18,8 @@ Successfully implemented a complete integration between Bitrix and a React calcu
 #### lib/Calculator/InitPayloadService.php
 - Prepares INIT payload for React application
 - Loads offer data from Bitrix catalog
-- Determines mode: NEW_CONFIG or EXISTING_CONFIG
-- Loads existing configuration if available
+- Determines mode: NEW_BUNDLE or EXISTING_BUNDLE
+- Loads existing bundle if available
 - Collects iblock IDs from module settings
 - Builds context with user, site, language info
 

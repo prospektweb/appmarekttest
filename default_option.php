@@ -14,7 +14,6 @@ $prospektweb_calc_default_option = [
     'IBLOCK_DETAILS' => 0,
     'IBLOCK_CALCULATORS' => 0,
     'IBLOCK_CONFIGURATIONS' => 0,
-    'PROPERTY_CONFIG_ID' => 'CONFIG_ID',
     // Связи ТП
     'FORMAT_FIELD_CODE' => 'FORMAT',
     'VOLUME_FIELD_CODE' => 'VOLUME',
