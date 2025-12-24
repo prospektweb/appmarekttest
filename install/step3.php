@@ -661,6 +661,82 @@ switch ($currentStep) {
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
         ];
 
+        // Свойства инфоблока:  Сборка для расчёта
+        $bundlesProps = [
+            'JSON' => [
+                'NAME' => 'JSON',
+                'TYPE' => 'S',
+                'USER_TYPE' => 'HTML',
+                'SORT' => 100,
+            ],
+            // Привязки к catalog (CALC_CONFIG, CALC_SETTINGS)
+            'CALC_CONFIG' => [
+                'NAME' => 'Конфигурации',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
+                'SORT' => 200,
+            ],
+            'CALC_SETTINGS' => [
+                'NAME' => 'Настройки калькулятора',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
+                'SORT' => 300,
+            ],
+            // Привязки к calculator_catalog
+            'CALC_MATERIALS' => [
+                'NAME' => 'Материалы',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
+                'SORT' => 400,
+            ],
+            'CALC_MATERIALS_VARIANTS' => [
+                'NAME' => 'Варианты материалов',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
+                'SORT' => 500,
+            ],
+            'CALC_OPERATIONS' => [
+                'NAME' => 'Операции',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
+                'SORT' => 600,
+            ],
+            'CALC_OPERATIONS_VARIANTS' => [
+                'NAME' => 'Варианты операций',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
+                'SORT' => 700,
+            ],
+            'CALC_EQUIPMENT' => [
+                'NAME' => 'Оборудование',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
+                'SORT' => 800,
+            ],
+            'CALC_DETAILS' => [
+                'NAME' => 'Детали',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
+                'SORT' => 900,
+            ],
+            'CALC_DETAILS_VARIANTS' => [
+                'NAME' => 'Варианты деталей',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 1,
+                'SORT' => 1000,
+            ],
+        ];
+
+        $installData['iblock_ids']['CALC_BUNDLES'] = createIblockWithLog('catalog', 'CALC_BUNDLES', 'Сборка для расчёта', $bundlesProps);
         $installData['iblock_ids']['CALC_CONFIG'] = createIblockWithLog('calculator', 'CALC_CONFIG', 'Конфигурации калькуляций', $configProps);
         $installData['iblock_ids']['CALC_SETTINGS'] = createIblockWithLog('calculator', 'CALC_SETTINGS', 'Настройки калькуляторов', $settingsProps);
         $installData['iblock_ids']['CALC_MATERIALS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS', 'Материалы', $materialsProps);
@@ -830,6 +906,36 @@ switch ($currentStep) {
                 $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $detailsIblockId]);
                 installLog("  → Обновлено свойство DETAILS (self-reference)", 'success');
             }
+
+            if ($installData['iblock_ids']['CALC_BUNDLES'] > 0) {
+                installLog("");
+                installLog("Обновление свойств CALC_BUNDLES с привязками к инфоблокам.. .", 'header');
+                
+                $bundlesIblockId = $installData['iblock_ids']['CALC_BUNDLES'];
+                $ibp = new \CIBlockProperty();
+                
+                $bundlesLinkProperties = [
+                    'CALC_CONFIG' => 'CALC_CONFIG',
+                    'CALC_SETTINGS' => 'CALC_SETTINGS',
+                    'CALC_MATERIALS' => 'CALC_MATERIALS',
+                    'CALC_MATERIALS_VARIANTS' => 'CALC_MATERIALS_VARIANTS',
+                    'CALC_OPERATIONS' => 'CALC_OPERATIONS',
+                    'CALC_OPERATIONS_VARIANTS' => 'CALC_OPERATIONS_VARIANTS',
+                    'CALC_EQUIPMENT' => 'CALC_EQUIPMENT',
+                    'CALC_DETAILS' => 'CALC_DETAILS',
+                    'CALC_DETAILS_VARIANTS' => 'CALC_DETAILS_VARIANTS',
+                ];
+                
+                foreach ($bundlesLinkProperties as $propCode => $linkIblockCode) {
+                    if (isset($installData['iblock_ids'][$linkIblockCode]) && $installData['iblock_ids'][$linkIblockCode] > 0) {
+                        $rsProperty = \CIBlockProperty:: GetList([], ['IBLOCK_ID' => $bundlesIblockId, 'CODE' => $propCode]);
+                        if ($arProperty = $rsProperty->Fetch()) {
+                            $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids'][$linkIblockCode]]);
+                            installLog("  → Обновлено свойство {$propCode}", 'success');
+                        }
+                    }
+                }
+            }
         }
         
         // Создание единиц измерения
@@ -867,13 +973,13 @@ switch ($currentStep) {
         
         // Добавление свойства DETAILS_VARIANTS в инфоблок торговых предложений
         $skuIblockId = $installData['sku_iblock_id'];
-        $detailsVariantsIblockId = $installData['iblock_ids']['CALC_DETAILS_VARIANTS'] ?? 0;
+        $bundlesIblockId = $installData['iblock_ids']['CALC_BUNDLES'] ?? 0;
 
-        if ($skuIblockId > 0 && $detailsVariantsIblockId > 0) {
+        if ($skuIblockId > 0 && $bundlesIblockId > 0) {
             installLog("");
-            installLog("Добавление свойства DETAILS_VARIANTS в инфоблок ТП...", 'header');
+            installLog("Добавление свойства BUNDLE в инфоблок ТП...", 'header');
             
-            $propertyCode = 'DETAILS_VARIANTS';
+            $propertyCode = 'BUNDLE';
             
             // Проверяем, существует ли свойство
             $rsProperty = \CIBlockProperty::GetList(
@@ -889,14 +995,14 @@ switch ($currentStep) {
                     'IBLOCK_ID' => $skuIblockId,
                     'ACTIVE' => 'Y',
                     'CODE' => $propertyCode,
-                    'NAME' => 'Детали группы',
+                    'NAME' => 'Сборка для расчёта',
                     'PROPERTY_TYPE' => 'E',
-                    'MULTIPLE' => 'Y',
+                    'MULTIPLE' => 'N',
                     'MULTIPLE_CNT' => 1,
                     'IS_REQUIRED' => 'N',
                     'SORT' => 999,
                     'COL_COUNT' => 1,
-                    'LINK_IBLOCK_ID' => $detailsVariantsIblockId,
+                    'LINK_IBLOCK_ID' => $bundlesIblockId,
                 ];
                 
                 $ibp = new \CIBlockProperty();
@@ -912,10 +1018,10 @@ switch ($currentStep) {
             }
         } else {
             if ($skuIblockId <= 0) {
-                installLog("  → Пропуск создания DETAILS_VARIANTS: SKU Iblock ID не задан", 'warning');
+                installLog("  → Пропуск создания BUNDLE: SKU Iblock ID не задан", 'warning');
             }
-            if ($detailsVariantsIblockId <= 0) {
-                installLog("  → Пропуск создания DETAILS_VARIANTS: CALC_DETAILS_VARIANTS не создан", 'warning');
+            if ($bundlesIblockId <= 0) {
+                installLog("  → Пропуск создания BUNDLE: CALC_BUNDLES не создан", 'warning');
             }
         }
         
