@@ -48,7 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && check_bitrix_sessid()) {
     Option::set($module_id, 'IBLOCK_DETAILS', (int)($_POST['IBLOCK_DETAILS'] ?? 0));
     Option::set($module_id, 'IBLOCK_CALCULATORS', (int)($_POST['IBLOCK_CALCULATORS'] ?? 0));
     Option::set($module_id, 'IBLOCK_CONFIGURATIONS', (int)($_POST['IBLOCK_CONFIGURATIONS'] ?? 0));
-    Option::set($module_id, 'PROPERTY_CONFIG_ID', (string)($_POST['PROPERTY_CONFIG_ID'] ?? 'CONFIG_ID'));
 
     // Сохраняем настройки связей ТП
     Option::set($module_id, 'FORMAT_FIELD_CODE', (string)($_POST['FORMAT_FIELD_CODE'] ?? 'FORMAT'));
@@ -281,13 +280,6 @@ $tabControl->Begin();
         <td><?= Loc::getMessage('PROSPEKTWEB_CALC_IBLOCK_CONFIGURATIONS_INTEGRATION') ?></td>
         <td>
             <input type="number" name="IBLOCK_CONFIGURATIONS" value="<?= (int)Option::get($module_id, 'IBLOCK_CONFIGURATIONS', 0) ?>" min="0" style="width: 100px;">
-        </td>
-    </tr>
-
-    <tr>
-        <td><?= Loc::getMessage('PROSPEKTWEB_CALC_PROPERTY_CONFIG_ID') ?></td>
-        <td>
-            <input type="text" name="PROPERTY_CONFIG_ID" value="<?= htmlspecialcharsbx(Option::get($module_id, 'PROPERTY_CONFIG_ID', 'CONFIG_ID')) ?>" style="width: 200px;">
         </td>
     </tr>
 

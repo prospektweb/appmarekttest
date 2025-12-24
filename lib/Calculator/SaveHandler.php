@@ -48,17 +48,17 @@ class SaveHandler
             $db->startTransaction();
 
             try {
-                // Обработка конфигурации
-                $configId = $this->saveConfiguration($mode, $configuration);
+                // Обработка сборки
+                $bundleId = $this->saveBundle($mode, $configuration);
 
                 // Обновление торговых предложений
-                $result = $this->updateOffers($offerUpdates, $configId);
+                $result = $this->updateOffers($offerUpdates, $bundleId);
 
                 $db->commitTransaction();
 
                 return [
                     'status' => $result['hasErrors'] ? 'partial' : 'ok',
-                    'configId' => $configId,
+                    'bundleId' => $bundleId,
                     'successOffers' => $result['successOffers'],
                     'errors' => $result['errors'],
                     'message' => $result['hasErrors'] 
@@ -87,7 +87,7 @@ class SaveHandler
      */
     private function validatePayload(array $payload): void
     {
-        if (empty($payload['mode']) || !in_array($payload['mode'], ['NEW_CONFIG', 'EXISTING_CONFIG'])) {
+        if (empty($payload['mode']) || !in_array($payload['mode'], ['NEW_BUNDLE', 'EXISTING_BUNDLE'])) {
             throw new \Exception('Некорректный режим сохранения');
         }
 
@@ -101,58 +101,60 @@ class SaveHandler
     }
 
     /**
-     * Сохранить конфигурацию
+     * Сохранить сборку
      *
      * @param string $mode
      * @param array $configuration
-     * @return int ID конфигурации
+     * @return int ID сборки
      * @throws \Exception
      */
-    private function saveConfiguration(string $mode, array $configuration): int
+    private function saveBundle(string $mode, array $configuration): int
     {
-        $iblockId = (int)Option::get(self::MODULE_ID, 'IBLOCK_CONFIGURATIONS', 0);
+        $configManager = new \Prospektweb\Calc\Config\ConfigManager();
+        $iblockId = $configManager->getIblockId('CALC_BUNDLES');
+        
         if ($iblockId <= 0) {
-            throw new \Exception('Инфоблок конфигураций не настроен');
+            throw new \Exception('Инфоблок сборок не настроен');
         }
 
         $el = new \CIBlockElement();
 
-        if ($mode === 'NEW_CONFIG') {
-            // Создаём новую конфигурацию
+        if ($mode === 'NEW_BUNDLE') {
+            // Создаём новую сборку
             $fields = [
                 'IBLOCK_ID' => $iblockId,
-                'NAME' => $configuration['name'] ?? 'Конфигурация ' . date('Y-m-d H:i:s'),
+                'NAME' => $configuration['name'] ?? 'Сборка ' . date('Y-m-d H:i:s'),
                 'ACTIVE' => 'Y',
                 'DETAIL_TEXT' => json_encode($configuration['data'] ?? [], JSON_UNESCAPED_UNICODE),
                 'DETAIL_TEXT_TYPE' => 'text',
             ];
 
-            $configId = $el->Add($fields);
-            if (!$configId) {
-                throw new \Exception('Ошибка создания конфигурации: ' . $el->LAST_ERROR);
+            $bundleId = $el->Add($fields);
+            if (!$bundleId) {
+                throw new \Exception('Ошибка создания сборки: ' . $el->LAST_ERROR);
             }
 
-            $this->logInfo('Created new configuration: ' . $configId);
-            return (int)$configId;
+            $this->logInfo('Created new bundle: ' . $bundleId);
+            return (int)$bundleId;
         } else {
-            // Обновляем существующую конфигурацию
-            $configId = (int)($configuration['id'] ?? 0);
-            if ($configId <= 0) {
-                throw new \Exception('ID конфигурации не указан для режима EXISTING_CONFIG');
+            // Обновляем существующую сборку
+            $bundleId = (int)($configuration['id'] ?? 0);
+            if ($bundleId <= 0) {
+                throw new \Exception('ID сборки не указан для режима EXISTING_BUNDLE');
             }
 
             $fields = [
-                'NAME' => $configuration['name'] ?? 'Конфигурация',
+                'NAME' => $configuration['name'] ?? 'Сборка',
                 'DETAIL_TEXT' => json_encode($configuration['data'] ?? [], JSON_UNESCAPED_UNICODE),
                 'DETAIL_TEXT_TYPE' => 'text',
             ];
 
-            if (!$el->Update($configId, $fields)) {
-                throw new \Exception('Ошибка обновления конфигурации: ' . $el->LAST_ERROR);
+            if (!$el->Update($bundleId, $fields)) {
+                throw new \Exception('Ошибка обновления сборки: ' . $el->LAST_ERROR);
             }
 
-            $this->logInfo('Updated configuration: ' . $configId);
-            return $configId;
+            $this->logInfo('Updated bundle: ' . $bundleId);
+            return $bundleId;
         }
     }
 
@@ -160,14 +162,13 @@ class SaveHandler
      * Обновить торговые предложения
      *
      * @param array $offerUpdates
-     * @param int $configId
+     * @param int $bundleId
      * @return array
      */
-    private function updateOffers(array $offerUpdates, int $configId): array
+    private function updateOffers(array $offerUpdates, int $bundleId): array
     {
         $successOffers = [];
         $errors = [];
-        $propertyConfigId = Option::get(self::MODULE_ID, 'PROPERTY_CONFIG_ID', 'CONFIG_ID');
 
         foreach ($offerUpdates as $update) {
             $offerId = (int)($update['id'] ?? 0);
@@ -181,9 +182,9 @@ class SaveHandler
             }
 
             try {
-                // Привязываем конфигурацию к ТП
+                // Привязываем сборку к ТП
                 \CIBlockElement::SetPropertyValuesEx($offerId, false, [
-                    $propertyConfigId => $configId,
+                    'BUNDLE' => $bundleId,
                 ]);
 
                 // Обновляем свойства

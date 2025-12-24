@@ -33,7 +33,6 @@ $MESS['PROSPEKTWEB_CALC_IBLOCK_EQUIPMENT_INTEGRATION'] = 'ID инфоблока 
 $MESS['PROSPEKTWEB_CALC_IBLOCK_DETAILS_INTEGRATION'] = 'ID инфоблока деталей (для интеграции)';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_CALCULATORS_INTEGRATION'] = 'ID инфоблока калькуляторов (для интеграции)';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_CONFIGURATIONS_INTEGRATION'] = 'ID инфоблока конфигураций (для интеграции)';
-$MESS['PROSPEKTWEB_CALC_PROPERTY_CONFIG_ID'] = 'Код свойства для привязки конфигурации';
 
 // Настройки связей торговых предложений
 $MESS['PROSPEKTWEB_CALC_TAB_OFFERS'] = 'Связи ТП';
