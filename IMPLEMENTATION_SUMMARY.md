@@ -2,36 +2,66 @@
 
 ## Overview
 
-Successfully implemented a complete integration between Bitrix and a React calculator application using the postMessage API protocol. The implementation follows all requirements from the specification and includes security, error handling, logging, and comprehensive documentation.
+Successfully implemented a complete integration between Bitrix and a React calculator application using the postMessage API protocol. The implementation includes a comprehensive bundle management system with automatic temporary bundle rotation, conflict detection, and flexible save/finalize workflow.
 
-## Files Created
+## Architecture Changes: CONFIG → BUNDLE
+
+The system has been refactored to use "bundles" (сборки) instead of "configs" (конфигурации). Key changes:
+
+### Bundle Management
+- **Temporary Bundles**: Automatically created when opening calculator
+- **Bundle Rotation**: Old temporary bundles are automatically deleted when limit is reached
+- **Conflict Detection**: Warns when offers have different bundles
+- **Bundle Finalization**: Temporary bundles can be moved to permanent storage
+
+### No More "Mode"
+- Removed `mode` field from payload (was NEW_BUNDLE/EXISTING_BUNDLE)
+- System automatically determines what to do based on bundle state
+- Always creates or uses a bundle - simpler logic
+
+### Property Renaming
+- `structure` → `json` (bundle property for custom data)
+- More flexible, can store any JSON data
+
+## Files Created/Modified
 
 ### 1. Configuration Files
 
-- **default_option.php** - Added default settings for integration iblock IDs
-- **options.php** - Added new "Integration" tab with iblock ID settings
-- **lang/ru/options.php** - Added Russian translations for new settings
+- **default_option.php** - Added temp bundle settings (TEMP_BUNDLES_LIMIT, TEMP_BUNDLES_SECTION_ID)
+- **options.php** - Added UI for temp bundles configuration with section selector
+- **lang/ru/options.php** - Added translations for new settings
 - **include.php** - Registered new PHP classes for autoloading
 
 ### 2. PHP Backend Services
 
+#### lib/Calculator/BundleHandler.php
+- NEW: Complete bundle management system
+- Creates temporary bundles with automatic rotation
+- Saves bundle data with linked elements
+- Finalizes bundles (moves from temp to permanent)
+- Deletes bundles and clears offer links
+- Checks if bundle is temporary
+- Loads bundle summaries for conflict detection
+- Maps linkedElements to property codes
+
 #### lib/Calculator/InitPayloadService.php
 - Prepares INIT payload for React application
 - Loads offer data from Bitrix catalog
-- Determines mode: NEW_BUNDLE or EXISTING_BUNDLE
-- Loads existing bundle if available
+- CHANGED: Analyzes bundle conflicts across offers
+- CHANGED: Returns requiresConfirmation for conflicts
+- CHANGED: Supports force parameter for conflict resolution
+- CHANGED: Always creates or uses bundle (no mode)
+- CHANGED: Loads bundle with json property instead of structure
+- CHANGED: Adds isTemporary flag to bundle data
 - Collects iblock IDs from module settings
 - Builds context with user, site, language info
 
 #### lib/Calculator/SaveHandler.php
-- Handles SAVE_REQUEST from React application
-- Validates incoming payload
-- Manages configuration creation/update in iblock
-- Updates offer properties and fields
-- Updates prices through Bitrix API
-- Transaction support with rollback on errors
-- Detailed error tracking per offer
-- Cached logging for performance
+- SIMPLIFIED: Now delegates to BundleHandler
+- Validates bundleId in payload
+- No longer manages transactions directly
+- No longer updates offers or prices
+- Focused on validation and delegation
 
 ### 3. AJAX Endpoint
 
@@ -40,7 +70,7 @@ Successfully implemented a complete integration between Bitrix and a React calcu
 - User authentication check
 - Permission validation (edit_catalog)
 - CSRF protection via sessid
-- Action routing (getInitData, save)
+- CHANGED: Action routing (getInitData with force, saveBundle, finalizeBundle)
 - JSON response formatting
 - Request logging
 - Error handling
