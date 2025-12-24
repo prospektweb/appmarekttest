@@ -233,6 +233,30 @@
                 case 'SYNC_VARIANTS_REQUEST':
                     await this.handleSyncVariantsRequest(message, origin);
                     break;
+                case 'GET_DETAIL_REQUEST':
+                    await this.handleGetDetailRequest(message, origin);
+                    break;
+                case 'ADD_NEW_DETAIL_REQUEST':
+                    await this.handleAddNewDetailRequest(message, origin);
+                    break;
+                case 'COPY_DETAIL_REQUEST':
+                    await this.handleCopyDetailRequest(message, origin);
+                    break;
+                case 'ADD_NEW_GROUP_REQUEST':
+                    await this.handleAddNewGroupRequest(message, origin);
+                    break;
+                case 'ADD_NEW_STAGE_REQUEST':
+                    await this.handleAddNewStageRequest(message, origin);
+                    break;
+                case 'DELETE_STAGE_REQUEST':
+                    await this.handleDeleteStageRequest(message, origin);
+                    break;
+                case 'DELETE_DETAIL_REQUEST':
+                    await this.handleDeleteDetailRequest(message, origin);
+                    break;
+                case 'CHANGE_NAME_DETAIL_REQUEST':
+                    await this.handleChangeNameDetailRequest(message, origin);
+                    break;
                 case 'CLOSE_REQUEST':
                     this.handleCloseRequest(message);
                     break;
@@ -242,7 +266,10 @@
                         'SELECT_REQUEST', 'REFRESH_REQUEST', 'ADD_OFFER_REQUEST', 
                         'REMOVE_OFFER_REQUEST', 'CALC_SETTINGS_REQUEST', 'CALC_EQUIPMENT_REQUEST',
                         'CALC_MATERIAL_VARIANT_REQUEST', 'CALC_OPERATION_VARIANT_REQUEST', 
-                        'SYNC_VARIANTS_REQUEST', 'CLOSE_REQUEST'
+                        'SYNC_VARIANTS_REQUEST', 'GET_DETAIL_REQUEST', 'ADD_NEW_DETAIL_REQUEST', 
+                        'COPY_DETAIL_REQUEST', 'ADD_NEW_GROUP_REQUEST', 'ADD_NEW_STAGE_REQUEST', 
+                        'DELETE_STAGE_REQUEST', 'DELETE_DETAIL_REQUEST', 'CHANGE_NAME_DETAIL_REQUEST', 
+                        'CLOSE_REQUEST'
                     ]);
             }
         }
@@ -563,6 +590,428 @@
                         items: [],
                         canCalculate: false,
                         stats: {},
+                    },
+                    message.requestId,
+                    origin
+                );
+            }
+        }
+
+        /**
+         * Обработка запроса получения детали с вложенными элементами
+         */
+        async handleGetDetailRequest(message, origin) {
+            console.log('[BitrixBridge][DEBUG] handleGetDetailRequest START', {
+                messageType: message.type,
+                payload: message.payload,
+                origin: origin,
+            });
+
+            const payload = message.payload || {};
+
+            try {
+                const result = await this.fetchRefreshData([
+                    {
+                        action: 'getDetailWithChildren',
+                        detailId: payload.detailId || 0,
+                    }
+                ]);
+
+                const responsePayload = (Array.isArray(result) && result[0])
+                    ? result[0]
+                    : { status: 'error', message: 'Empty response' };
+
+                console.log('[BitrixBridge][DEBUG] Sending GET_DETAIL_RESPONSE', {
+                    requestId: message.requestId,
+                    status: responsePayload.status,
+                });
+
+                this.sendPwrtMessage('GET_DETAIL_RESPONSE', responsePayload, message.requestId, origin);
+
+                console.log('[BitrixBridge][DEBUG] handleGetDetailRequest END - success');
+
+            } catch (error) {
+                console.error('[BitrixBridge][DEBUG] handleGetDetailRequest ERROR', {
+                    error: error,
+                    message: error.message,
+                });
+
+                this.sendPwrtMessage(
+                    'GET_DETAIL_RESPONSE',
+                    {
+                        status: 'error',
+                        message: error && error.message ? error.message : 'Unknown error',
+                    },
+                    message.requestId,
+                    origin
+                );
+            }
+        }
+
+        /**
+         * Обработка запроса создания новой детали
+         */
+        async handleAddNewDetailRequest(message, origin) {
+            console.log('[BitrixBridge][DEBUG] handleAddNewDetailRequest START', {
+                messageType: message.type,
+                payload: message.payload,
+                origin: origin,
+            });
+
+            const payload = message.payload || {};
+
+            try {
+                // Используем fetchRefreshData с action
+                const result = await this.fetchRefreshData([
+                    {
+                        action: 'addNewDetail',
+                        offerIds: payload.offerIds || [],
+                        name: payload.name || '',
+                    }
+                ]);
+
+                console.log('[BitrixBridge][DEBUG] handleAddNewDetailRequest result:', {
+                    isArray: Array.isArray(result),
+                    length: Array.isArray(result) ? result.length : 0,
+                    firstItem: Array.isArray(result) && result[0] ? result[0] : null,
+                });
+
+                // Ответ будет в result[0]
+                const responsePayload = (Array.isArray(result) && result[0])
+                    ? result[0]
+                    : { status: 'error', message: 'Empty response' };
+
+                console.log('[BitrixBridge][DEBUG] Sending ADD_NEW_DETAIL_RESPONSE', {
+                    requestId: message.requestId,
+                    status: responsePayload.status,
+                });
+
+                this.sendPwrtMessage('ADD_NEW_DETAIL_RESPONSE', responsePayload, message.requestId, origin);
+
+                console.log('[BitrixBridge][DEBUG] handleAddNewDetailRequest END - success');
+
+            } catch (error) {
+                console.error('[BitrixBridge][DEBUG] handleAddNewDetailRequest ERROR', {
+                    error: error,
+                    message: error.message,
+                });
+
+                this.sendPwrtMessage(
+                    'ADD_NEW_DETAIL_RESPONSE',
+                    {
+                        status: 'error',
+                        message: error && error.message ? error.message : 'Unknown error',
+                    },
+                    message.requestId,
+                    origin
+                );
+            }
+        }
+
+        /**
+         * Обработка запроса копирования детали
+         */
+        async handleCopyDetailRequest(message, origin) {
+            console.log('[BitrixBridge][DEBUG] handleCopyDetailRequest START', {
+                messageType: message.type,
+                payload: message.payload,
+                origin: origin,
+            });
+
+            const payload = message.payload || {};
+
+            try {
+                const result = await this.fetchRefreshData([
+                    {
+                        action: 'copyDetail',
+                        detailId: payload.detailId || 0,
+                        offerIds: payload.offerIds || [],
+                    }
+                ]);
+
+                const responsePayload = (Array.isArray(result) && result[0])
+                    ? result[0]
+                    : { status: 'error', message: 'Empty response' };
+
+                console.log('[BitrixBridge][DEBUG] Sending COPY_DETAIL_RESPONSE', {
+                    requestId: message.requestId,
+                    status: responsePayload.status,
+                });
+
+                this.sendPwrtMessage('COPY_DETAIL_RESPONSE', responsePayload, message.requestId, origin);
+
+                console.log('[BitrixBridge][DEBUG] handleCopyDetailRequest END - success');
+
+            } catch (error) {
+                console.error('[BitrixBridge][DEBUG] handleCopyDetailRequest ERROR', {
+                    error: error,
+                    message: error.message,
+                });
+
+                this.sendPwrtMessage(
+                    'COPY_DETAIL_RESPONSE',
+                    {
+                        status: 'error',
+                        message: error && error.message ? error.message : 'Unknown error',
+                    },
+                    message.requestId,
+                    origin
+                );
+            }
+        }
+
+        /**
+         * Обработка запроса создания группы скрепления
+         */
+        async handleAddNewGroupRequest(message, origin) {
+            console.log('[BitrixBridge][DEBUG] handleAddNewGroupRequest START', {
+                messageType: message.type,
+                payload: message.payload,
+                origin: origin,
+            });
+
+            const payload = message.payload || {};
+
+            try {
+                const result = await this.fetchRefreshData([
+                    {
+                        action: 'addNewGroup',
+                        offerIds: payload.offerIds || [],
+                        detailIds: payload.detailIds || [],
+                        name: payload.name || 'Группа скрепления',
+                    }
+                ]);
+
+                const responsePayload = (Array.isArray(result) && result[0])
+                    ? result[0]
+                    : { status: 'error', message: 'Empty response' };
+
+                console.log('[BitrixBridge][DEBUG] Sending ADD_NEW_GROUP_RESPONSE', {
+                    requestId: message.requestId,
+                    status: responsePayload.status,
+                });
+
+                this.sendPwrtMessage('ADD_NEW_GROUP_RESPONSE', responsePayload, message.requestId, origin);
+
+                console.log('[BitrixBridge][DEBUG] handleAddNewGroupRequest END - success');
+
+            } catch (error) {
+                console.error('[BitrixBridge][DEBUG] handleAddNewGroupRequest ERROR', {
+                    error: error,
+                    message: error.message,
+                });
+
+                this.sendPwrtMessage(
+                    'ADD_NEW_GROUP_RESPONSE',
+                    {
+                        status: 'error',
+                        message: error && error.message ? error.message : 'Unknown error',
+                    },
+                    message.requestId,
+                    origin
+                );
+            }
+        }
+
+        /**
+         * Обработка запроса добавления нового этапа
+         */
+        async handleAddNewStageRequest(message, origin) {
+            console.log('[BitrixBridge][DEBUG] handleAddNewStageRequest START', {
+                messageType: message.type,
+                payload: message.payload,
+                origin: origin,
+            });
+
+            const payload = message.payload || {};
+
+            try {
+                const result = await this.fetchRefreshData([
+                    {
+                        action: 'addNewStage',
+                        detailId: payload.detailId || 0,
+                    }
+                ]);
+
+                const responsePayload = (Array.isArray(result) && result[0])
+                    ? result[0]
+                    : { status: 'error', message: 'Empty response' };
+
+                console.log('[BitrixBridge][DEBUG] Sending ADD_NEW_STAGE_RESPONSE', {
+                    requestId: message.requestId,
+                    status: responsePayload.status,
+                });
+
+                this.sendPwrtMessage('ADD_NEW_STAGE_RESPONSE', responsePayload, message.requestId, origin);
+
+                console.log('[BitrixBridge][DEBUG] handleAddNewStageRequest END - success');
+
+            } catch (error) {
+                console.error('[BitrixBridge][DEBUG] handleAddNewStageRequest ERROR', {
+                    error: error,
+                    message: error.message,
+                });
+
+                this.sendPwrtMessage(
+                    'ADD_NEW_STAGE_RESPONSE',
+                    {
+                        status: 'error',
+                        message: error && error.message ? error.message : 'Unknown error',
+                    },
+                    message.requestId,
+                    origin
+                );
+            }
+        }
+
+        /**
+         * Обработка запроса удаления этапа
+         */
+        async handleDeleteStageRequest(message, origin) {
+            console.log('[BitrixBridge][DEBUG] handleDeleteStageRequest START', {
+                messageType: message.type,
+                payload: message.payload,
+                origin: origin,
+            });
+
+            const payload = message.payload || {};
+
+            try {
+                const result = await this.fetchRefreshData([
+                    {
+                        action: 'deleteStage',
+                        configId: payload.configId || 0,
+                        detailId: payload.detailId || 0,
+                    }
+                ]);
+
+                const responsePayload = (Array.isArray(result) && result[0])
+                    ? result[0]
+                    : { status: 'error', message: 'Empty response' };
+
+                console.log('[BitrixBridge][DEBUG] Sending DELETE_STAGE_RESPONSE', {
+                    requestId: message.requestId,
+                    status: responsePayload.status,
+                });
+
+                this.sendPwrtMessage('DELETE_STAGE_RESPONSE', responsePayload, message.requestId, origin);
+
+                console.log('[BitrixBridge][DEBUG] handleDeleteStageRequest END - success');
+
+            } catch (error) {
+                console.error('[BitrixBridge][DEBUG] handleDeleteStageRequest ERROR', {
+                    error: error,
+                    message: error.message,
+                });
+
+                this.sendPwrtMessage(
+                    'DELETE_STAGE_RESPONSE',
+                    {
+                        status: 'error',
+                        message: error && error.message ? error.message : 'Unknown error',
+                    },
+                    message.requestId,
+                    origin
+                );
+            }
+        }
+
+        /**
+         * Обработка запроса удаления детали
+         */
+        async handleDeleteDetailRequest(message, origin) {
+            console.log('[BitrixBridge][DEBUG] handleDeleteDetailRequest START', {
+                messageType: message.type,
+                payload: message.payload,
+                origin: origin,
+            });
+
+            const payload = message.payload || {};
+
+            try {
+                const result = await this.fetchRefreshData([
+                    {
+                        action: 'deleteDetail',
+                        detailId: payload.detailId || 0,
+                    }
+                ]);
+
+                const responsePayload = (Array.isArray(result) && result[0])
+                    ? result[0]
+                    : { status: 'error', message: 'Empty response' };
+
+                console.log('[BitrixBridge][DEBUG] Sending DELETE_DETAIL_RESPONSE', {
+                    requestId: message.requestId,
+                    status: responsePayload.status,
+                });
+
+                this.sendPwrtMessage('DELETE_DETAIL_RESPONSE', responsePayload, message.requestId, origin);
+
+                console.log('[BitrixBridge][DEBUG] handleDeleteDetailRequest END - success');
+
+            } catch (error) {
+                console.error('[BitrixBridge][DEBUG] handleDeleteDetailRequest ERROR', {
+                    error: error,
+                    message: error.message,
+                });
+
+                this.sendPwrtMessage(
+                    'DELETE_DETAIL_RESPONSE',
+                    {
+                        status: 'error',
+                        message: error && error.message ? error.message : 'Unknown error',
+                    },
+                    message.requestId,
+                    origin
+                );
+            }
+        }
+
+        /**
+         * Обработка запроса изменения имени детали
+         */
+        async handleChangeNameDetailRequest(message, origin) {
+            console.log('[BitrixBridge][DEBUG] handleChangeNameDetailRequest START', {
+                messageType: message.type,
+                payload: message.payload,
+                origin: origin,
+            });
+
+            const payload = message.payload || {};
+
+            try {
+                const result = await this.fetchRefreshData([
+                    {
+                        action: 'changeNameDetail',
+                        detailId: payload.detailId || 0,
+                        newName: payload.newName || '',
+                    }
+                ]);
+
+                const responsePayload = (Array.isArray(result) && result[0])
+                    ? result[0]
+                    : { status: 'error', message: 'Empty response' };
+
+                console.log('[BitrixBridge][DEBUG] Sending CHANGE_NAME_DETAIL_RESPONSE', {
+                    requestId: message.requestId,
+                    status: responsePayload.status,
+                });
+
+                this.sendPwrtMessage('CHANGE_NAME_DETAIL_RESPONSE', responsePayload, message.requestId, origin);
+
+                console.log('[BitrixBridge][DEBUG] handleChangeNameDetailRequest END - success');
+
+            } catch (error) {
+                console.error('[BitrixBridge][DEBUG] handleChangeNameDetailRequest ERROR', {
+                    error: error,
+                    message: error.message,
+                });
+
+                this.sendPwrtMessage(
+                    'CHANGE_NAME_DETAIL_RESPONSE',
+                    {
+                        status: 'error',
+                        message: error && error.message ? error.message : 'Unknown error',
                     },
                     message.requestId,
                     origin

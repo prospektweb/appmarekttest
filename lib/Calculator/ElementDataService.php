@@ -17,11 +17,66 @@ class ElementDataService
         $result = [];
 
         foreach ($requests as $request) {
-            // Проверяем специальный action для syncVariants
-            if (isset($request['action']) && $request['action'] === 'syncVariants') {
-                $handler = new \Prospektweb\Calc\Services\SyncVariantsHandler();
-                $result[] = $handler->handle($request);
-                continue;
+            // Проверяем специальные actions
+            if (isset($request['action'])) {
+                switch ($request['action']) {
+                    case 'syncVariants':
+                        $handler = new \Prospektweb\Calc\Services\SyncVariantsHandler();
+                        $result[] = $handler->handle($request);
+                        continue 2;
+                        
+                    case 'addNewDetail':
+                        $handler = new \Prospektweb\Calc\Services\DetailHandler();
+                        $result[] = $handler->addDetail($request);
+                        continue 2;
+                        
+                    case 'copyDetail':
+                        $handler = new \Prospektweb\Calc\Services\DetailHandler();
+                        $result[] = $handler->copyDetail($request);
+                        continue 2;
+                        
+                    case 'addNewGroup':
+                        $handler = new \Prospektweb\Calc\Services\DetailHandler();
+                        $result[] = $handler->addGroup($request);
+                        continue 2;
+                        
+                    case 'addNewStage':
+                        $handler = new \Prospektweb\Calc\Services\DetailHandler();
+                        $result[] = $handler->addStage($request);
+                        continue 2;
+                        
+                    case 'deleteStage':
+                        $handler = new \Prospektweb\Calc\Services\DetailHandler();
+                        $result[] = $handler->deleteStage($request);
+                        continue 2;
+                        
+                    case 'deleteDetail':
+                        $handler = new \Prospektweb\Calc\Services\DetailHandler();
+                        $result[] = $handler->deleteDetail($request);
+                        continue 2;
+                        
+                    case 'changeNameDetail':
+                        $handler = new \Prospektweb\Calc\Services\DetailHandler();
+                        $result[] = $handler->changeName($request);
+                        continue 2;
+                        
+                    case 'getDetailWithChildren':
+                        $handler = new \Prospektweb\Calc\Services\DetailHandler();
+                        $detailId = (int)($request['detailId'] ?? 0);
+                        $detailData = $handler->getDetailWithChildren($detailId);
+                        if ($detailData) {
+                            $result[] = [
+                                'status' => 'ok',
+                                'detail' => $detailData,
+                            ];
+                        } else {
+                            $result[] = [
+                                'status' => 'error',
+                                'message' => 'Деталь не найдена',
+                            ];
+                        }
+                        continue 2;
+                }
             }
 
             $iblockId = isset($request['iblockId']) ? (int)$request['iblockId'] : 0;
