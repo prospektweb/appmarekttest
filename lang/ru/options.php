@@ -12,6 +12,7 @@ $MESS['PROSPEKTWEB_CALC_DEFAULT_PRICE_TYPE'] = 'Тип цены по умолч�
 $MESS['PROSPEKTWEB_CALC_DEFAULT_CURRENCY'] = 'Валюта по умолчанию';
 $MESS['PROSPEKTWEB_CALC_LOGGING_ENABLED'] = 'Включить логирование';
 
+$MESS['PROSPEKTWEB_CALC_IBLOCK_BUNDLES'] = 'Сборки для расчётов';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_CALC_CONFIG'] = 'Конфигурации калькуляций';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_CALC_SETTINGS'] = 'Настройки калькуляторов';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_MATERIALS'] = 'Материалы';
