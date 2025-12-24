@@ -239,8 +239,8 @@ class SyncVariantsHandler
             'OPERATION_VARIANT' => $calc['operationVariantId'] ?? null,
             'MATERIAL_VARIANT' => $calc['materialVariantId'] ?? null,
             'EQUIPMENT' => $calc['equipmentId'] ?? null,
-            'OPERATION_QUANTITY' => $calc['operationQuantity'] ?? null,
-            'MATERIAL_QUANTITY' => $calc['materialQuantity'] ?? null,
+            'QUANTITY_OPERATION_VARIANT' => $calc['operationQuantity'] ?? 1,
+            'QUANTITY_MATERIAL_VARIANT' => $calc['materialQuantity'] ?? 1,
         ];
         
         // Сохраняем OTHER_OPTIONS как JSON
