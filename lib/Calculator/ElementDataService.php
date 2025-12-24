@@ -76,6 +76,11 @@ class ElementDataService
                             ];
                         }
                         continue 2;
+                        
+                    case 'activatePricePanel':
+                        $handler = new \Prospektweb\Calc\Services\PricePanelHandler();
+                        $result[] = $handler->handleActivation($request);
+                        continue 2;
                 }
             }
 
