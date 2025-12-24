@@ -195,27 +195,21 @@ class Installer
             return;
         }
 
-        // Добавляем свойство CONFIG_ID
-        $configPropId = $this->propertyCreator->addCalcConfigProperty($skuIblockId);
-        if ($configPropId > 0) {
-            $this->log[] = "Добавлено свойство CALC_CONFIG_ID в инфоблок ТП (ID: {$configPropId})";
-        }
-
-        // Добавляем свойство DETAILS_VARIANTS
-        $detailsVariantsId = (int)($iblockIds['CALC_DETAILS_VARIANTS'] ?? 0);
+        // Добавляем свойство BUNDLE
+        $bundlesId = (int)($iblockIds['CALC_BUNDLES'] ?? 0);
         
-        $this->log[] = "Попытка создания DETAILS_VARIANTS: SKU ID={$skuIblockId}, CALC_DETAILS_VARIANTS ID={$detailsVariantsId}";
+        $this->log[] = "Попытка создания свойства BUNDLE: SKU ID={$skuIblockId}, CALC_BUNDLES ID={$bundlesId}";
         
-        if ($detailsVariantsId > 0) {
-            $propId = $this->propertyCreator->addDetailsVariantsProperty($skuIblockId, $detailsVariantsId);
+        if ($bundlesId > 0) {
+            $propId = $this->propertyCreator->addDetailsVariantsProperty($skuIblockId, $bundlesId);
             
             if ($propId > 0) {
-                $this->log[] = "Добавлено свойство DETAILS_VARIANTS в инфоблок ТП (ID свойства: {$propId})";
+                $this->log[] = "Добавлено свойство BUNDLE в инфоблок ТП (ID свойства: {$propId})";
             } else {
-                $this->errors[] = "Не удалось создать свойство DETAILS_VARIANTS (SKU ID={$skuIblockId}, Link ID={$detailsVariantsId})";
+                $this->errors[] = "Не удалось создать свойство BUNDLE (SKU ID={$skuIblockId}, Link ID={$bundlesId})";
             }
         } else {
-            $this->errors[] = "CALC_DETAILS_VARIANTS iblock ID is empty or 0. Available iblock_ids: " . json_encode(array_keys($iblockIds));
+            $this->errors[] = "CALC_BUNDLES iblock ID is empty or 0. Available iblock_ids: " . json_encode(array_keys($iblockIds));
         }
     }
 
