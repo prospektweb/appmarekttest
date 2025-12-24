@@ -474,18 +474,54 @@ class DetailHandler
     // ========== Вспомогательные методы ==========
 
     /**
+     * Получить ID значения списочного свойства по XML_ID
+     * 
+     * @param int $iblockId ID инфоблока
+     * @param string $propertyCode Код свойства
+     * @param string $xmlId XML_ID значения
+     * @return int|null ID значения или null
+     */
+    private function getListPropertyValueId(int $iblockId, string $propertyCode, string $xmlId): ?int
+    {
+        $rsProperty = \CIBlockProperty::GetList(
+            [],
+            ['IBLOCK_ID' => $iblockId, 'CODE' => $propertyCode]
+        );
+        
+        if ($arProperty = $rsProperty->Fetch()) {
+            // Проверяем, что это свойство типа "Список"
+            if ($arProperty['PROPERTY_TYPE'] === 'L') {
+                $rsPropertyEnum = \CIBlockPropertyEnum::GetList(
+                    [],
+                    ['IBLOCK_ID' => $iblockId, 'PROPERTY_ID' => $arProperty['ID'], 'XML_ID' => $xmlId]
+                );
+                
+                if ($arEnum = $rsPropertyEnum->Fetch()) {
+                    return (int)$arEnum['ID'];
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
      * Создать элемент детали
      */
     private function createDetailElement(string $name, string $type): ?int
     {
         $el = new \CIBlockElement();
         
+        // Получаем ID значения свойства TYPE по XML_ID
+        // XML_ID для детали: "DETAIL", для группы скрепления: "BINDING"
+        $typeValueId = $this->getListPropertyValueId($this->detailsIblockId, 'TYPE', $type);
+        
         $fields = [
             'IBLOCK_ID' => $this->detailsIblockId,
             'NAME' => $name,
             'ACTIVE' => 'Y',
             'PROPERTY_VALUES' => [
-                'TYPE' => $type,
+                'TYPE' => $typeValueId ?: $type, // Если не нашли ID, используем строку (для совместимости)
             ],
         ];
         

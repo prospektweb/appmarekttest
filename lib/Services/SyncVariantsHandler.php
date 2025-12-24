@@ -181,20 +181,53 @@ class SyncVariantsHandler
     {
         $el = new \CIBlockElement();
         
-        $typeValue = $item['type'] === 'binding' ? 'BINDING' : 'DETAIL';
+        $typeXmlId = $item['type'] === 'binding' ? 'BINDING' : 'DETAIL';
+        $typeValueId = $this->getListPropertyValueId($iblockId, 'TYPE', $typeXmlId);
         
         $fields = [
             'IBLOCK_ID' => $iblockId,
             'NAME' => $item['name'] ?? 'Без названия',
             'ACTIVE' => 'Y',
             'PROPERTY_VALUES' => [
-                'TYPE' => $typeValue,
+                'TYPE' => $typeValueId ?: $typeXmlId,
             ],
         ];
         
         $id = $el->Add($fields);
         
         return $id ? (int)$id : null;
+    }
+    
+    /**
+     * Получить ID значения списочного свойства по XML_ID
+     * 
+     * @param int $iblockId ID инфоблока
+     * @param string $propertyCode Код свойства
+     * @param string $xmlId XML_ID значения
+     * @return int|null ID значения или null
+     */
+    private function getListPropertyValueId(int $iblockId, string $propertyCode, string $xmlId): ?int
+    {
+        $rsProperty = \CIBlockProperty::GetList(
+            [],
+            ['IBLOCK_ID' => $iblockId, 'CODE' => $propertyCode]
+        );
+        
+        if ($arProperty = $rsProperty->Fetch()) {
+            // Проверяем, что это свойство типа "Список"
+            if ($arProperty['PROPERTY_TYPE'] === 'L') {
+                $rsPropertyEnum = \CIBlockPropertyEnum::GetList(
+                    [],
+                    ['IBLOCK_ID' => $iblockId, 'PROPERTY_ID' => $arProperty['ID'], 'XML_ID' => $xmlId]
+                );
+                
+                if ($arEnum = $rsPropertyEnum->Fetch()) {
+                    return (int)$arEnum['ID'];
+                }
+            }
+        }
+        
+        return null;
     }
     
     /**
