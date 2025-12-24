@@ -27,7 +27,7 @@ A new service that handles synchronization of variants (детали и скре
 **Features:**
 - Creates/updates CALC_DETAILS elements
 - Creates/updates CALC_CONFIG elements with all calculator settings
-- Manages relationships: CALC_CONFIG, CALC_CONFIG_BINDINGS, CALC_CONFIG_BINDINGS_FINISHING, DETAILS
+- Manages relationships: CALC_CONFIG, DETAILS
 - Tracks statistics (created, updated, deleted)
 - Handles errors gracefully
 - Supports both "detail" and "binding" types
@@ -162,7 +162,6 @@ Registered the new `SyncVariantsHandler` class in the autoloader:
 - Has `bindingCalculators` array for binding operations
 - Has `finishingCalculators` array for finishing operations
 - Has `childIds` array for linked detail IDs
-- Configurations linked via `CALC_CONFIG_BINDINGS` and `CALC_CONFIG_BINDINGS_FINISHING` properties
 - Child details linked via `DETAILS` property
 
 ## Data Flow
