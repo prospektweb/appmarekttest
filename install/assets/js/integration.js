@@ -257,6 +257,9 @@
                 case 'CHANGE_NAME_DETAIL_REQUEST':
                     await this.handleChangeNameDetailRequest(message, origin);
                     break;
+                case 'ACTIVATE_PRICE_PANEL_REQUEST':
+                    await this.handleActivatePricePanelRequest(message, origin);
+                    break;
                 case 'CLOSE_REQUEST':
                     this.handleCloseRequest(message);
                     break;
@@ -268,8 +271,8 @@
                         'CALC_MATERIAL_VARIANT_REQUEST', 'CALC_OPERATION_VARIANT_REQUEST', 
                         'SYNC_VARIANTS_REQUEST', 'GET_DETAIL_REQUEST', 'ADD_NEW_DETAIL_REQUEST', 
                         'COPY_DETAIL_REQUEST', 'ADD_NEW_GROUP_REQUEST', 'ADD_NEW_STAGE_REQUEST', 
-                        'DELETE_STAGE_REQUEST', 'DELETE_DETAIL_REQUEST', 'CHANGE_NAME_DETAIL_REQUEST', 
-                        'CLOSE_REQUEST'
+                        'DELETE_STAGE_REQUEST', 'DELETE_DETAIL_REQUEST', 'CHANGE_NAME_DETAIL_REQUEST',
+                        'ACTIVATE_PRICE_PANEL_REQUEST', 'CLOSE_REQUEST'
                     ]);
             }
         }
@@ -1009,6 +1012,61 @@
 
                 this.sendPwrtMessage(
                     'CHANGE_NAME_DETAIL_RESPONSE',
+                    {
+                        status: 'error',
+                        message: error && error.message ? error.message : 'Unknown error',
+                    },
+                    message.requestId,
+                    origin
+                );
+            }
+        }
+
+        /**
+         * Обработка запроса активации панели цен (pricepanel)
+         * Вызывается при выборе калькулятора и заполнении значений по умолчанию
+         */
+        async handleActivatePricePanelRequest(message, origin) {
+            console.log('[BitrixBridge][DEBUG] handleActivatePricePanelRequest START', {
+                messageType: message.type,
+                payload: message.payload,
+                origin: origin,
+            });
+
+            const payload = message.payload || {};
+
+            try {
+                const result = await this.fetchRefreshData([
+                    {
+                        action: 'activatePricePanel',
+                        calculatorSettingsId: payload.calculatorSettingsId || 0,
+                        detailId: payload.detailId || 0,
+                        defaultOperationVariantId: payload.defaultOperationVariantId || null,
+                        defaultMaterialVariantId: payload.defaultMaterialVariantId || null,
+                    }
+                ]);
+
+                const responsePayload = (Array.isArray(result) && result[0])
+                    ? result[0]
+                    : { status: 'error', message: 'Empty response' };
+
+                console.log('[BitrixBridge][DEBUG] Sending ACTIVATE_PRICE_PANEL_RESPONSE', {
+                    requestId: message.requestId,
+                    status: responsePayload.status,
+                });
+
+                this.sendPwrtMessage('ACTIVATE_PRICE_PANEL_RESPONSE', responsePayload, message.requestId, origin);
+
+                console.log('[BitrixBridge][DEBUG] handleActivatePricePanelRequest END - success');
+
+            } catch (error) {
+                console.error('[BitrixBridge][DEBUG] handleActivatePricePanelRequest ERROR', {
+                    error: error,
+                    message: error.message,
+                });
+
+                this.sendPwrtMessage(
+                    'ACTIVATE_PRICE_PANEL_RESPONSE',
                     {
                         status: 'error',
                         message: error && error.message ? error.message : 'Unknown error',
