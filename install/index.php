@@ -429,6 +429,7 @@ class prospektweb_calc extends CModule
 
         // Проверяем наличие инфоблоков
         $iblockCodes = [
+            'CALC_BUNDLES',
             'CALC_CONFIG',
             'CALC_SETTINGS',
             'CALC_MATERIALS',
