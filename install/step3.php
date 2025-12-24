@@ -634,31 +634,15 @@ switch ($currentStep) {
                 'SORT' => 110,
                 'COL_COUNT' => 1,
             ],
-            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1, 'SORT' => 120],
             'DETAILS' => [
-                'NAME' => 'Детали группы',
+                'NAME' => 'Детали группы скрепления',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
                 'MULTIPLE_CNT' => 1,
                 'SORT' => 200,
                 'COL_COUNT' => 1,
             ],
-            'CALC_CONFIG_BINDINGS' => [
-                'NAME' => 'Конфигурации | Скрепление',
-                'TYPE' => 'E',
-                'MULTIPLE' => 'Y',
-                'MULTIPLE_CNT' => 1,
-                'SORT' => 210,
-                'COL_COUNT' => 1,
-            ],
-            'CALC_CONFIG_BINDINGS_FINISHING' => [
-                'NAME' => 'Конфигурации | Финишная обработка',
-                'TYPE' => 'E',
-                'MULTIPLE' => 'Y',
-                'MULTIPLE_CNT' => 1,
-                'SORT' => 220,
-                'COL_COUNT' => 1,
-            ],
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1, 'SORT' => 220],
         ];
 
         $detailsVariantsProps = [
