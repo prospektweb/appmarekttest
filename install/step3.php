@@ -478,16 +478,6 @@ switch ($currentStep) {
                 'TYPE' => 'E',
                 'SORT' => 400,
             ],
-            'OPERATION_QUANTITY' => [
-                'NAME' => 'Количество операций',
-                'TYPE' => 'N',
-                'SORT' => 500,
-            ],
-            'MATERIAL_QUANTITY' => [
-                'NAME' => 'Количество материала',
-                'TYPE' => 'N',
-                'SORT' => 600,
-            ],
             'OTHER_OPTIONS' => [
                 'NAME' => 'Прочие опции (JSON)',
                 'TYPE' => 'S',
