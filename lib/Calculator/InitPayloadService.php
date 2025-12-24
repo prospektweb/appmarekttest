@@ -20,10 +20,11 @@ class InitPayloadService
      *
      * @param array $offerIds ID торговых предложений
      * @param string $siteId ID сайта
+     * @param bool $force Принудительное создание нового bundle (после подтверждения)
      * @return array
      * @throws \Exception
      */
-    public function prepareInitPayload(array $offerIds, string $siteId): array
+    public function prepareInitPayload(array $offerIds, string $siteId, bool $force = false): array
     {
         if (empty($offerIds)) {
             throw new \Exception('Список торговых предложений не может быть пустым');
@@ -32,11 +33,33 @@ class InitPayloadService
         Loader::includeModule('iblock');
         Loader::includeModule('catalog');
 
-        // Собираем информацию о торговых предложениях
+        // Загружаем информацию о ТП
         $selectedOffers = $this->loadOffers($offerIds);
-
-        // Определяем режим работы
-        $mode = $this->determineMode($selectedOffers);
+        
+        // Анализируем состояние BUNDLE у ТП
+        $analysis = $this->analyzeBundles($selectedOffers);
+        
+        // Если конфликт и не подтверждено — возвращаем данные для попапа
+        if ($analysis['scenario'] === 'CONFLICT' && !$force) {
+            return [
+                'requiresConfirmation' => true,
+                'existingBundles' => $analysis['existingBundles'],
+                'offersWithBundle' => $analysis['offersWithBundle'],
+                'offersWithoutBundle' => $analysis['offersWithoutBundle'],
+            ];
+        }
+        
+        // Определяем bundleId
+        $bundleId = $analysis['bundleId'];
+        
+        if ($bundleId === null || $force) {
+            // Создаём новый временный bundle
+            $bundleHandler = new BundleHandler();
+            $bundleId = $bundleHandler->createTemporaryBundle($offerIds);
+        }
+        
+        // Загружаем bundle с данными
+        $bundle = $this->loadBundle($bundleId);
 
         // Собираем контекст
         $context = $this->buildContext($siteId);
@@ -45,25 +68,16 @@ class InitPayloadService
         $iblocks = $this->getIblocks();
         $iblocksTypes = $this->getIblockTypes($iblocks);
 
-        $payload = [
-            'mode' => $mode,
+        // Формируем payload БЕЗ mode!
+        return [
             'context' => $context,
             'iblocks' => $iblocks,
             'iblocksTypes' => $iblocksTypes,
             'iblocksTree' => $this->buildIblocksTree(),
             'selectedOffers' => $selectedOffers,
             'priceTypes' => $this->getPriceTypes(),
+            'bundle' => $bundle,
         ];
-
-        // Если режим EXISTING_BUNDLE - загружаем сборку
-        if ($mode === 'EXISTING_BUNDLE' && !empty($selectedOffers[0]['bundleId'])) {
-            $bundle = $this->loadBundle($selectedOffers[0]['bundleId']);
-            if ($bundle) {
-                $payload['bundle'] = $bundle;
-            }
-        }
-
-        return $payload;
     }
 
     /**
@@ -117,12 +131,11 @@ class InitPayloadService
                 }
             }
 
-            // Получаем свойства элемента
-            $offer = [
+            $offers[] = [
                 'id' => $offerId,
-                'code' => $element['CODE'] ?? null,
-                'productId' => $productId,
+                'iblockId' => (int)$element['IBLOCK_ID'],
                 'name' => $element['NAME'] ?? '',
+                'code' => $element['CODE'] ?? null,
                 'fields' => [
                     'width' => isset($productData['WIDTH']) ? (float)$productData['WIDTH'] : null,
                     'height' => isset($productData['HEIGHT']) ? (float)$productData['HEIGHT'] : null,
@@ -133,15 +146,8 @@ class InitPayloadService
                 'measureRatio' => $measureRatio,
                 'prices' => $prices,
                 'properties' => $properties,
+                // bundleId теперь не нужен в offer, он общий для всех
             ];
-
-            // Добавляем bundleId если есть
-            $bundleId = $this->extractBundleId($offer);
-            if ($bundleId !== null) {
-                $offer['bundleId'] = $bundleId;
-            }
-
-            $offers[] = $offer;
         }
 
         return $offers;
@@ -224,44 +230,80 @@ class InitPayloadService
     }
 
     /**
-     * Определить режим работы калькулятора
-     *
-     * @param array $offers
-     * @return string 'NEW_BUNDLE' | 'EXISTING_BUNDLE'
+     * Анализировать состояние BUNDLE у торговых предложений
+     * 
+     * @param array $offers Массив ТП
+     * @return array Результат анализа
      */
-    private function determineMode(array $offers): string
+    private function analyzeBundles(array $offers): array
     {
-        if (empty($offers)) {
-            return 'NEW_BUNDLE';
-        }
-
-        $firstBundleId = $this->extractBundleId($offers[0]);
+        $bundleIds = [];
+        $offersWithBundle = [];
+        $offersWithoutBundle = [];
         
-        if ($firstBundleId === null || $firstBundleId <= 0) {
-            return 'NEW_BUNDLE';
-        }
-
         foreach ($offers as $offer) {
-            $currentBundleId = $this->extractBundleId($offer);
-            if ($currentBundleId !== $firstBundleId) {
-                return 'NEW_BUNDLE';
+            $bundleId = $this->extractBundleId($offer);
+            
+            if ($bundleId !== null && $bundleId > 0) {
+                $bundleIds[$bundleId] = $bundleId;
+                $offersWithBundle[$offer['id']] = $bundleId;
+            } else {
+                $offersWithoutBundle[] = $offer['id'];
             }
         }
-
-        return 'EXISTING_BUNDLE';
+        
+        $uniqueBundleIds = array_values($bundleIds);
+        
+        // Сценарий A: У всех одинаковый bundle → используем существующий
+        if (count($uniqueBundleIds) === 1 && empty($offersWithoutBundle)) {
+            return [
+                'scenario' => 'EXISTING_BUNDLE',
+                'bundleId' => $uniqueBundleIds[0],
+                'requiresConfirmation' => false,
+            ];
+        }
+        
+        // Сценарий B: Ни у кого нет bundle → создаём новый (без предупреждения)
+        if (empty($uniqueBundleIds)) {
+            return [
+                'scenario' => 'NEW_BUNDLE',
+                'bundleId' => null,
+                'requiresConfirmation' => false,
+            ];
+        }
+        
+        // Сценарий C: Смешанная ситуация → нужно предупреждение
+        $bundleHandler = new BundleHandler();
+        $bundlesSummary = $bundleHandler->loadBundlesSummary($uniqueBundleIds);
+        
+        // Добавляем offerIds к каждой сборке
+        $existingBundles = [];
+        foreach ($bundlesSummary as $id => $info) {
+            $info['offerIds'] = array_keys(array_filter($offersWithBundle, fn($bid) => $bid === $id));
+            $existingBundles[] = $info;
+        }
+        
+        return [
+            'scenario' => 'CONFLICT',
+            'bundleId' => null,
+            'requiresConfirmation' => true,
+            'existingBundles' => $existingBundles,
+            'offersWithBundle' => $offersWithBundle,
+            'offersWithoutBundle' => $offersWithoutBundle,
+        ];
     }
 
     /**
-     * Извлечь bundleId из данных ТП
-     *
-     * @param array $offer
+     * Извлечь bundleId из offer
+     * 
+     * @param array $offer Данные ТП
      * @return int|null
      */
     private function extractBundleId(array $offer): ?int
     {
         $value = $offer['properties']['BUNDLE']['VALUE'] ?? null;
         
-        if ($value === null || $value === false || $value === '') {
+        if ($value === null || $value === false || $value === '' || $value === '0') {
             return null;
         }
         
@@ -409,9 +451,9 @@ class InitPayloadService
     }
 
     /**
-     * Загрузить сборку по ID
-     *
-     * @param int $bundleId
+     * Загрузить bundle со всеми данными
+     * 
+     * @param int $bundleId ID сборки
      * @return array|null
      */
     private function loadBundle(int $bundleId): ?array
@@ -432,7 +474,7 @@ class InitPayloadService
             ['ID' => $bundleId, 'IBLOCK_ID' => $iblockId],
             false,
             false,
-            ['ID', 'NAME', 'CODE']
+            ['ID', 'NAME', 'CODE', 'IBLOCK_SECTION_ID']
         )->GetNextElement();
 
         if (!$elementObject) {
@@ -444,104 +486,119 @@ class InitPayloadService
 
         // Парсим JSON-свойство (тип HTML)
         $jsonRaw = $propertiesRaw['JSON']['~VALUE']['TEXT'] ?? '';
-        $structure = [];
+        $json = [];
         if (!empty($jsonRaw)) {
             $decoded = json_decode($jsonRaw, true);
             if (is_array($decoded)) {
-                $structure = $decoded;
+                $json = $decoded;
             }
         }
 
-        // Собираем ID связанных элементов по свойствам
+        // Собираем ID связанных элементов
         $linkedElementIds = $this->collectLinkedElementIds($propertiesRaw);
         
-        // Загружаем данные связанных элементов через ElementDataService
+        // Загружаем данные связанных элементов
         $elements = $this->loadBundleElements($linkedElementIds);
+        
+        // Определяем, временная ли сборка
+        $bundleHandler = new BundleHandler();
+        $isTemporary = $bundleHandler->isTemporaryBundle($bundleId);
 
         return [
             'id' => $bundleId,
             'name' => $fields['NAME'] ?? '',
             'code' => $fields['CODE'] ?? null,
-            'structure' => $structure,
+            'isTemporary' => $isTemporary,
+            'json' => $json,
             'elements' => $elements,
         ];
     }
 
     /**
-     * Собрать ID связанных элементов из свойств сборки
-     *
-     * @param array $propertiesRaw
-     * @return array Массив с ключами по типам связанных элементов
+     * Собрать ID связанных элементов из свойств bundle
+     * 
+     * @param array $propertiesRaw Свойства элемента
+     * @return array
      */
     private function collectLinkedElementIds(array $propertiesRaw): array
     {
-        $linkedIds = [];
-
-        $propertyMap = [
-            'CALC_CONFIG' => 'calcConfig',
-            'CALC_SETTINGS' => 'calcSettings',
-            'CALC_MATERIALS' => 'materials',
-            'CALC_MATERIALS_VARIANTS' => 'materialsVariants',
-            'CALC_OPERATIONS' => 'operations',
-            'CALC_OPERATIONS_VARIANTS' => 'operationsVariants',
-            'CALC_EQUIPMENT' => 'equipment',
-            'CALC_DETAILS' => 'details',
-            'CALC_DETAILS_VARIANTS' => 'detailsVariants',
+        $map = [
+            'calcConfig' => 'CALC_CONFIG',
+            'calcSettings' => 'CALC_SETTINGS',
+            'materials' => 'CALC_MATERIALS',
+            'materialsVariants' => 'CALC_MATERIALS_VARIANTS',
+            'operations' => 'CALC_OPERATIONS',
+            'operationsVariants' => 'CALC_OPERATIONS_VARIANTS',
+            'equipment' => 'CALC_EQUIPMENT',
+            'details' => 'CALC_DETAILS',
+            'detailsVariants' => 'CALC_DETAILS_VARIANTS',
         ];
-
-        foreach ($propertyMap as $propertyCode => $key) {
-            $values = $propertiesRaw[$propertyCode]['VALUE'] ?? null;
-            
-            if ($values === null || $values === false || $values === '') {
-                $linkedIds[$key] = [];
-                continue;
+        
+        $result = [];
+        
+        foreach ($map as $jsKey => $propCode) {
+            $value = $propertiesRaw[$propCode]['VALUE'] ?? [];
+            if (!is_array($value)) {
+                $value = !empty($value) ? [$value] : [];
             }
-
-            // Преобразуем в массив, если это не массив
-            if (!is_array($values)) {
-                $values = [$values];
-            }
-
-            // Фильтруем и преобразуем в int
-            $linkedIds[$key] = array_values(array_filter(array_map('intval', $values), function($id) {
-                return $id > 0;
-            }));
+            $result[$jsKey] = array_filter(array_map('intval', $value), fn($id) => $id > 0);
         }
-
-        return $linkedIds;
+        
+        return $result;
     }
 
     /**
-     * Загрузить связанные элементы через ElementDataService
-     *
-     * @param array $linkedIds
+     * Загрузить данные связанных элементов
+     * 
+     * @param array $linkedIds Массив ID по категориям
      * @return array
      */
     private function loadBundleElements(array $linkedIds): array
     {
         $elementDataService = new ElementDataService();
-        $elements = [];
-
+        $configManager = new ConfigManager();
+        
+        $iblockMap = [
+            'calcConfig' => $configManager->getIblockId('CALC_CONFIG'),
+            'calcSettings' => $configManager->getIblockId('CALC_SETTINGS'),
+            'materials' => $configManager->getIblockId('CALC_MATERIALS'),
+            'materialsVariants' => $configManager->getIblockId('CALC_MATERIALS_VARIANTS'),
+            'operations' => $configManager->getIblockId('CALC_OPERATIONS'),
+            'operationsVariants' => $configManager->getIblockId('CALC_OPERATIONS_VARIANTS'),
+            'equipment' => $configManager->getIblockId('CALC_EQUIPMENT'),
+            'details' => $configManager->getIblockId('CALC_DETAILS'),
+            'detailsVariants' => $configManager->getIblockId('CALC_DETAILS_VARIANTS'),
+        ];
+        
+        $result = [];
+        
         foreach ($linkedIds as $key => $ids) {
             if (empty($ids)) {
-                $elements[$key] = [];
+                $result[$key] = [];
                 continue;
             }
-
-            // Определяем, нужно ли включать данные родителя (для вариантов)
-            $includeParent = in_array($key, ['materialsVariants', 'operationsVariants', 'detailsVariants'], true);
-
-            // Формируем запрос для prepareRefreshPayload
-            $request = [
-                'ids' => $ids,
-                'includeParent' => $includeParent,
-            ];
-
-            $result = $elementDataService->prepareRefreshPayload([$request]);
-            $elements[$key] = !empty($result[0]['data']) ? $result[0]['data'] : [];
+            
+            $iblockId = $iblockMap[$key] ?? 0;
+            if ($iblockId <= 0) {
+                $result[$key] = [];
+                continue;
+            }
+            
+            // Определяем, нужен ли родитель (для вариантов)
+            $includeParent = in_array($key, ['materialsVariants', 'operationsVariants', 'detailsVariants']);
+            
+            $payload = $elementDataService->prepareRefreshPayload([
+                [
+                    'iblockId' => $iblockId,
+                    'ids' => $ids,
+                    'includeParent' => $includeParent,
+                ],
+            ]);
+            
+            $result[$key] = $payload[0]['data'] ?? [];
         }
-
-        return $elements;
+        
+        return $result;
     }
 
     /**
