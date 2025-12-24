@@ -830,24 +830,6 @@ switch ($currentStep) {
                 $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $detailsIblockId]);
                 installLog("  → Обновлено свойство DETAILS (self-reference)", 'success');
             }
-            
-            // Обновляем CALC_CONFIG_BINDINGS
-            if ($installData['iblock_ids']['CALC_CONFIG'] > 0) {
-                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $detailsIblockId, 'CODE' => 'CALC_CONFIG_BINDINGS']);
-                if ($arProperty = $rsProperty->Fetch()) {
-                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_CONFIG']]);
-                    installLog("  → Обновлено свойство CALC_CONFIG_BINDINGS", 'success');
-                }
-            }
-            
-            // Обновляем CALC_CONFIG_BINDINGS_FINISHING
-            if ($installData['iblock_ids']['CALC_CONFIG'] > 0) {
-                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $detailsIblockId, 'CODE' => 'CALC_CONFIG_BINDINGS_FINISHING']);
-                if ($arProperty = $rsProperty->Fetch()) {
-                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_CONFIG']]);
-                    installLog("  → Обновлено свойство CALC_CONFIG_BINDINGS_FINISHING", 'success');
-                }
-            }
         }
         
         // Создание единиц измерения
