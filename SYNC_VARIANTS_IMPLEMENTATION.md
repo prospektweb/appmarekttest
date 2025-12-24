@@ -55,8 +55,8 @@ Added 7 new properties to CALC_CONFIG infoblock for storing calculator configura
 | OPERATION_VARIANT | Вариант операции | E | CALC_OPERATIONS_VARIANTS | 200 |
 | MATERIAL_VARIANT | Вариант материала | E | CALC_MATERIALS_VARIANTS | 300 |
 | EQUIPMENT | Оборудование | E | CALC_EQUIPMENT | 400 |
-| OPERATION_QUANTITY | Количество операций | N | - | 500 |
-| MATERIAL_QUANTITY | Количество материала | N | - | 600 |
+| QUANTITY_OPERATION_VARIANT | Количество операций | N | - | 500 |
+| QUANTITY_MATERIAL_VARIANT | Количество материала | N | - | 600 |
 | OTHER_OPTIONS | Прочие опции (JSON) | HTML | - | 700 |
 
 **Modified Files:**
@@ -189,8 +189,8 @@ Request payload → Bitrix properties:
 | operationVariantId | OPERATION_VARIANT | Link to CALC_OPERATIONS_VARIANTS |
 | materialVariantId | MATERIAL_VARIANT | Link to CALC_MATERIALS_VARIANTS |
 | equipmentId | EQUIPMENT | Link to CALC_EQUIPMENT |
-| operationQuantity | OPERATION_QUANTITY | Numeric value |
-| materialQuantity | MATERIAL_QUANTITY | Numeric value |
+| operationQuantity | QUANTITY_OPERATION_VARIANT | Numeric value |
+| materialQuantity | QUANTITY_MATERIAL_VARIANT | Numeric value |
 | otherOptions | OTHER_OPTIONS | JSON encoded string |
 
 ## Installation
