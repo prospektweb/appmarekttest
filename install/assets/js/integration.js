@@ -211,6 +211,9 @@
                 case 'SELECT_REQUEST':
                     await this.handleSelectRequest(message, origin);
                     break;
+                case 'SELECT_DETAILS_REQUEST':
+                    await this.handleSelectDetailsRequest(message, origin);
+                    break;
                 case 'REFRESH_REQUEST':
                     await this.handleRefreshRequest(message, origin);
                     break;
@@ -266,7 +269,7 @@
                 default:
                     console.warn('[BitrixBridge][DEBUG] Unknown pwrt message type:', message.type);
                     console.warn('[BitrixBridge][DEBUG] Known types:', [
-                        'SELECT_REQUEST', 'REFRESH_REQUEST', 'ADD_OFFER_REQUEST', 
+                        'SELECT_REQUEST', 'SELECT_DETAILS_REQUEST', 'REFRESH_REQUEST', 'ADD_OFFER_REQUEST', 
                         'REMOVE_OFFER_REQUEST', 'CALC_SETTINGS_REQUEST', 'CALC_EQUIPMENT_REQUEST',
                         'CALC_MATERIAL_VARIANT_REQUEST', 'CALC_OPERATION_VARIANT_REQUEST', 
                         'SYNC_VARIANTS_REQUEST', 'GET_DETAIL_REQUEST', 'ADD_NEW_DETAIL_REQUEST', 
@@ -361,6 +364,29 @@
             });
 
             await this.sendSelectDone({
+                ids: selectedIds,
+                iblockId: iblockId,
+                iblockType: iblockType,
+                lang: lang,
+                requestId: message.requestId,
+                origin: origin,
+            });
+        }
+
+        async handleSelectDetailsRequest(message, origin) {
+            const requestPayload = message.payload || {};
+            // Получить iblockId для CALC_DETAILS из initData
+            const iblockId = this.initData?.iblocks?.calcDetails || requestPayload.iblockId || null;
+            const iblockType = this.initData?.iblocksTypes?.[iblockId] || requestPayload.iblockType || null;
+            const lang = requestPayload.lang || (this.initData?.lang) || null;
+
+            const selectedIds = await this.openElementSelectionDialog({
+                iblockId: iblockId,
+                iblockType: iblockType,
+                lang: lang,
+            });
+
+            await this.sendSelectDetailsResponse({
                 ids: selectedIds,
                 iblockId: iblockId,
                 iblockType: iblockType,
@@ -1098,6 +1124,34 @@
             }
 
             this.sendPwrtMessage('SELECT_DONE', {
+                iblockId: iblockId,
+                iblockType: iblockType,
+                lang: lang,
+                items: items,
+            }, requestId, origin);
+        }
+
+        async sendSelectDetailsResponse({ ids, iblockId, iblockType, lang, requestId, origin }) {
+            const normalizedIds = this.normalizeSelectedIds(ids);
+            let items = [];
+
+            if (normalizedIds.length > 0) {
+                try {
+                    const response = await this.fetchRefreshData([
+                        { iblockId: iblockId, iblockType: iblockType, ids: normalizedIds },
+                    ]);
+
+                    const elements = Array.isArray(response) && response[0] && Array.isArray(response[0].data)
+                        ? response[0].data
+                        : [];
+
+                    items = elements.map((item) => this.normalizeItemData(item));
+                } catch (error) {
+                    console.error('[CalcIntegration] Error during select details processing', error);
+                }
+            }
+
+            this.sendPwrtMessage('SELECT_DETAILS_RESPONSE', {
                 iblockId: iblockId,
                 iblockType: iblockType,
                 lang: lang,
