@@ -14,6 +14,8 @@ $MESS['PROSPEKTWEB_CALC_LOGGING_ENABLED'] = 'Включить логирован
 
 $MESS['PROSPEKTWEB_CALC_IBLOCK_BUNDLES'] = 'Сборки для расчётов';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_CALC_CONFIG'] = 'Конфигурации калькуляций';
+$MESS['PROSPEKTWEB_CALC_TEMP_BUNDLES_LIMIT'] = 'Количество временных сборок';
+$MESS['PROSPEKTWEB_CALC_TEMP_BUNDLES_SECTION'] = 'Раздел временных сборок';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_CALC_SETTINGS'] = 'Настройки калькуляторов';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_MATERIALS'] = 'Материалы';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_MATERIALS_VARIANTS'] = 'Варианты материалов';

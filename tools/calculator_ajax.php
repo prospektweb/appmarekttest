@@ -14,6 +14,7 @@ use Bitrix\Main\Config\Option;
 use Prospektweb\Calc\Calculator\InitPayloadService;
 use Prospektweb\Calc\Calculator\ElementDataService;
 use Prospektweb\Calc\Calculator\SaveHandler;
+use Prospektweb\Calc\Calculator\BundleHandler;
 use Prospektweb\Calc\Services\HeaderTabsService;
 use Prospektweb\Calc\Services\SyncVariantsHandler;
 
@@ -123,6 +124,14 @@ try {
             handleSave($request);
             break;
 
+        case 'saveBundle':
+            handleSaveBundle($request);
+            break;
+
+        case 'finalizeBundle':
+            handleFinalizeBundle($request);
+            break;
+
         case 'refreshData':
             handleRefreshData($request);
             break;
@@ -146,7 +155,8 @@ try {
 function handleGetInitData($request): void
 {
     $offerIdsRaw = $request->get('offerIds');
-    $siteId = $request->get('siteId') ?? SITE_ID;
+    $siteId = $request->get('siteId') ?: SITE_ID;
+    $force = $request->get('force') === '1' || $request->get('force') === 'true';
 
     if (empty($offerIdsRaw)) {
         sendJsonResponse(['error' => 'Missing parameter', 'message' => 'Параметр offerIds обязателен'], 400);
@@ -163,7 +173,7 @@ function handleGetInitData($request): void
 
     try {
         $service = new InitPayloadService();
-        $payload = $service->prepareInitPayload($offerIds, $siteId);
+        $payload = $service->prepareInitPayload($offerIds, $siteId, $force);
 
         logInfo('GetInitData success for offers: ' . implode(',', $offerIds));
         sendJsonResponse(['success' => true, 'data' => $payload]);
@@ -202,6 +212,63 @@ function handleSave($request): void
         sendJsonResponse(['success' => $result['status'] !== 'error', 'data' => $result]);
     } catch (\Exception $e) {
         logError('Save error: ' . $e->getMessage());
+        sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Обработка запроса saveBundle
+ */
+function handleSaveBundle($request): void
+{
+    $payloadRaw = $request->get('payload');
+
+    if (empty($payloadRaw)) {
+        sendJsonResponse(['error' => 'Missing parameter', 'message' => 'Параметр payload обязателен'], 400);
+    }
+
+    // Если payload передан как JSON-строка
+    if (is_string($payloadRaw)) {
+        $payload = json_decode($payloadRaw, true);
+        if (!is_array($payload)) {
+            sendJsonResponse(['error' => 'Invalid parameter', 'message' => 'Некорректный формат payload'], 400);
+        }
+    } else {
+        $payload = $payloadRaw;
+    }
+
+    try {
+        $handler = new BundleHandler();
+        $result = $handler->saveBundle($payload);
+
+        logInfo('SaveBundle request processed. BundleId: ' . $result['bundleId']);
+        sendJsonResponse(['success' => true, 'data' => $result]);
+    } catch (\Exception $e) {
+        logError('SaveBundle error: ' . $e->getMessage());
+        sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Обработка запроса finalizeBundle
+ */
+function handleFinalizeBundle($request): void
+{
+    $bundleId = (int)$request->get('bundleId');
+    $name = $request->get('name');
+
+    if ($bundleId <= 0) {
+        sendJsonResponse(['error' => 'Missing parameter', 'message' => 'bundleId обязателен'], 400);
+    }
+
+    try {
+        $handler = new BundleHandler();
+        $result = $handler->finalizeBundle($bundleId, $name);
+
+        logInfo('FinalizeBundle success for bundle: ' . $bundleId);
+        sendJsonResponse(['success' => true, 'data' => $result]);
+    } catch (\Exception $e) {
+        logError('FinalizeBundle error: ' . $e->getMessage());
         sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
     }
 }

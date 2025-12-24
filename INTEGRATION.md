@@ -127,14 +127,16 @@ openCalcPopup([123, 456, 789]);
 - **READY** - React-приложение готово к инициализации
 - **INIT_DONE** - Инициализация завершена
 - **CALC_PREVIEW** - Результаты расчёта (предпросмотр)
-- **SAVE_REQUEST** - Запрос на сохранение данных
+- **SAVE_BUNDLE_REQUEST** - Запрос на сохранение сборки
+- **FINALIZE_BUNDLE_REQUEST** - Запрос на финализацию сборки (перенос из временного раздела)
 - **CLOSE_REQUEST** - Запрос на закрытие окна
 - **ERROR** - Ошибка в React-приложении
 
 #### От Bitrix к React:
 
 - **INIT** - Начальные данные для инициализации
-- **SAVE_RESULT** - Результат сохранения данных
+- **SAVE_BUNDLE_RESULT** - Результат сохранения сборки
+- **FINALIZE_BUNDLE_RESULT** - Результат финализации сборки
 - **ERROR** - Ошибка в Bitrix
 - **SELECT_DONE** - Результат выбора элементов (мультивыбор)
 
@@ -203,52 +205,136 @@ interface PwrtMessage {
 ### Получение данных инициализации
 
 ```
-GET /bitrix/tools/prospektweb.calc/calculator_ajax.php?action=getInitData&offerIds=123,456&siteId=s1&sessid=xxx
+GET /bitrix/tools/prospektweb.calc/calculator_ajax.php?action=getInitData&offerIds=123,456&siteId=s1&force=0&sessid=xxx
 ```
+
+Параметры:
+- **offerIds** - ID торговых предложений (через запятую или массив)
+- **siteId** - ID сайта (опционально, по умолчанию текущий)
+- **force** - Принудительное создание нового bundle (0 или 1)
+- **sessid** - Bitrix session ID для CSRF-защиты
+
+#### Сценарий A: У всех ТП одинаковый bundle
 
 Ответ:
 ```json
 {
   "success": true,
   "data": {
-    "mode": "NEW_BUNDLE" | "EXISTING_BUNDLE",
     "context": {
       "siteId": "s1",
       "userId": "1",
       "lang": "ru",
-      "timestamp": 1234567890
+      "timestamp": 1234567890,
+      "url": "https://example.com",
+      "menuLinks": []
     },
     "iblocks": {
       "materials": 10,
       "operations": 11,
       "equipment": 12,
       "details": 13,
-      "calculators": 14,
-      "configurations": 15
+      "calculators": 14
     },
     "selectedOffers": [
       {
         "id": 123,
-        "productId": 100,
-        "name": "Товар 1"
+        "iblockId": 20,
+        "name": "Товар 1",
+        "fields": {},
+        "measure": null,
+        "measureRatio": 1.0,
+        "prices": [],
+        "properties": {}
       }
     ],
-    "bundle": { // только для EXISTING_BUNDLE
+    "bundle": {
       "id": 50,
       "name": "Сборка для визиток",
       "code": "business_cards_bundle",
-      "structure": {},
-      "elements": {}
+      "isTemporary": false,
+      "json": {},
+      "elements": {
+        "calcConfig": [],
+        "calcSettings": [],
+        "materials": [],
+        "materialsVariants": [],
+        "operations": [],
+        "operationsVariants": [],
+        "equipment": [],
+        "details": [],
+        "detailsVariants": []
+      }
     }
   }
 }
 ```
 
-### Сохранение данных
+#### Сценарий B: Ни у кого нет bundle
+
+Автоматически создаётся временный bundle, возвращается как в сценарии A с `isTemporary: true`.
+
+#### Сценарий C: Конфликт (разные bundle или их нет)
+
+Ответ (требуется подтверждение):
+```json
+{
+  "success": true,
+  "data": {
+    "requiresConfirmation": true,
+    "existingBundles": [
+      {
+        "id": 50,
+        "name": "Сборка 1",
+        "offerIds": [123, 456]
+      },
+      {
+        "id": 51,
+        "name": "Сборка 2",
+        "offerIds": [789]
+      }
+    ],
+    "offersWithBundle": {
+      "123": 50,
+      "456": 50,
+      "789": 51
+    },
+    "offersWithoutBundle": []
+  }
+}
+```
+
+При получении `requiresConfirmation: true`, React должен показать предупреждение пользователю. После подтверждения повторить запрос с `force=1`.
+
+### Сохранение сборки
 
 ```
 POST /bitrix/tools/prospektweb.calc/calculator_ajax.php
-action=save&sessid=xxx&payload={"mode":"NEW_BUNDLE","configuration":{...},"offerUpdates":[...]}
+action=saveBundle&sessid=xxx&payload={...}
+```
+
+Payload:
+```json
+{
+  "bundleId": 50,
+  "linkedElements": {
+    "calcConfig": [1, 2],
+    "calcSettings": [3],
+    "materials": [10, 11],
+    "materialsVariants": [100, 101],
+    "operations": [20],
+    "operationsVariants": [200],
+    "equipment": [30],
+    "details": [40],
+    "detailsVariants": [400]
+  },
+  "json": {
+    "customData": "any structure"
+  },
+  "meta": {
+    "name": "Новое название сборки"
+  }
+}
 ```
 
 Ответ:
@@ -256,11 +342,29 @@ action=save&sessid=xxx&payload={"mode":"NEW_BUNDLE","configuration":{...},"offer
 {
   "success": true,
   "data": {
-    "status": "ok" | "error" | "partial",
+    "status": "ok",
+    "bundleId": 50
+  }
+}
+```
+
+### Финализация сборки
+
+Перенос сборки из временного раздела в корень (сохранение сборки как постоянной):
+
+```
+POST /bitrix/tools/prospektweb.calc/calculator_ajax.php
+action=finalizeBundle&bundleId=50&name=Моя%20сборка&sessid=xxx
+```
+
+Ответ:
+```json
+{
+  "success": true,
+  "data": {
+    "status": "ok",
     "bundleId": 50,
-    "successOffers": [123, 456],
-    "errors": [],
-    "message": "Данные успешно сохранены"
+    "finalized": true
   }
 }
 ```
