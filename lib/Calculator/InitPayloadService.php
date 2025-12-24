@@ -531,8 +531,14 @@ class InitPayloadService
             // Определяем, нужно ли включать данные родителя (для вариантов)
             $includeParent = in_array($key, ['materialsVariants', 'operationsVariants', 'detailsVariants'], true);
 
-            // Загружаем элементы
-            $elements[$key] = $elementDataService->loadElements($ids, $includeParent);
+            // Формируем запрос для prepareRefreshPayload
+            $request = [
+                'ids' => $ids,
+                'includeParent' => $includeParent,
+            ];
+
+            $result = $elementDataService->prepareRefreshPayload([$request]);
+            $elements[$key] = !empty($result[0]['data']) ? $result[0]['data'] : [];
         }
 
         return $elements;
