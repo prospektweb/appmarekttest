@@ -736,7 +736,7 @@ switch ($currentStep) {
             ],
         ];
 
-        $installData['iblock_ids']['CALC_BUNDLES'] = createIblockWithLog('catalog', 'CALC_BUNDLES', 'Сборка для расчёта', $bundlesProps);
+        $installData['iblock_ids']['CALC_BUNDLES'] = createIblockWithLog('calculator', 'CALC_BUNDLES', 'Сборка для расчёта', $bundlesProps);
         $installData['iblock_ids']['CALC_CONFIG'] = createIblockWithLog('calculator', 'CALC_CONFIG', 'Конфигурации калькуляций', $configProps);
         $installData['iblock_ids']['CALC_SETTINGS'] = createIblockWithLog('calculator', 'CALC_SETTINGS', 'Настройки калькуляторов', $settingsProps);
         $installData['iblock_ids']['CALC_MATERIALS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS', 'Материалы', $materialsProps);
@@ -748,7 +748,7 @@ switch ($currentStep) {
         $installData['iblock_ids']['CALC_DETAILS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS_VARIANTS', 'Варианты деталей', $detailsVariantsProps);
 
         $created = count(array_filter($installData['iblock_ids'], fn($id) => $id > 0));
-        installLog("Создано инфоблоков: {$created}/9", $created === 9 ? 'success' : 'warning');
+        installLog("Создано инфоблоков: {$created}/10", $created === 10 ? 'success' : 'warning');
         
         // Обновление свойств CALC_SETTINGS с привязками к инфоблокам
         if ($installData['iblock_ids']['CALC_SETTINGS'] > 0) {
