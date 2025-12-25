@@ -175,6 +175,26 @@ if ($deleteData) {
         uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_MODULES_NOT_LOADED'), 'error');
         $errors[] = Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_MODULES_NOT_LOADED');
     }
+
+    // Удаление свойства BUNDLE из инфоблока ТП
+    $skuIblockId = (int)Option::get($moduleId, 'SKU_IBLOCK_ID', 0);
+    if ($skuIblockId > 0) {
+        uninstallLog('Удаление свойства BUNDLE из инфоблока ТП... ', 'header');
+        $rsProperty = \CIBlockProperty::GetList([], [
+            'IBLOCK_ID' => $skuIblockId,
+            'CODE' => 'BUNDLE'
+        ]);
+        if ($arProperty = $rsProperty->Fetch()) {
+            if (\CIBlockProperty::Delete($arProperty['ID'])) {
+                uninstallLog("  → BUNDLE (ID: {$arProperty['ID']}): " .  Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
+            } else {
+                uninstallLog("  → BUNDLE:  " . Loc:: getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_ERROR'), 'error');
+            }
+        } else {
+            uninstallLog("  → BUNDLE:  свойство не найдено", 'warning');
+        }
+        uninstallLog('');
+    }
 }
 
 // ============= ШАГ 2: УДАЛЕНИЕ ФАЙЛОВ =============
