@@ -179,6 +179,25 @@ class ElementDataService
                 'properties' => $properties,
             ];
 
+            // ========== НОВОЕ: Загрузка кастомных полей ==========
+            // Если элемент имеет свойство CUSTOM_FIELDS, загружаем конфигурацию полей
+            if (isset($properties['CUSTOM_FIELDS']) && !empty($properties['CUSTOM_FIELDS']['VALUE'])) {
+                $customFieldsService = new \Prospektweb\Calc\Services\CustomFieldsService();
+                $customFieldIds = is_array($properties['CUSTOM_FIELDS']['VALUE']) 
+                    ? $properties['CUSTOM_FIELDS']['VALUE'] 
+                    : [$properties['CUSTOM_FIELDS']['VALUE']];
+                
+                // Фильтруем пустые значения
+                $customFieldIds = array_filter($customFieldIds, function($id) {
+                    return !empty($id);
+                });
+                
+                if (!empty($customFieldIds)) {
+                    $elementData['customFields'] = $customFieldsService->getFieldsConfig($customFieldIds);
+                }
+            }
+            // =====================================================
+
             // ========== НОВОЕ:  Загрузка родительского элемента ==========
             if ($includeParent && $productId > 0) {
                 $parentData = $this->loadParentElement($productId);

@@ -236,6 +236,41 @@ class prospektweb_calc extends CModule
                     $success = false;
                 }
             }
+            
+            // Копируем админский файл для кастомных полей
+            $adminCustomFieldFile = $sourceAdmin . '/prospektweb_calc_custom_field.php';
+            if (file_exists($adminCustomFieldFile)) {
+                if (!copy($adminCustomFieldFile, $targetAdmin . '/prospektweb_calc_custom_field.php')) {
+                    $errors[] = "Не удалось скопировать админский файл кастомных полей";
+                    $success = false;
+                }
+            }
+        }
+        
+        // НОВОЕ: Копируем компоненты
+        $sourceComponents = __DIR__ . '/components';
+        $targetComponents = $docRoot . '/local/components';
+        
+        if (is_dir($sourceComponents)) {
+            if (!is_dir($targetComponents)) {
+                mkdir($targetComponents, 0755, true);
+            }
+            
+            // Создаём директорию для компонентов prospektweb
+            $targetProspektweb = $targetComponents . '/prospektweb';
+            if (!is_dir($targetProspektweb)) {
+                mkdir($targetProspektweb, 0755, true);
+            }
+            
+            // Копируем компонент calc.custom_field.edit
+            $sourceComponent = $sourceComponents . '/prospektweb/calc.custom_field.edit';
+            $targetComponent = $targetProspektweb . '/calc.custom_field.edit';
+            
+            if (is_dir($sourceComponent)) {
+                CopyDirFiles($sourceComponent, $targetComponent, true, true);
+            } else {
+                $errors[] = "Исходный компонент не найден: {$sourceComponent}";
+            }
         }
         
         // НОВОЕ: Копируем React-приложение из install/apps_dist
