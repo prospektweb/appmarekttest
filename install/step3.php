@@ -98,7 +98,7 @@ function createIblockTypeWithLog(string $id, string $name): bool
 }
 
 // Создание инфоблока
-function createIblockWithLog(string $typeId, string $code, string $name, array $properties = []): int
+function createIblockWithLog(string $typeId, string $code, string $name, array $properties = [], array $options = []): int
 {
     installLog("Обработка инфоблока '{$code}'.. .");
     
@@ -121,6 +121,11 @@ function createIblockWithLog(string $typeId, string $code, string $name, array $
         'VERSION' => 2,
         'GROUP_ID' => ['1' => 'X', '2' => 'R'],
     ];
+    
+    // Добавляем дополнительные опции (например, EDIT_FILE_AFTER)
+    if (!empty($options)) {
+        $arFields = array_merge($arFields, $options);
+    }
 
     $iblock = new \CIBlock();
     $iblockId = $iblock->Add($arFields);
@@ -578,11 +583,12 @@ switch ($currentStep) {
                 'TYPE' => 'E',
                 'SORT' => 600,
             ],
-            'OTHER_OPTIONS' => [
-                'NAME' => 'Прочие опции',
-                'TYPE' => 'S',
-                'USER_TYPE' => 'HTML',
+            'CUSTOM_FIELDS' => [
+                'NAME' => 'Дополнительные поля',
+                'TYPE' => 'E',
                 'SORT' => 700,
+                'MULTIPLE' => 'Y',
+                'MULTIPLE_CNT' => 3,
             ],
         ];
         
@@ -625,6 +631,85 @@ switch ($currentStep) {
             'MAX_LENGTH' => ['NAME' => 'Макс. длина, мм', 'TYPE' => 'N'],
             'START_COST' => ['NAME' => 'Стоимость старта', 'TYPE' => 'N'],
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
+        ];
+
+        $customFieldsProps = [
+            'FIELD_CODE' => [
+                'NAME' => 'Символьный код поля',
+                'TYPE' => 'S',
+                'IS_REQUIRED' => 'Y',
+                'SORT' => 100,
+                'HINT' => 'Только заглавные латинские буквы, цифры и подчёркивание (например: BLEED, PAPER_TYPE)',
+            ],
+            'FIELD_TYPE' => [
+                'NAME' => 'Тип поля',
+                'TYPE' => 'L',
+                'IS_REQUIRED' => 'Y',
+                'SORT' => 200,
+                'VALUES' => [
+                    ['XML_ID' => 'number', 'VALUE' => 'Число (number)'],
+                    ['XML_ID' => 'text', 'VALUE' => 'Текст (text)'],
+                    ['XML_ID' => 'checkbox', 'VALUE' => 'Чекбокс (checkbox)'],
+                    ['XML_ID' => 'select', 'VALUE' => 'Выпадающий список (select)'],
+                ],
+            ],
+            'DEFAULT_VALUE' => [
+                'NAME' => 'Значение по умолчанию',
+                'TYPE' => 'S',
+                'SORT' => 300,
+            ],
+            'IS_REQUIRED' => [
+                'NAME' => 'Обязательное',
+                'TYPE' => 'L',
+                'SORT' => 400,
+                'VALUES' => [
+                    ['XML_ID' => 'Y', 'VALUE' => 'Да'],
+                    ['XML_ID' => 'N', 'VALUE' => 'Нет', 'DEF' => 'Y'],
+                ],
+            ],
+            'UNIT' => [
+                'NAME' => 'Единица измерения',
+                'TYPE' => 'S',
+                'SORT' => 500,
+                'HINT' => 'Только для типа "Число": мм, шт, %',
+            ],
+            'MIN_VALUE' => [
+                'NAME' => 'Минимальное значение',
+                'TYPE' => 'N',
+                'SORT' => 600,
+                'HINT' => 'Только для типа "Число"',
+            ],
+            'MAX_VALUE' => [
+                'NAME' => 'Максимальное значение',
+                'TYPE' => 'N',
+                'SORT' => 700,
+                'HINT' => 'Только для типа "Число"',
+            ],
+            'STEP_VALUE' => [
+                'NAME' => 'Шаг',
+                'TYPE' => 'N',
+                'SORT' => 800,
+                'HINT' => 'Только для типа "Число"',
+            ],
+            'MAX_LENGTH' => [
+                'NAME' => 'Максимальная длина',
+                'TYPE' => 'N',
+                'SORT' => 900,
+                'HINT' => 'Только для типа "Текст"',
+            ],
+            'OPTIONS' => [
+                'NAME' => 'Варианты выбора',
+                'TYPE' => 'S',
+                'USER_TYPE' => 'HTML',
+                'SORT' => 1000,
+                'HINT' => 'Только для типа "Выпадающий список": JSON-массив вариантов',
+            ],
+            'SORT_ORDER' => [
+                'NAME' => 'Сортировка',
+                'TYPE' => 'N',
+                'SORT' => 1100,
+                'HINT' => 'Порядок отображения поля',
+            ],
         ];
 
         $detailsProps = [
@@ -744,11 +829,18 @@ switch ($currentStep) {
         $installData['iblock_ids']['CALC_OPERATIONS'] = createIblockWithLog('calculator_catalog', 'CALC_OPERATIONS', 'Операции', $operationsProps);
         $installData['iblock_ids']['CALC_OPERATIONS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_OPERATIONS_VARIANTS', 'Варианты операций', $operationsVariantsProps);
         $installData['iblock_ids']['CALC_EQUIPMENT'] = createIblockWithLog('calculator_catalog', 'CALC_EQUIPMENT', 'Оборудование', $equipmentProps);
+        $installData['iblock_ids']['CALC_CUSTOM_FIELDS'] = createIblockWithLog(
+            'calculator_catalog', 
+            'CALC_CUSTOM_FIELDS', 
+            'Дополнительные поля калькуляторов', 
+            $customFieldsProps,
+            ['EDIT_FILE_AFTER' => '/bitrix/admin/prospektweb_calc_custom_field.php']
+        );
         $installData['iblock_ids']['CALC_DETAILS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS', 'Детали', $detailsProps);
         $installData['iblock_ids']['CALC_DETAILS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS_VARIANTS', 'Варианты деталей', $detailsVariantsProps);
 
         $created = count(array_filter($installData['iblock_ids'], fn($id) => $id > 0));
-        installLog("Создано инфоблоков: {$created}/10", $created === 10 ? 'success' : 'warning');
+        installLog("Создано инфоблоков: {$created}/11", $created === 11 ? 'success' : 'warning');
         
         // Обновление свойств CALC_SETTINGS с привязками к инфоблокам
         if ($installData['iblock_ids']['CALC_SETTINGS'] > 0) {
@@ -781,6 +873,15 @@ switch ($currentStep) {
             if ($arProperty = $rsProperty->Fetch()) {
                 $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $settingsIblockId]);
                 installLog("  → Обновлено свойство REQUIRES_BEFORE", 'success');
+            }
+            
+            // Обновляем CUSTOM_FIELDS
+            if ($installData['iblock_ids']['CALC_CUSTOM_FIELDS'] > 0) {
+                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $settingsIblockId, 'CODE' => 'CUSTOM_FIELDS']);
+                if ($arProperty = $rsProperty->Fetch()) {
+                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_CUSTOM_FIELDS']]);
+                    installLog("  → Обновлено свойство CUSTOM_FIELDS", 'success');
+                }
             }
         }
         
