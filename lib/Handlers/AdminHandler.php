@@ -476,9 +476,13 @@ class AdminHandler
         }
 
         $types = [];
-        $moduleId = 'prospektweb.calc';
+        $configManager = new \Prospektweb\Calc\Config\ConfigManager();
         
-        $iblockCodes = [
+        // Получаем все ID инфоблоков модуля
+        $moduleIblocks = $configManager->getAllIblockIds();
+        
+        // Карта типов инфоблоков (соответствует ConfigManager::IBLOCK_TYPES)
+        $iblockTypes = [
             'CALC_BUNDLES' => 'calculator',
             'CALC_CONFIG' => 'calculator',
             'CALC_SETTINGS' => 'calculator',
@@ -492,10 +496,9 @@ class AdminHandler
             'CALC_DETAILS_VARIANTS' => 'calculator_catalog',
         ];
         
-        foreach ($iblockCodes as $code => $type) {
-            $iblockId = (int)\Bitrix\Main\Config\Option::get($moduleId, 'IBLOCK_' . $code, 0);
-            if ($iblockId > 0) {
-                $types[$iblockId] = $type;
+        foreach ($moduleIblocks as $code => $iblockId) {
+            if ($iblockId > 0 && isset($iblockTypes[$code])) {
+                $types[$iblockId] = $iblockTypes[$code];
             }
         }
         

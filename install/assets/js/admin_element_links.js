@@ -40,12 +40,18 @@
             // Определяем тип инфоблока (нужно получить из конфига или использовать дефолтный)
             const iblockType = getIblockType(iblockId);
             
+            // Определяем язык интерфейса
+            let lang = 'ru';
+            if (typeof BX !== 'undefined' && BX.message) {
+                lang = BX.message('LANGUAGE_ID') || 'ru';
+            }
+            
             // Создаём ссылку
             const link = document.createElement('a');
             link.href = '/bitrix/admin/iblock_element_edit.php?IBLOCK_ID=' + iblockId + 
                         '&type=' + iblockType + 
                         '&ID=' + elementId + 
-                        '&lang=' + (BX.message('LANGUAGE_ID') || 'ru');
+                        '&lang=' + lang;
             link.textContent = span.textContent;
             link.style.cssText = 'color: #2067b0; text-decoration: none;';
             link.title = 'Открыть элемент ID: ' + elementId;
@@ -87,14 +93,26 @@
     }
     
     // Также отслеживаем динамическое добавление элементов (для множественных свойств)
-    // Используем MutationObserver
+    // Используем MutationObserver с debouncing
+    let mutationTimeout = null;
     const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.addedNodes.length) {
-                // Небольшая задержка для обработки новых элементов
-                setTimeout(initElementLinks, 100);
-            }
+        // Проверяем, есть ли добавленные узлы
+        const hasAddedNodes = mutations.some(function(mutation) {
+            return mutation.addedNodes.length > 0;
         });
+        
+        if (hasAddedNodes) {
+            // Отменяем предыдущий таймер если есть
+            if (mutationTimeout) {
+                clearTimeout(mutationTimeout);
+            }
+            
+            // Устанавливаем новый таймер с debouncing
+            mutationTimeout = setTimeout(function() {
+                initElementLinks();
+                mutationTimeout = null;
+            }, 150);
+        }
     });
     
     // Наблюдаем за изменениями в форме
