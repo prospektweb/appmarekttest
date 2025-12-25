@@ -353,6 +353,13 @@ class prospektweb_calc extends CModule
             '\\Prospektweb\\Calc\\Handlers\\DependencyHandler',
             'onElementUpdate'
         );
+        $em->registerEventHandler(
+            'main',
+            'OnBeforeEndBufferContent',
+            $this->MODULE_ID,
+            '\\Prospektweb\\Calc\\Handlers\\AdminHandler',
+            'onBeforeEndBufferContent'
+        );
     }
 
     public function uninstallEvents(): void
@@ -389,6 +396,14 @@ class prospektweb_calc extends CModule
             $this->MODULE_ID,
             '\\Prospektweb\\Calc\\Handlers\\DependencyHandler',
             'onElementUpdate'
+        );
+        
+        $eventManager->unRegisterEventHandler(
+            'main',
+            'OnBeforeEndBufferContent',
+            $this->MODULE_ID,
+            '\\Prospektweb\\Calc\\Handlers\\AdminHandler',
+            'onBeforeEndBufferContent'
         );
     }
 
