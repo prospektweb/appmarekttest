@@ -17,17 +17,6 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
     protected $properties;
 
     /**
-     * Проверка параметров
-     */
-    public function onPrepareComponentParams($arParams)
-    {
-        $arParams['IBLOCK_ID'] = (int)($arParams['IBLOCK_ID'] ?? 0);
-        $arParams['ELEMENT_ID'] = (int)($arParams['ELEMENT_ID'] ?? 0);
-
-        return $arParams;
-    }
-
-    /**
      * Загрузка данных элемента
      */
     protected function loadElement()
@@ -35,7 +24,7 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         if ($this->elementId <= 0) {
             return true;
         }
-
+    
         $rsElement = CIBlockElement::GetByID($this->elementId);
         if (!$rsElement) {
             $this->arResult['ERRORS'][] = 'Ошибка загрузки элемента';
@@ -43,27 +32,58 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         }
         
         $this->element = $rsElement->Fetch();
-
+    
         if (!$this->element) {
             $this->arResult['ERRORS'][] = 'Элемент не найден';
             return false;
         }
-
-        // Загружаем свойства (все, без фильтрации по CODE)
+    
+        // Загружаем свойства через GetProperty (работает корректно)
         $rsProps = CIBlockElement::GetProperty(
             $this->iblockId,
             $this->elementId,
-            ['sort' => 'asc'],
+            ['SORT' => 'ASC'],
             []
         );
-
+    
         $this->properties = [];
         while ($prop = $rsProps->Fetch()) {
-            $this->properties[$prop['CODE']] = $prop;
+            $code = $prop['CODE'];
+            
+            // Для множественных свойств (например OPTIONS) собираем в массив
+            if ($prop['MULTIPLE'] === 'Y') {
+                if (! isset($this->properties[$code])) {
+                    $this->properties[$code] = [
+                        'CODE' => $code,
+                        'PROPERTY_TYPE' => $prop['PROPERTY_TYPE'],
+                        'MULTIPLE' => 'Y',
+                        'VALUES' => [],
+                    ];
+                }
+                // Добавляем значение в массив
+                if (! empty($prop['VALUE']) || ! empty($prop['DESCRIPTION'])) {
+                    $this->properties[$code]['VALUES'][] = [
+                        'VALUE' => $prop['VALUE'],
+                        'DESCRIPTION' => $prop['DESCRIPTION'],
+                    ];
+                }
+            } else {
+                // Для одиночных свойств
+                $this->properties[$code] = [
+                    'CODE' => $code,
+                    'PROPERTY_TYPE' => $prop['PROPERTY_TYPE'],
+                    'MULTIPLE' => 'N',
+                    'VALUE' => $prop['VALUE'],
+                    'VALUE_XML_ID' => $prop['VALUE_XML_ID'] ?? null,
+                    'VALUE_ENUM_ID' => $prop['VALUE_ENUM_ID'] ?? null,
+                    'DESCRIPTION' => $prop['DESCRIPTION'] ?? null,
+                ];
+            }
         }
-
+    
         return true;
     }
+        
 
     /**
      * Сохранение элемента
