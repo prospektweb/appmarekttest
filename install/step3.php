@@ -180,6 +180,9 @@ function createIblockWithLog(string $typeId, string $code, string $name, array $
         if (isset($propData['MULTIPLE_CNT'])) {
          $arProperty['MULTIPLE_CNT'] = $propData['MULTIPLE_CNT'];
         }
+        if (isset($propData['WITH_DESCRIPTION'])) {
+            $arProperty['WITH_DESCRIPTION'] = $propData['WITH_DESCRIPTION'];
+        }
         
         $ibp = new \CIBlockProperty();
         if ($ibp->Add($arProperty)) {
@@ -699,11 +702,12 @@ switch ($currentStep) {
                 'HINT' => 'Только для типа "Текст"',
             ],
             'OPTIONS' => [
-                'NAME' => 'Варианты выбора',
+                'NAME' => 'Варианты выбора (для списка)',
                 'TYPE' => 'S',
-                'USER_TYPE' => 'HTML',
                 'SORT' => 1000,
-                'HINT' => 'Только для типа "Выпадающий список": JSON-массив вариантов',
+                'MULTIPLE' => 'Y',
+                'WITH_DESCRIPTION' => 'Y',
+                'HINT' => 'Значение = код опции, Описание = отображаемый текст',
             ],
             'SORT_ORDER' => [
                 'NAME' => 'Сортировка',

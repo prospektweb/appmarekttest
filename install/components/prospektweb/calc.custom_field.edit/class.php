@@ -49,24 +49,12 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
             return false;
         }
 
-        // Загружаем свойства
+        // Загружаем свойства (все, без фильтрации по CODE)
         $rsProps = CIBlockElement::GetProperty(
             $this->iblockId,
             $this->elementId,
-            [],
-            ['CODE' => [
-                'FIELD_CODE',
-                'FIELD_TYPE',
-                'DEFAULT_VALUE',
-                'IS_REQUIRED',
-                'UNIT',
-                'MIN_VALUE',
-                'MAX_VALUE',
-                'STEP_VALUE',
-                'MAX_LENGTH',
-                'OPTIONS',
-                'SORT_ORDER',
-            ]]
+            ['sort' => 'asc'],
+            []
         );
 
         $this->properties = [];
@@ -136,8 +124,45 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
             return false;
         }
 
+        // Подготавливаем значения свойств
+        $propertyValues = $_POST['PROPERTY_VALUES'] ?? [];
+        
+        // Обработка OPTIONS - преобразуем в формат VALUE/DESCRIPTION для множественного свойства
+        if (isset($_POST['PROPERTY_VALUES']['OPTIONS']) && is_array($_POST['PROPERTY_VALUES']['OPTIONS'])) {
+            $options = $_POST['PROPERTY_VALUES']['OPTIONS'];
+            $optionValues = [];
+            $defaultOptionIndex = (int)($_POST['DEFAULT_OPTION'] ?? -1);
+            $newDefaultValue = null;
+            
+            // Собираем только непустые опции и находим значение по умолчанию
+            $currentIndex = 0;
+            foreach ($options as $originalIndex => $opt) {
+                if (!empty($opt['VALUE']) || !empty($opt['DESCRIPTION'])) {
+                    $optionValues[] = [
+                        'VALUE' => trim($opt['VALUE'] ?? ''),
+                        'DESCRIPTION' => trim($opt['DESCRIPTION'] ?? ''),
+                    ];
+                    
+                    // Если это была выбранная опция по умолчанию, сохраняем её значение
+                    // Используем строгое сравнение после приведения типов
+                    if ((int)$originalIndex === $defaultOptionIndex) {
+                        $newDefaultValue = trim($opt['VALUE'] ?? '');
+                    }
+                    
+                    $currentIndex++;
+                }
+            }
+            
+            $propertyValues['OPTIONS'] = $optionValues;
+            
+            // Устанавливаем значение по умолчанию, если оно было выбрано
+            if ($newDefaultValue !== null) {
+                $propertyValues['DEFAULT_VALUE'] = $newDefaultValue;
+            }
+        }
+        
         // Сохраняем свойства
-        CIBlockElement::SetPropertyValuesEx($this->elementId, $this->iblockId, $_POST['PROPERTY_VALUES'] ?? []);
+        CIBlockElement::SetPropertyValuesEx($this->elementId, $this->iblockId, $propertyValues);
 
         $this->arResult['SUCCESS'] = true;
         $this->arResult['ELEMENT_ID'] = $this->elementId;

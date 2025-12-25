@@ -39,24 +39,12 @@ class CustomFieldsService
         );
 
         while ($element = $rsElements->Fetch()) {
-            // Загружаем свойства элемента
+            // Загружаем свойства элемента (все, без фильтрации)
             $rsProps = \CIBlockElement::GetProperty(
                 $element['IBLOCK_ID'],
                 $element['ID'],
-                [],
-                ['CODE' => [
-                    'FIELD_CODE',
-                    'FIELD_TYPE',
-                    'DEFAULT_VALUE',
-                    'IS_REQUIRED',
-                    'UNIT',
-                    'MIN_VALUE',
-                    'MAX_VALUE',
-                    'STEP_VALUE',
-                    'MAX_LENGTH',
-                    'OPTIONS',
-                    'SORT_ORDER',
-                ]]
+                ['sort' => 'asc'],
+                []
             );
 
             $props = [];
@@ -104,16 +92,27 @@ class CustomFieldsService
                     break;
 
                 case 'select':
-                    // OPTIONS хранится как JSON-массив в HTML-свойстве
-                    if (!empty($props['OPTIONS'])) {
-                        $options = json_decode($props['OPTIONS'], true);
-                        if (is_array($options)) {
-                            $fieldConfig['options'] = $options;
-                        } else {
-                            $fieldConfig['options'] = [];
+                    // OPTIONS теперь множественное свойство с описанием
+                    $options = [];
+                    
+                    $rsOptions = \CIBlockElement::GetProperty(
+                        $element['IBLOCK_ID'],
+                        $element['ID'],
+                        ['sort' => 'asc'],
+                        ['CODE' => 'OPTIONS']
+                    );
+                    
+                    while ($option = $rsOptions->Fetch()) {
+                        if (!empty($option['VALUE'])) {
+                            $options[] = [
+                                'value' => $option['VALUE'],
+                                'label' => $option['DESCRIPTION'] ?: $option['VALUE'],
+                            ];
                         }
-                    } else {
-                        $fieldConfig['options'] = [];
+                    }
+                    
+                    if (!empty($options)) {
+                        $fieldConfig['options'] = $options;
                     }
                     break;
 
