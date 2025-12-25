@@ -450,12 +450,13 @@ class InitPayloadService
         return $types;
     }
 
+
     /**
-     * Загрузить bundle со всеми данными
-     * 
-     * @param int $bundleId ID сборки
-     * @return array|null
-     */
+    * Загрузить bundle со всеми данными
+    * 
+    * @param int $bundleId ID сборки
+    * @return array|null
+    */
     private function loadBundle(int $bundleId): ?array
     {
         if ($bundleId <= 0) {
@@ -469,33 +470,42 @@ class InitPayloadService
             return null;
         }
 
-        $elementObject = \CIBlockElement::GetList(
+        // Получаем основные поля элемента
+        $rsElement = \CIBlockElement:: GetList(
             [],
             ['ID' => $bundleId, 'IBLOCK_ID' => $iblockId],
             false,
-            false,
+            ['nTopCount' => 1],
             ['ID', 'NAME', 'CODE', 'IBLOCK_SECTION_ID']
-        )->GetNextElement();
+        );
 
-        if (!$elementObject) {
+        $fields = $rsElement->Fetch();
+        if (! $fields) {
             return null;
         }
 
-        $fields = $elementObject->GetFields();
-        $propertiesRaw = $elementObject->GetProperties();
+        // Получаем свойства через GetProperty (работает для версии 2)
+        $propertiesRaw = $this->loadBundleProperties($iblockId, $bundleId);
 
-        // Парсим JSON-свойство (тип HTML)
-        $jsonRaw = $propertiesRaw['JSON']['~VALUE']['TEXT'] ?? '';
+        // Парсим JSON-свойство
         $json = [];
-        if (!empty($jsonRaw)) {
-            $decoded = json_decode($jsonRaw, true);
-            if (is_array($decoded)) {
-                $json = $decoded;
+        if (! empty($propertiesRaw['JSON'])) {
+            $jsonValue = $propertiesRaw['JSON'][0] ?? null;
+            if (is_array($jsonValue) && isset($jsonValue['TEXT'])) {
+                $decoded = json_decode($jsonValue['TEXT'], true);
+                if (is_array($decoded)) {
+                    $json = $decoded;
+                }
+            } elseif (is_string($jsonValue)) {
+                $decoded = json_decode($jsonValue, true);
+                if (is_array($decoded)) {
+                    $json = $decoded;
+                }
             }
         }
 
         // Собираем ID связанных элементов
-        $linkedElementIds = $this->collectLinkedElementIds($propertiesRaw);
+        $linkedElementIds = $this->collectLinkedElementIdsFromRaw($propertiesRaw);
         
         // Загружаем данные связанных элементов
         $elements = $this->loadBundleElements($linkedElementIds);
@@ -507,7 +517,7 @@ class InitPayloadService
         return [
             'id' => $bundleId,
             'name' => $fields['NAME'] ?? '',
-            'code' => $fields['CODE'] ?? null,
+            'code' => $fields['CODE'] ?? '',
             'isTemporary' => $isTemporary,
             'json' => $json,
             'elements' => $elements,
@@ -515,12 +525,56 @@ class InitPayloadService
     }
 
     /**
-     * Собрать ID связанных элементов из свойств bundle
-     * 
-     * @param array $propertiesRaw Свойства элемента
-     * @return array
-     */
-    private function collectLinkedElementIds(array $propertiesRaw): array
+    * Загрузить свойства bundle через GetProperty (для инфоблоков версии 2)
+    * 
+    * @param int $iblockId ID инфоблока
+    * @param int $elementId ID элемента
+    * @return array Массив [CODE => [values]]
+    */
+    private function loadBundleProperties(int $iblockId, int $elementId): array
+    {
+        $propCodes = [
+            'JSON',
+            'CALC_CONFIG',
+            'CALC_SETTINGS',
+            'CALC_MATERIALS',
+            'CALC_MATERIALS_VARIANTS',
+            'CALC_OPERATIONS',
+            'CALC_OPERATIONS_VARIANTS',
+            'CALC_EQUIPMENT',
+            'CALC_DETAILS',
+            'CALC_DETAILS_VARIANTS',
+        ];
+        
+        $result = [];
+        
+        foreach ($propCodes as $code) {
+            $result[$code] = [];
+            
+            $rsProperty = \CIBlockElement::GetProperty(
+                $iblockId,
+                $elementId,
+                [],
+                ['CODE' => $code]
+            );
+            
+            while ($arProp = $rsProperty->Fetch()) {
+                if ($arProp['VALUE'] !== null && $arProp['VALUE'] !== '') {
+                    $result[$code][] = $arProp['VALUE'];
+                }
+            }
+        }
+        
+        return $result;
+    }
+
+    /**
+    * Собрать ID связанных элементов из сырых данных свойств
+    * 
+    * @param array $propertiesRaw Массив [CODE => [values]]
+    * @return array
+    */
+    private function collectLinkedElementIdsFromRaw(array $propertiesRaw): array
     {
         $map = [
             'calcConfig' => 'CALC_CONFIG',
@@ -537,11 +591,8 @@ class InitPayloadService
         $result = [];
         
         foreach ($map as $jsKey => $propCode) {
-            $value = $propertiesRaw[$propCode]['VALUE'] ?? [];
-            if (!is_array($value)) {
-                $value = !empty($value) ? [$value] : [];
-            }
-            $result[$jsKey] = array_filter(array_map('intval', $value), fn($id) => $id > 0);
+            $values = $propertiesRaw[$propCode] ??  [];
+            $result[$jsKey] = array_filter(array_map('intval', $values), fn($id) => $id > 0);
         }
         
         return $result;
