@@ -589,6 +589,7 @@ switch ($currentStep) {
                 'SORT' => 700,
                 'MULTIPLE' => 'Y',
                 'MULTIPLE_CNT' => 3,
+                // LINK_IBLOCK_ID будет установлен позже в секции обновления свойств
             ],
         ];
         
@@ -840,7 +841,8 @@ switch ($currentStep) {
         $installData['iblock_ids']['CALC_DETAILS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS_VARIANTS', 'Варианты деталей', $detailsVariantsProps);
 
         $created = count(array_filter($installData['iblock_ids'], fn($id) => $id > 0));
-        installLog("Создано инфоблоков: {$created}/11", $created === 11 ? 'success' : 'warning');
+        $expected = 11;
+        installLog("Создано инфоблоков: {$created}/{$expected}", $created === $expected ? 'success' : 'warning');
         
         // Обновление свойств CALC_SETTINGS с привязками к инфоблокам
         if ($installData['iblock_ids']['CALC_SETTINGS'] > 0) {

@@ -37,6 +37,11 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         }
 
         $rsElement = CIBlockElement::GetByID($this->elementId);
+        if (!$rsElement) {
+            $this->arResult['ERRORS'][] = 'Ошибка загрузки элемента';
+            return false;
+        }
+        
         $this->element = $rsElement->Fetch();
 
         if (!$this->element) {

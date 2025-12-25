@@ -134,12 +134,16 @@ class CustomFieldsService
     /**
      * Приведение значения по умолчанию к нужному типу
      *
-     * @param string $value Значение
+     * @param string|null $value Значение
      * @param string $type Тип поля (number, text, checkbox, select)
      * @return mixed Приведенное значение
      */
-    public function castDefaultValue(string $value, string $type)
+    public function castDefaultValue(?string $value, string $type)
     {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        
         switch ($type) {
             case 'number':
                 return (float)$value;

@@ -221,7 +221,7 @@ if ($fieldType) {
                                 Варианты (JSON):
                             </td>
                             <td class="adm-detail-content-cell-r">
-                                <textarea name="PROPERTY_VALUES[OPTIONS]" rows="10" cols="70" placeholder='[{"value": "option1", "label": "Вариант 1"}, {"value": "option2", "label": "Вариант 2"}]'><?= $options ?></textarea>
+                                <textarea name="PROPERTY_VALUES[OPTIONS]" rows="10" cols="70" placeholder='[{"value": "option1", "label": "Вариант 1"}, {"value": "option2", "label": "Вариант 2"}]'><?= htmlspecialcharsbx($options) ?></textarea>
                                 <div class="adm-info-message">
                                     Формат: JSON-массив с объектами {value: "код", label: "Название"}
                                 </div>
