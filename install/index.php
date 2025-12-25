@@ -360,6 +360,13 @@ class prospektweb_calc extends CModule
             '\\Prospektweb\\Calc\\Handlers\\AdminHandler',
             'onBeforeEndBufferContent'
         );
+        $em->registerEventHandler(
+            'main',
+            'OnBeforeEndBufferContent',
+            $this->MODULE_ID,
+            '\\Prospektweb\\Calc\\Handlers\\AdminHandler',
+            'onBeforeEndBufferContent'
+        );
     }
 
     public function uninstallEvents(): void
