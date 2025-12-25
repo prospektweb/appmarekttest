@@ -8,8 +8,8 @@ class CalcCustomFieldEditor {
 
         this.form = this.container.querySelector('#calc-field-form');
         this.typeSelector = this.container.querySelector('#field-type-selector');
-        this.optionsList = this.container. querySelector('#options-list');
-        this.previewContainer = this. container.querySelector('#field-preview');
+        this.optionsList = this.container.querySelector('#options-list');
+        this.previewContainer = this.container.querySelector('#field-preview');
         this.optionIndex = initialOptionCount;
 
         this.init();
@@ -32,7 +32,7 @@ class CalcCustomFieldEditor {
         radios.forEach(radio => {
             radio.addEventListener('change', () => {
                 // Обновляем активный класс
-                this.typeSelector.querySelectorAll('. calc-type-option').forEach(opt => {
+                this.typeSelector.querySelectorAll('.calc-type-option').forEach(opt => {
                     opt.classList.remove('active');
                 });
                 radio.closest('.calc-type-option').classList.add('active');
@@ -62,7 +62,7 @@ class CalcCustomFieldEditor {
      * Редактор опций для select
      */
     bindOptionsEditor() {
-        const addBtn = this.container. querySelector('#add-option-btn');
+        const addBtn = this.container.querySelector('#add-option-btn');
         if (addBtn) {
             addBtn.addEventListener('click', () => this.addOption());
         }
@@ -70,8 +70,8 @@ class CalcCustomFieldEditor {
         if (this.optionsList) {
             // Удаление опции
             this.optionsList.addEventListener('click', (e) => {
-                if (e.target. closest('.calc-option-remove')) {
-                    const row = e.target. closest('.calc-option-row');
+                if (e.target.closest('.calc-option-remove')) {
+                    const row = e.target.closest('.calc-option-row');
                     row.remove();
                     this.updatePreview();
                 }
@@ -80,7 +80,7 @@ class CalcCustomFieldEditor {
             // Обновление превью при вводе
             this.optionsList.addEventListener('input', () => {
                 this.updateOptionRadioValues();
-                this. updatePreview();
+                this.updatePreview();
             });
         }
     }
@@ -91,7 +91,7 @@ class CalcCustomFieldEditor {
     addOption() {
         const row = document.createElement('div');
         row.className = 'calc-option-row';
-        row. dataset.index = this. optionIndex;
+        row.dataset.index = this.optionIndex;
         row.innerHTML = `
             <div class="calc-option-default">
                 <input type="radio" 
@@ -101,7 +101,7 @@ class CalcCustomFieldEditor {
             </div>
             <div class="calc-option-value">
                 <input type="text" 
-                       name="PROPERTY_VALUES[OPTIONS][${this. optionIndex}][VALUE]" 
+                       name="PROPERTY_VALUES[OPTIONS][${this.optionIndex}][VALUE]" 
                        class="calc-input"
                        placeholder="glossy">
             </div>
@@ -116,7 +116,7 @@ class CalcCustomFieldEditor {
             </div>
         `;
 
-        this.optionsList. appendChild(row);
+        this.optionsList.appendChild(row);
         this.optionIndex++;
 
         // Фокус на новое поле
@@ -127,9 +127,9 @@ class CalcCustomFieldEditor {
      * Синхронизация value для radio-кнопок опций
      */
     updateOptionRadioValues() {
-        this.optionsList. querySelectorAll('. calc-option-row').forEach(row => {
+        this.optionsList.querySelectorAll('.calc-option-row').forEach(row => {
             const valueInput = row.querySelector('.calc-option-value input');
-            const radio = row.querySelector('. calc-option-default input[type="radio"]');
+            const radio = row.querySelector('.calc-option-default input[type="radio"]');
             if (valueInput && radio) {
                 radio.value = valueInput.value;
             }
@@ -142,7 +142,7 @@ class CalcCustomFieldEditor {
     bindPreviewUpdates() {
         const inputs = this.form.querySelectorAll('input, select, textarea');
         inputs.forEach(input => {
-            input. addEventListener('input', () => this.updatePreview());
+            input.addEventListener('input', () => this.updatePreview());
             input.addEventListener('change', () => this.updatePreview());
         });
     }
@@ -151,10 +151,10 @@ class CalcCustomFieldEditor {
      * Генерация превью
      */
     updatePreview() {
-        const type = this.form. querySelector('input[name="PROPERTY_VALUES[FIELD_TYPE]"]:checked')?.value || '';
-        const name = this.form. querySelector('input[name="NAME"]')?.value || 'Название поля';
-        const isRequired = this.form. querySelector('input[name="PROPERTY_VALUES[IS_REQUIRED]"]')?.checked || false;
-        const unit = this.form. querySelector('input[name="PROPERTY_VALUES[UNIT]"]')?.value || '';
+        const type = this.form.querySelector('input[name="PROPERTY_VALUES[FIELD_TYPE]"]:checked')?.value || '';
+        const name = this.form.querySelector('input[name="NAME"]')?.value || 'Название поля';
+        const isRequired = this.form.querySelector('input[name="PROPERTY_VALUES[IS_REQUIRED]"]')?.checked || false;
+        const unit = this.form.querySelector('input[name="PROPERTY_VALUES[UNIT]"]')?.value || '';
 
         if (! type) {
             this.previewContainer.innerHTML = '<div class="calc-preview-placeholder">Выберите тип поля для отображения превью</div>';
@@ -174,7 +174,7 @@ class CalcCustomFieldEditor {
             </div>
         `;
 
-        this.previewContainer. innerHTML = html;
+        this.previewContainer.innerHTML = html;
     }
 
     /**
@@ -183,10 +183,10 @@ class CalcCustomFieldEditor {
     renderPreviewInput(type) {
         switch (type) {
             case 'number':
-                const min = this.form. querySelector('input[name="PROPERTY_VALUES[MIN_VALUE]"]')?.value || '';
+                const min = this.form.querySelector('input[name="PROPERTY_VALUES[MIN_VALUE]"]')?.value || '';
                 const max = this.form.querySelector('input[name="PROPERTY_VALUES[MAX_VALUE]"]')?.value || '';
                 const step = this.form.querySelector('input[name="PROPERTY_VALUES[STEP_VALUE]"]')?.value || '1';
-                const defaultNum = this.form. querySelector('[data-default-number]')?.value || '';
+                const defaultNum = this.form.querySelector('[data-default-number]')?.value || '';
                 return `
                     <input type="number" 
                            class="calc-preview-control" 
@@ -199,7 +199,7 @@ class CalcCustomFieldEditor {
 
             case 'text':
                 const maxLength = this.form.querySelector('input[name="PROPERTY_VALUES[MAX_LENGTH]"]')?.value || '';
-                const defaultText = this. form.querySelector('[data-default-text]')?.value || '';
+                const defaultText = this.form.querySelector('[data-default-text]')?.value || '';
                 return `
                     <input type="text" 
                            class="calc-preview-control" 
@@ -207,7 +207,7 @@ class CalcCustomFieldEditor {
                            ${maxLength ? `maxlength="${maxLength}"` : ''}
                            placeholder="Введите текст..."
                            readonly>
-                    ${maxLength ? `<span class="calc-preview-hint">макс. ${maxLength} символов</span>` : ''}
+                    ${maxLength ? `<span class="calc-preview-hint">макс.${maxLength} символов</span>` : ''}
                 `;
 
             case 'checkbox': 
@@ -221,7 +221,7 @@ class CalcCustomFieldEditor {
 
             case 'select': 
                 const options = this.collectOptions();
-                const defaultVal = this.form. querySelector('input[name="DEFAULT_OPTION"]:checked')?.value || '';
+                const defaultVal = this.form.querySelector('input[name="DEFAULT_OPTION"]:checked')?.value || '';
                 if (options.length === 0) {
                     return `<span class="calc-preview-empty">Добавьте варианты списка</span>`;
                 }
@@ -246,9 +246,9 @@ class CalcCustomFieldEditor {
         const options = [];
         if (! this.optionsList) return options;
 
-        this. optionsList.querySelectorAll('.calc-option-row').forEach(row => {
-            const value = row.querySelector('. calc-option-value input')?.value || '';
-            const label = row.querySelector('. calc-option-label input')?.value || '';
+        this.optionsList.querySelectorAll('.calc-option-row').forEach(row => {
+            const value = row.querySelector('.calc-option-value input')?.value || '';
+            const label = row.querySelector('.calc-option-label input')?.value || '';
             if (value || label) {
                 options.push({ value, label });
             }
