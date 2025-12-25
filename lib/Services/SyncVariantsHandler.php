@@ -268,17 +268,24 @@ class SyncVariantsHandler
         $name = sprintf('Конфиг: %s / Этап', $detailName);
         
         $properties = [
-            'CALCULATOR_SETTINGS' => $calc['calculatorCode'] ?? null,
+            'CALC_SETTING' => $calc['calculatorCode'] ?? null,
             'OPERATION_VARIANT' => $calc['operationVariantId'] ?? null,
             'MATERIAL_VARIANT' => $calc['materialVariantId'] ?? null,
             'EQUIPMENT' => $calc['equipmentId'] ?? null,
-            'QUANTITY_OPERATION_VARIANT' => $calc['operationQuantity'] ?? 1,
-            'QUANTITY_MATERIAL_VARIANT' => $calc['materialQuantity'] ?? 1,
+            'OPERATION_QUANTITY' => $calc['operationQuantity'] ?? 1,
+            'MATERIAL_QUANTITY' => $calc['materialQuantity'] ?? 1,
         ];
         
-        // Сохраняем OTHER_OPTIONS как JSON
+        // Сохраняем CUSTOM_FIELDS_VALUE как массив с описанием
         if (!empty($calc['otherOptions'])) {
-            $properties['OTHER_OPTIONS'] = json_encode($calc['otherOptions'], JSON_UNESCAPED_UNICODE);
+            $customFieldsValues = [];
+            foreach ($calc['otherOptions'] as $fieldCode => $fieldValue) {
+                $customFieldsValues[] = [
+                    'VALUE' => $fieldCode,
+                    'DESCRIPTION' => $fieldValue,
+                ];
+            }
+            $properties['CUSTOM_FIELDS_VALUE'] = $customFieldsValues;
         }
         
         // Удаляем null значения
