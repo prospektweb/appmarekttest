@@ -315,19 +315,20 @@ if ($fieldType) {
         
         addOption() {
             const row = document.createElement('div');
+            const safeIndex = parseInt(this.index, 10); // Ensure it's a safe integer
             row.className = 'calc-option-row';
-            row.dataset.index = this.index;
+            row.dataset.index = safeIndex;
             row.innerHTML = `
                 <input type="radio" 
                        name="DEFAULT_OPTION" 
-                       value="${this.index}"
+                       value="${safeIndex}"
                        title="Сделать значением по умолчанию">
                 <input type="text" 
-                       name="PROPERTY_VALUES[OPTIONS][${this.index}][VALUE]" 
+                       name="PROPERTY_VALUES[OPTIONS][${safeIndex}][VALUE]" 
                        class="calc-option-value"
                        placeholder="Код (например: glossy)">
                 <input type="text" 
-                       name="PROPERTY_VALUES[OPTIONS][${this.index}][DESCRIPTION]" 
+                       name="PROPERTY_VALUES[OPTIONS][${safeIndex}][DESCRIPTION]" 
                        class="calc-option-label"
                        placeholder="Название (например: Глянцевая)">
                 <button type="button" class="calc-option-remove" title="Удалить">✕</button>

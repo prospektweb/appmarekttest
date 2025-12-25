@@ -144,7 +144,8 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
                     ];
                     
                     // Если это была выбранная опция по умолчанию, сохраняем её значение
-                    if ($originalIndex == $defaultOptionIndex) {
+                    // Используем строгое сравнение после приведения типов
+                    if ((int)$originalIndex === $defaultOptionIndex) {
                         $newDefaultValue = trim($opt['VALUE'] ?? '');
                     }
                     

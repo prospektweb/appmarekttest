@@ -39,24 +39,12 @@ class CustomFieldsService
         );
 
         while ($element = $rsElements->Fetch()) {
-            // Загружаем свойства элемента
+            // Загружаем свойства элемента (все, без фильтрации)
             $rsProps = \CIBlockElement::GetProperty(
                 $element['IBLOCK_ID'],
                 $element['ID'],
-                [],
-                ['CODE' => [
-                    'FIELD_CODE',
-                    'FIELD_TYPE',
-                    'DEFAULT_VALUE',
-                    'IS_REQUIRED',
-                    'UNIT',
-                    'MIN_VALUE',
-                    'MAX_VALUE',
-                    'STEP_VALUE',
-                    'MAX_LENGTH',
-                    'OPTIONS',
-                    'SORT_ORDER',
-                ]]
+                ['sort' => 'asc'],
+                []
             );
 
             $props = [];
