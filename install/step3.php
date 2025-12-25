@@ -759,7 +759,7 @@ switch ($currentStep) {
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
         ];
 
-        // Свойства инфоблока:  Сборка для расчёта
+        // Свойства инфоблока:  Сборки для расчётов
         $bundlesProps = [
             'JSON' => [
                 'NAME' => 'JSON',
@@ -1130,7 +1130,7 @@ switch ($currentStep) {
                     'IBLOCK_ID' => $skuIblockId,
                     'ACTIVE' => 'Y',
                     'CODE' => $propertyCode,
-                    'NAME' => 'Сборка для расчёта',
+                    'NAME' => 'Сборки для расчётов',
                     'PROPERTY_TYPE' => 'E',
                     'MULTIPLE' => 'N',
                     'MULTIPLE_CNT' => 1,
