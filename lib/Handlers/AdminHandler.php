@@ -440,29 +440,30 @@ class AdminHandler
      * Подключение JS для улучшения формы редактирования элементов
      * Добавляет ссылки на связанные элементы (свойства типа E)
      */
-    public static function onBeforeEndBufferContent(): void
-    {
-        global $APPLICATION;
-        
-        // Подключаем только на странице редактирования элемента
-        $currentPage = $APPLICATION->GetCurPage();
-        if (strpos($currentPage, 'iblock_element_edit.php') === false) {
-            return;
-        }
-        
-        // Формируем данные о типах инфоблоков
-        $iblockTypes = self::getModuleIblockTypes();
-        
-        // Добавляем скрипт
-        $jsPath = '/local/js/prospektweb.calc/admin_element_links.js';
-        
-        $inlineJs = '<script>
-            window.PROSPEKTWEB_CALC_IBLOCK_TYPES = ' . json_encode($iblockTypes, self::JSON_ENCODE_FLAGS) . ';
-        </script>
-        <script src="' . \CUtil::GetAdditionalFileURL($jsPath) . '"></script>';
-        
-        $APPLICATION->AddViewContent('below_pagetitle', $inlineJs);
-    }
+	public static function onBeforeEndBufferContent(): void
+	{
+		global $APPLICATION;
+		
+		if (! defined('ADMIN_SECTION') || ADMIN_SECTION !== true) {
+			return;
+		}
+		
+		$currentPage = $APPLICATION->GetCurPage();
+		if (strpos($currentPage, 'iblock_element_edit.php') === false) {
+			return;
+		}
+
+		$iblockTypes = self::getModuleIblockTypes();
+
+		$jsPath = '/local/js/prospektweb.calc/admin_element_links.js';
+		
+		$inlineJs = '<script>
+			window. PROSPEKTWEB_CALC_IBLOCK_TYPES = ' . json_encode($iblockTypes, self::JSON_ENCODE_FLAGS) . ';
+		</script>
+		<script src="' . \CUtil::GetAdditionalFileURL($jsPath) . '"></script>';
+		
+		Asset::getInstance()->addString($inlineJs, false, AssetLocation::AFTER_JS);
+	}
 
     /**
      * Получить типы инфоблоков модуля
