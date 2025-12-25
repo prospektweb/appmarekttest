@@ -87,6 +87,7 @@ $MESS['PROSPEKTWEB_CALC_INSTALL_ERRORS'] = 'Возникли ошибки при
 $MESS['PROSPEKTWEB_CALC_INSTALL_RETRY'] = 'Начать заново';
 $MESS['PROSPEKTWEB_CALC_INSTALL_COMPLETED'] = 'Установка завершена успешно';
 $MESS['PROSPEKTWEB_CALC_INSTALL_COMPLETED_WITH_ERRORS'] = 'Установка завершена с ошибками';
+$MESS['PROSPEKTWEB_CALC_TEMP_SECTION_CREATED'] = 'Создан раздел для временных сборок';
 
 // Шаг 4
 $MESS['PROSPEKTWEB_CALC_INSTALL_SUCCESS_MESSAGE'] = 'Модуль успешно установлен! Все необходимые ресурсы созданы.';
