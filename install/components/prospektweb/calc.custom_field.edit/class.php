@@ -1,20 +1,32 @@
 <?php
-if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
-    die();
-}
 
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
 
-/**
- * Компонент для редактирования дополнительных полей калькуляторов
- */
+if (! defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
+    die();
+}
+
+Loc::loadMessages(__FILE__);
+
 class CalcCustomFieldEditComponent extends CBitrixComponent
 {
     protected $iblockId;
     protected $elementId;
     protected $element;
     protected $properties;
+
+    /**
+     * Подготовка параметров компонента
+     */
+    public function onPrepareComponentParams($arParams)
+    {
+        $arParams['IBLOCK_ID'] = (int)($arParams['IBLOCK_ID'] ?? 0);
+        $arParams['ELEMENT_ID'] = (int)($arParams['ELEMENT_ID'] ?? 0);
+        $arParams['BACK_URL'] = $arParams['BACK_URL'] ?? '';
+
+        return $arParams;
+    }
 
     /**
      * Загрузка данных элемента
@@ -24,32 +36,33 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         if ($this->elementId <= 0) {
             return true;
         }
-    
+
+        // Загружаем основные поля элемента
         $rsElement = CIBlockElement::GetByID($this->elementId);
         if (!$rsElement) {
             $this->arResult['ERRORS'][] = 'Ошибка загрузки элемента';
             return false;
         }
-        
+
         $this->element = $rsElement->Fetch();
-    
+
         if (!$this->element) {
             $this->arResult['ERRORS'][] = 'Элемент не найден';
             return false;
         }
-    
-        // Загружаем свойства через GetProperty (работает корректно)
+
+        // Загружаем свойства через GetProperty
         $rsProps = CIBlockElement::GetProperty(
             $this->iblockId,
             $this->elementId,
             ['SORT' => 'ASC'],
             []
         );
-    
+
         $this->properties = [];
         while ($prop = $rsProps->Fetch()) {
             $code = $prop['CODE'];
-            
+
             // Для множественных свойств (например OPTIONS) собираем в массив
             if ($prop['MULTIPLE'] === 'Y') {
                 if (! isset($this->properties[$code])) {
@@ -60,8 +73,8 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
                         'VALUES' => [],
                     ];
                 }
-                // Добавляем значение в массив
-                if (! empty($prop['VALUE']) || ! empty($prop['DESCRIPTION'])) {
+                // Добавляем значение в массив (только если есть данные)
+                if (!empty($prop['VALUE']) || !empty($prop['DESCRIPTION'])) {
                     $this->properties[$code]['VALUES'][] = [
                         'VALUE' => $prop['VALUE'],
                         'DESCRIPTION' => $prop['DESCRIPTION'],
@@ -80,10 +93,9 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
                 ];
             }
         }
-    
+
         return true;
     }
-        
 
     /**
      * Сохранение элемента
@@ -95,43 +107,94 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         }
 
         if (!check_bitrix_sessid()) {
-            $this->arResult['ERRORS'][] = 'Неверный sessid';
+            $this->arResult['ERRORS'][] = 'Ошибка безопасности.  Обновите страницу и попробуйте снова.';
+            return false;
+        }
+
+        // Проверяем, нажата ли кнопка сохранения
+        if (empty($_POST['save']) && empty($_POST['apply'])) {
             return false;
         }
 
         $el = new CIBlockElement();
-        
+
+        // Основные поля
         $arFields = [
             'IBLOCK_ID' => $this->iblockId,
             'NAME' => trim($_POST['NAME'] ?? ''),
-            'ACTIVE' => ($_POST['ACTIVE'] ?? 'Y') === 'Y' ? 'Y' : 'N',
+            'ACTIVE' => ! empty($_POST['ACTIVE']) ? 'Y' : 'N',
         ];
 
-        // Валидация
+        // Валидация названия
         if (empty($arFields['NAME'])) {
             $this->arResult['ERRORS'][] = 'Не указано название поля';
             return false;
         }
 
-        $fieldCode = trim($_POST['PROPERTY_VALUES']['FIELD_CODE'] ?? '');
+        // Получаем значения свойств
+        $propValues = $_POST['PROPERTY_VALUES'] ?? [];
+
+        // Валидация символьного кода
+        $fieldCode = trim($propValues['FIELD_CODE'] ?? '');
         if (empty($fieldCode)) {
             $this->arResult['ERRORS'][] = 'Не указан символьный код поля';
             return false;
         }
-
-        // Проверка формата кода
-        if (!preg_match('/^[A-Z0-9_]+$/', $fieldCode)) {
-            $this->arResult['ERRORS'][] = 'Символьный код должен содержать только заглавные латинские буквы, цифры и подчёркивание';
+        if (!preg_match('/^[A-Z][A-Z0-9_]*$/', $fieldCode)) {
+            $this->arResult['ERRORS'][] = 'Символьный код должен начинаться с буквы и содержать только заглавные латинские буквы, цифры и подчёркивание';
             return false;
         }
 
-        $fieldType = $_POST['PROPERTY_VALUES']['FIELD_TYPE'] ?? '';
-        if (empty($fieldType)) {
-            $this->arResult['ERRORS'][] = 'Не указан тип поля';
+        // Валидация типа поля
+        $fieldType = $propValues['FIELD_TYPE'] ?? '';
+        $allowedTypes = ['number', 'text', 'checkbox', 'select'];
+        if (empty($fieldType) || !in_array($fieldType, $allowedTypes)) {
+            $this->arResult['ERRORS'][] = 'Не выбран тип поля';
             return false;
         }
 
-        // Сохраняем или обновляем элемент
+        // Обработка значения по умолчанию
+        $defaultValue = '';
+        if ($fieldType === 'checkbox') {
+            $defaultValue = ! empty($propValues['DEFAULT_VALUE']) ? 'Y' : 'N';
+        } elseif ($fieldType === 'select') {
+            // Для select берём из DEFAULT_OPTION (radio)
+            $defaultValue = $_POST['DEFAULT_OPTION'] ?? '';
+        } else {
+            $defaultValue = trim($propValues['DEFAULT_VALUE'] ?? '');
+        }
+
+        // Обработка OPTIONS для select
+        $optionsValues = [];
+        if ($fieldType === 'select' && !empty($propValues['OPTIONS'])) {
+            foreach ($propValues['OPTIONS'] as $opt) {
+                $optValue = trim($opt['VALUE'] ?? '');
+                $optDesc = trim($opt['DESCRIPTION'] ?? '');
+                if (!empty($optValue) || !empty($optDesc)) {
+                    $optionsValues[] = [
+                        'VALUE' => $optValue,
+                        'DESCRIPTION' => $optDesc,
+                    ];
+                }
+            }
+        }
+
+        // Формируем массив свойств
+        $arFields['PROPERTY_VALUES'] = [
+            'FIELD_CODE' => $fieldCode,
+            'FIELD_TYPE' => $fieldType,
+            'DEFAULT_VALUE' => $defaultValue,
+            'IS_REQUIRED' => ! empty($propValues['IS_REQUIRED']) ? 'Y' : 'N',
+            'UNIT' => $fieldType === 'number' ? trim($propValues['UNIT'] ?? '') : '',
+            'MIN_VALUE' => $fieldType === 'number' ? $propValues['MIN_VALUE'] :  '',
+            'MAX_VALUE' => $fieldType === 'number' ? $propValues['MAX_VALUE'] : '',
+            'STEP_VALUE' => $fieldType === 'number' ? $propValues['STEP_VALUE'] : '',
+            'MAX_LENGTH' => $fieldType === 'text' ? $propValues['MAX_LENGTH'] : '',
+            'OPTIONS' => $optionsValues,
+            'SORT_ORDER' => (int)($propValues['SORT_ORDER'] ?? 500),
+        ];
+
+        // Создание или обновление
         if ($this->elementId > 0) {
             $success = $el->Update($this->elementId, $arFields);
         } else {
@@ -139,88 +202,24 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
             $success = $this->elementId > 0;
         }
 
-        if (!$success) {
-            $this->arResult['ERRORS'][] = $el->LAST_ERROR;
+        if (! $success) {
+            $this->arResult['ERRORS'][] = 'Ошибка сохранения:  ' . $el->LAST_ERROR;
             return false;
         }
 
-        // Подготавливаем значения свойств
-        $propertyValues = $_POST['PROPERTY_VALUES'] ?? [];
-        
-        // Обработка OPTIONS - преобразуем в формат VALUE/DESCRIPTION для множественного свойства
-        if (isset($_POST['PROPERTY_VALUES']['OPTIONS']) && is_array($_POST['PROPERTY_VALUES']['OPTIONS'])) {
-            $options = $_POST['PROPERTY_VALUES']['OPTIONS'];
-            $optionValues = [];
-            $defaultOptionIndex = (int)($_POST['DEFAULT_OPTION'] ?? -1);
-            $newDefaultValue = null;
-            
-            // Собираем только непустые опции и находим значение по умолчанию
-            $currentIndex = 0;
-            foreach ($options as $originalIndex => $opt) {
-                if (!empty($opt['VALUE']) || !empty($opt['DESCRIPTION'])) {
-                    $optionValues[] = [
-                        'VALUE' => trim($opt['VALUE'] ?? ''),
-                        'DESCRIPTION' => trim($opt['DESCRIPTION'] ?? ''),
-                    ];
-                    
-                    // Если это была выбранная опция по умолчанию, сохраняем её значение
-                    // Используем строгое сравнение после приведения типов
-                    if ((int)$originalIndex === $defaultOptionIndex) {
-                        $newDefaultValue = trim($opt['VALUE'] ?? '');
-                    }
-                    
-                    $currentIndex++;
-                }
-            }
-            
-            $propertyValues['OPTIONS'] = $optionValues;
-            
-            // Устанавливаем значение по умолчанию, если оно было выбрано
-            if ($newDefaultValue !== null) {
-                $propertyValues['DEFAULT_VALUE'] = $newDefaultValue;
-            }
-        }
-        
-        // Сохраняем свойства
-        CIBlockElement::SetPropertyValuesEx($this->elementId, $this->iblockId, $propertyValues);
-
-        $this->arResult['SUCCESS'] = true;
-        $this->arResult['ELEMENT_ID'] = $this->elementId;
-
         // Редирект после сохранения
-        $listUrl = '/bitrix/admin/iblock_list_admin.php?IBLOCK_ID=' . $this->iblockId . '&type=calculator_catalog&lang=ru';
-        LocalRedirect($listUrl);
+        if (! empty($_POST['save'])) {
+            // Кнопка "Сохранить" — возврат к списку
+            $backUrl = $this->arParams['BACK_URL'] ?: '/bitrix/admin/iblock_list_admin.php? IBLOCK_ID=' . $this->iblockId .  '&type=calculator&lang=' .  LANGUAGE_ID;
+            LocalRedirect($backUrl);
+        } else {
+            // Кнопка "Применить" — остаёмся на странице
+            $this->arResult['SUCCESS_MESSAGE'] = 'Изменения сохранены';
+            // Перезагружаем элемент
+            $this->loadElement();
+        }
 
         return true;
-    }
-
-    /**
-     * Получение списков для свойств типа "Список"
-     */
-    protected function getPropertyEnums()
-    {
-        $enums = [];
-        
-        $rsProps = CIBlockProperty::GetList(
-            [],
-            ['IBLOCK_ID' => $this->iblockId, 'PROPERTY_TYPE' => 'L']
-        );
-
-        while ($prop = $rsProps->Fetch()) {
-            $propId = $prop['ID'];
-            $enums[$prop['CODE']] = [];
-
-            $rsEnum = CIBlockPropertyEnum::GetList(
-                ['SORT' => 'ASC'],
-                ['PROPERTY_ID' => $propId]
-            );
-
-            while ($enum = $rsEnum->Fetch()) {
-                $enums[$prop['CODE']][] = $enum;
-            }
-        }
-
-        return $enums;
     }
 
     /**
@@ -228,37 +227,35 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
      */
     public function executeComponent()
     {
-        if (!Loader::includeModule('iblock')) {
-            ShowError('Модуль Инфоблоков не установлен');
+        if (! Loader::includeModule('iblock')) {
+            $this->arResult['ERRORS'][] = 'Модуль iblock не установлен';
+            $this->includeComponentTemplate();
             return;
         }
 
         $this->iblockId = $this->arParams['IBLOCK_ID'];
         $this->elementId = $this->arParams['ELEMENT_ID'];
 
-        $this->arResult['ERRORS'] = [];
-        $this->arResult['SUCCESS'] = false;
-
-        // Обработка сохранения
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
-            $this->saveElement();
-        }
-
-        // Загрузка данных
-        if (!$this->loadElement()) {
+        if ($this->iblockId <= 0) {
+            $this->arResult['ERRORS'][] = 'Не указан ID инфоблока';
             $this->includeComponentTemplate();
             return;
         }
 
-        // Подготовка данных для шаблона
-        $this->arResult['IBLOCK_ID'] = $this->iblockId;
-        $this->arResult['ELEMENT_ID'] = $this->elementId;
-        $this->arResult['ELEMENT'] = $this->element;
-        $this->arResult['PROPERTIES'] = $this->properties;
-        $this->arResult['PROPERTY_ENUMS'] = $this->getPropertyEnums();
+        $this->arResult['ERRORS'] = [];
+        $this->arResult['IS_NEW'] = ($this->elementId <= 0);
 
-        // URL для возврата к списку
-        $this->arResult['LIST_URL'] = '/bitrix/admin/iblock_list_admin.php?IBLOCK_ID=' . $this->iblockId . '&type=calculator_catalog&lang=ru';
+        // Сначала пытаемся сохранить
+        $this->saveElement();
+
+        // Затем загружаем данные (или загружаем заново после применения)
+        if (empty($this->arResult['SUCCESS_MESSAGE'])) {
+            $this->loadElement();
+        }
+
+        // Передаём данные в шаблон
+        $this->arResult['ELEMENT'] = $this->element ??  [];
+        $this->arResult['PROPERTIES'] = $this->properties ?? [];
 
         $this->includeComponentTemplate();
     }
