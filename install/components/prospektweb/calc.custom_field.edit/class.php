@@ -53,8 +53,8 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         $rsProps = CIBlockElement::GetProperty(
             $this->iblockId,
             $this->elementId,
-            'sort',
-            'asc'
+            ['sort' => 'asc'],
+            []
         );
 
         $this->properties = [];

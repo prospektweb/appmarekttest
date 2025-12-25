@@ -31,7 +31,7 @@ if ($elementId > 0) {
     $rsOptions = CIBlockElement::GetProperty(
         $iblockId,
         $elementId,
-        [],
+        ['sort' => 'asc'],
         ['CODE' => 'OPTIONS']
     );
     

@@ -110,7 +110,7 @@ class CustomFieldsService
                     $rsOptions = \CIBlockElement::GetProperty(
                         $element['IBLOCK_ID'],
                         $element['ID'],
-                        [],
+                        ['sort' => 'asc'],
                         ['CODE' => 'OPTIONS']
                     );
                     
