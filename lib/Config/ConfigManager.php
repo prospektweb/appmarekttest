@@ -23,6 +23,7 @@ class ConfigManager
         'CALC_BUNDLES' => 'calculator',
         'CALC_CONFIG' => 'calculator',
         'CALC_SETTINGS' => 'calculator',
+        'CALC_CUSTOM_FIELDS' => 'calculator',
         'CALC_MATERIALS' => 'calculator_catalog',
         'CALC_MATERIALS_VARIANTS' => 'calculator_catalog',
         'CALC_OPERATIONS' => 'calculator_catalog',

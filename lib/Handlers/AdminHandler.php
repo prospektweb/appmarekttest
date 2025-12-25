@@ -435,4 +435,73 @@ class AdminHandler
 
         return $result;
     }
+
+    /**
+     * Подключение JS для улучшения формы редактирования элементов
+     * Добавляет ссылки на связанные элементы (свойства типа E)
+     */
+    public static function onBeforeEndBufferContent(): void
+    {
+        global $APPLICATION;
+        
+        // Подключаем только на странице редактирования элемента
+        $currentPage = $APPLICATION->GetCurPage();
+        if (strpos($currentPage, 'iblock_element_edit.php') === false) {
+            return;
+        }
+        
+        // Формируем данные о типах инфоблоков
+        $iblockTypes = self::getModuleIblockTypes();
+        
+        // Добавляем скрипт
+        $jsPath = '/local/js/prospektweb.calc/admin_element_links.js';
+        
+        $inlineJs = '<script>
+            window.PROSPEKTWEB_CALC_IBLOCK_TYPES = ' . json_encode($iblockTypes, self::JSON_ENCODE_FLAGS) . ';
+        </script>
+        <script src="' . \CUtil::GetAdditionalFileURL($jsPath) . '"></script>';
+        
+        $APPLICATION->AddViewContent('below_pagetitle', $inlineJs);
+    }
+
+    /**
+     * Получить типы инфоблоков модуля
+     * 
+     * @return array Массив [iblock_id => type]
+     */
+    private static function getModuleIblockTypes(): array
+    {
+        if (!Loader::includeModule('prospektweb.calc')) {
+            return [];
+        }
+
+        $types = [];
+        $configManager = new \Prospektweb\Calc\Config\ConfigManager();
+        
+        // Получаем все ID инфоблоков модуля
+        $moduleIblocks = $configManager->getAllIblockIds();
+        
+        // Карта типов инфоблоков (соответствует ConfigManager::IBLOCK_TYPES)
+        $iblockTypes = [
+            'CALC_BUNDLES' => 'calculator',
+            'CALC_CONFIG' => 'calculator',
+            'CALC_SETTINGS' => 'calculator',
+            'CALC_CUSTOM_FIELDS' => 'calculator',
+            'CALC_MATERIALS' => 'calculator_catalog',
+            'CALC_MATERIALS_VARIANTS' => 'calculator_catalog',
+            'CALC_OPERATIONS' => 'calculator_catalog',
+            'CALC_OPERATIONS_VARIANTS' => 'calculator_catalog',
+            'CALC_EQUIPMENT' => 'calculator_catalog',
+            'CALC_DETAILS' => 'calculator_catalog',
+            'CALC_DETAILS_VARIANTS' => 'calculator_catalog',
+        ];
+        
+        foreach ($moduleIblocks as $code => $iblockId) {
+            if ($iblockId > 0 && isset($iblockTypes[$code])) {
+                $types[$iblockId] = $iblockTypes[$code];
+            }
+        }
+        
+        return $types;
+    }
 }
