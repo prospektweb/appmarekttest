@@ -104,16 +104,27 @@ class CustomFieldsService
                     break;
 
                 case 'select':
-                    // OPTIONS хранится как JSON-массив в HTML-свойстве
-                    if (!empty($props['OPTIONS'])) {
-                        $options = json_decode($props['OPTIONS'], true);
-                        if (is_array($options)) {
-                            $fieldConfig['options'] = $options;
-                        } else {
-                            $fieldConfig['options'] = [];
+                    // OPTIONS теперь множественное свойство с описанием
+                    $options = [];
+                    
+                    $rsOptions = \CIBlockElement::GetProperty(
+                        $element['IBLOCK_ID'],
+                        $element['ID'],
+                        [],
+                        ['CODE' => 'OPTIONS']
+                    );
+                    
+                    while ($option = $rsOptions->Fetch()) {
+                        if (!empty($option['VALUE'])) {
+                            $options[] = [
+                                'value' => $option['VALUE'],
+                                'label' => $option['DESCRIPTION'] ?: $option['VALUE'],
+                            ];
                         }
-                    } else {
-                        $fieldConfig['options'] = [];
+                    }
+                    
+                    if (!empty($options)) {
+                        $fieldConfig['options'] = $options;
                     }
                     break;
 

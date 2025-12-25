@@ -53,20 +53,8 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         $rsProps = CIBlockElement::GetProperty(
             $this->iblockId,
             $this->elementId,
-            [],
-            ['CODE' => [
-                'FIELD_CODE',
-                'FIELD_TYPE',
-                'DEFAULT_VALUE',
-                'IS_REQUIRED',
-                'UNIT',
-                'MIN_VALUE',
-                'MAX_VALUE',
-                'STEP_VALUE',
-                'MAX_LENGTH',
-                'OPTIONS',
-                'SORT_ORDER',
-            ]]
+            ['sort' => 'asc'],
+            ['EMPTY' => 'N']
         );
 
         $this->properties = [];
@@ -136,8 +124,34 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
             return false;
         }
 
+        // Подготавливаем значения свойств
+        $propertyValues = $_POST['PROPERTY_VALUES'] ?? [];
+        
+        // Обработка OPTIONS - преобразуем в формат VALUE/DESCRIPTION для множественного свойства
+        if (isset($_POST['PROPERTY_VALUES']['OPTIONS']) && is_array($_POST['PROPERTY_VALUES']['OPTIONS'])) {
+            $options = $_POST['PROPERTY_VALUES']['OPTIONS'];
+            $optionValues = [];
+            
+            foreach ($options as $opt) {
+                if (!empty($opt['VALUE']) || !empty($opt['DESCRIPTION'])) {
+                    $optionValues[] = [
+                        'VALUE' => trim($opt['VALUE'] ?? ''),
+                        'DESCRIPTION' => trim($opt['DESCRIPTION'] ?? ''),
+                    ];
+                }
+            }
+            
+            $propertyValues['OPTIONS'] = $optionValues;
+            
+            // Сохранить выбранное значение по умолчанию
+            $defaultOptionIndex = (int)($_POST['DEFAULT_OPTION'] ?? -1);
+            if ($defaultOptionIndex >= 0 && isset($optionValues[$defaultOptionIndex])) {
+                $propertyValues['DEFAULT_VALUE'] = $optionValues[$defaultOptionIndex]['VALUE'];
+            }
+        }
+        
         // Сохраняем свойства
-        CIBlockElement::SetPropertyValuesEx($this->elementId, $this->iblockId, $_POST['PROPERTY_VALUES'] ?? []);
+        CIBlockElement::SetPropertyValuesEx($this->elementId, $this->iblockId, $propertyValues);
 
         $this->arResult['SUCCESS'] = true;
         $this->arResult['ELEMENT_ID'] = $this->elementId;

@@ -23,8 +23,27 @@ $minValue = htmlspecialcharsbx($properties['MIN_VALUE']['VALUE'] ?? '');
 $maxValue = htmlspecialcharsbx($properties['MAX_VALUE']['VALUE'] ?? '');
 $stepValue = htmlspecialcharsbx($properties['STEP_VALUE']['VALUE'] ?? '');
 $maxLength = htmlspecialcharsbx($properties['MAX_LENGTH']['VALUE'] ?? '');
-$options = htmlspecialcharsbx($properties['OPTIONS']['VALUE']['TEXT'] ?? '');
 $sortOrder = htmlspecialcharsbx($properties['SORT_ORDER']['VALUE'] ?? '500');
+
+// Загружаем OPTIONS как множественное свойство с описанием
+$optionsData = [];
+if ($elementId > 0) {
+    $rsOptions = CIBlockElement::GetProperty(
+        $iblockId,
+        $elementId,
+        [],
+        ['CODE' => 'OPTIONS']
+    );
+    
+    while ($option = $rsOptions->Fetch()) {
+        if (!empty($option['VALUE']) || !empty($option['DESCRIPTION'])) {
+            $optionsData[] = [
+                'VALUE' => $option['VALUE'],
+                'DESCRIPTION' => $option['DESCRIPTION'],
+            ];
+        }
+    }
+}
 
 // Получаем XML_ID для типа поля
 $currentFieldTypeXmlId = '';
@@ -214,21 +233,44 @@ if ($fieldType) {
             <!-- Поля для типа "select" -->
             <div id="select-fields" class="type-specific-fields" style="display: none;">
                 <h3>Варианты для выпадающего списка</h3>
-                <table class="adm-detail-content-table edit-table">
-                    <tbody>
-                        <tr>
-                            <td class="adm-detail-content-cell-l" width="40%">
-                                Варианты (JSON):
-                            </td>
-                            <td class="adm-detail-content-cell-r">
-                                <textarea name="PROPERTY_VALUES[OPTIONS]" rows="10" cols="70" placeholder='[{"value": "option1", "label": "Вариант 1"}, {"value": "option2", "label": "Вариант 2"}]'><?= htmlspecialcharsbx($options) ?></textarea>
-                                <div class="adm-info-message">
-                                    Формат: JSON-массив с объектами {value: "код", label: "Название"}
+                
+                <div class="calc-options-editor">
+                    <div class="calc-options-list" id="options-list">
+                        <?php if (!empty($optionsData)): ?>
+                            <?php foreach ($optionsData as $index => $option): ?>
+                                <div class="calc-option-row" data-index="<?= $index ?>">
+                                    <input type="radio" 
+                                           name="DEFAULT_OPTION" 
+                                           value="<?= $index ?>"
+                                           <?= ($defaultValue === $option['VALUE']) ? 'checked' : '' ?>
+                                           title="Сделать значением по умолчанию">
+                                    <input type="text" 
+                                           name="PROPERTY_VALUES[OPTIONS][<?= $index ?>][VALUE]" 
+                                           class="calc-option-value"
+                                           placeholder="Код (например: glossy)"
+                                           value="<?= htmlspecialcharsbx($option['VALUE']) ?>">
+                                    <input type="text" 
+                                           name="PROPERTY_VALUES[OPTIONS][<?= $index ?>][DESCRIPTION]" 
+                                           class="calc-option-label"
+                                           placeholder="Название (например: Глянцевая)"
+                                           value="<?= htmlspecialcharsbx($option['DESCRIPTION']) ?>">
+                                    <button type="button" class="calc-option-remove" title="Удалить">✕</button>
                                 </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <button type="button" class="calc-option-add" id="add-option-btn">
+                        <span>+ Добавить вариант</span>
+                    </button>
+                    
+                    <div class="adm-info-message" style="margin-top: 15px;">
+                        <strong>Как использовать:</strong><br>
+                        • <strong>Код</strong> — техническое значение (например: <code>glossy</code>)<br>
+                        • <strong>Название</strong> — текст для отображения пользователю (например: <code>Глянцевая</code>)<br>
+                        • <strong>○</strong> — выберите вариант по умолчанию
+                    </div>
+                </div>
             </div>
             
             <!-- Превью поля -->
@@ -246,10 +288,66 @@ if ($fieldType) {
 </form>
 
 <script>
+    // Класс для управления опциями
+    class OptionsEditor {
+        constructor(container) {
+            this.container = container;
+            this.list = document.getElementById('options-list');
+            this.addBtn = document.getElementById('add-option-btn');
+            this.index = this.list ? this.list.children.length : 0;
+            
+            this.bindEvents();
+        }
+        
+        bindEvents() {
+            if (!this.addBtn || !this.list) return;
+            
+            // Добавление новой опции
+            this.addBtn.addEventListener('click', () => this.addOption());
+            
+            // Удаление опции
+            this.list.addEventListener('click', (e) => {
+                if (e.target.closest('.calc-option-remove')) {
+                    e.target.closest('.calc-option-row').remove();
+                }
+            });
+        }
+        
+        addOption() {
+            const row = document.createElement('div');
+            row.className = 'calc-option-row';
+            row.dataset.index = this.index;
+            row.innerHTML = `
+                <input type="radio" 
+                       name="DEFAULT_OPTION" 
+                       value="${this.index}"
+                       title="Сделать значением по умолчанию">
+                <input type="text" 
+                       name="PROPERTY_VALUES[OPTIONS][${this.index}][VALUE]" 
+                       class="calc-option-value"
+                       placeholder="Код (например: glossy)">
+                <input type="text" 
+                       name="PROPERTY_VALUES[OPTIONS][${this.index}][DESCRIPTION]" 
+                       class="calc-option-label"
+                       placeholder="Название (например: Глянцевая)">
+                <button type="button" class="calc-option-remove" title="Удалить">✕</button>
+            `;
+            
+            this.list.appendChild(row);
+            this.index++;
+            
+            // Фокус на новое поле
+            row.querySelector('.calc-option-value').focus();
+        }
+    }
+    
     // Инициализация при загрузке
     BX.ready(function() {
         var fieldTypeSelect = document.getElementById('field-type-select');
         var currentType = '<?= $currentFieldTypeXmlId ?>';
+        
+        // Инициализируем редактор опций
+        var optionsEditor = new OptionsEditor(document.querySelector('.calc-options-editor'));
         
         // Показываем нужные поля при загрузке
         if (currentType) {
