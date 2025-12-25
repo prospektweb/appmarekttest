@@ -49,12 +49,12 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
             return false;
         }
 
-        // Загружаем свойства
+        // Загружаем свойства (все, без фильтрации по CODE)
         $rsProps = CIBlockElement::GetProperty(
             $this->iblockId,
             $this->elementId,
-            ['sort' => 'asc'],
-            ['EMPTY' => 'N']
+            'sort',
+            'asc'
         );
 
         $this->properties = [];
@@ -131,22 +131,32 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         if (isset($_POST['PROPERTY_VALUES']['OPTIONS']) && is_array($_POST['PROPERTY_VALUES']['OPTIONS'])) {
             $options = $_POST['PROPERTY_VALUES']['OPTIONS'];
             $optionValues = [];
+            $defaultOptionIndex = (int)($_POST['DEFAULT_OPTION'] ?? -1);
+            $newDefaultValue = null;
             
-            foreach ($options as $opt) {
+            // Собираем только непустые опции и находим значение по умолчанию
+            $currentIndex = 0;
+            foreach ($options as $originalIndex => $opt) {
                 if (!empty($opt['VALUE']) || !empty($opt['DESCRIPTION'])) {
                     $optionValues[] = [
                         'VALUE' => trim($opt['VALUE'] ?? ''),
                         'DESCRIPTION' => trim($opt['DESCRIPTION'] ?? ''),
                     ];
+                    
+                    // Если это была выбранная опция по умолчанию, сохраняем её значение
+                    if ($originalIndex == $defaultOptionIndex) {
+                        $newDefaultValue = trim($opt['VALUE'] ?? '');
+                    }
+                    
+                    $currentIndex++;
                 }
             }
             
             $propertyValues['OPTIONS'] = $optionValues;
             
-            // Сохранить выбранное значение по умолчанию
-            $defaultOptionIndex = (int)($_POST['DEFAULT_OPTION'] ?? -1);
-            if ($defaultOptionIndex >= 0 && isset($optionValues[$defaultOptionIndex])) {
-                $propertyValues['DEFAULT_VALUE'] = $optionValues[$defaultOptionIndex]['VALUE'];
+            // Устанавливаем значение по умолчанию, если оно было выбрано
+            if ($newDefaultValue !== null) {
+                $propertyValues['DEFAULT_VALUE'] = $newDefaultValue;
             }
         }
         

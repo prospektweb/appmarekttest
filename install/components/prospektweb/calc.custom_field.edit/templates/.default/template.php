@@ -16,7 +16,7 @@ $name = htmlspecialcharsbx($element['NAME'] ?? '');
 $active = ($element['ACTIVE'] ?? 'Y') === 'Y';
 $fieldCode = htmlspecialcharsbx($properties['FIELD_CODE']['VALUE'] ?? '');
 $fieldType = $properties['FIELD_TYPE']['VALUE_ENUM_ID'] ?? '';
-$defaultValue = htmlspecialcharsbx($properties['DEFAULT_VALUE']['VALUE'] ?? '');
+$defaultValue = $properties['DEFAULT_VALUE']['VALUE'] ?? ''; // Не экранируем здесь, т.к. используем для сравнения
 $isRequired = $properties['IS_REQUIRED']['VALUE_ENUM_ID'] ?? '';
 $unit = htmlspecialcharsbx($properties['UNIT']['VALUE'] ?? '');
 $minValue = htmlspecialcharsbx($properties['MIN_VALUE']['VALUE'] ?? '');
@@ -157,7 +157,7 @@ if ($fieldType) {
                             Значение по умолчанию:
                         </td>
                         <td class="adm-detail-content-cell-r">
-                            <input type="text" name="PROPERTY_VALUES[DEFAULT_VALUE]" value="<?= $defaultValue ?>" size="50">
+                            <input type="text" name="PROPERTY_VALUES[DEFAULT_VALUE]" value="<?= htmlspecialcharsbx($defaultValue) ?>" size="50">
                         </td>
                     </tr>
                     
