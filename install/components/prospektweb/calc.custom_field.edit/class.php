@@ -3,7 +3,7 @@
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
 
-if (! defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
+if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
     die();
 }
 
@@ -15,6 +15,7 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
     protected $elementId;
     protected $element;
     protected $properties;
+    protected $enumValues = []; // Варианты списков
 
     /**
      * Подготовка параметров компонента
@@ -26,6 +27,50 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         $arParams['BACK_URL'] = $arParams['BACK_URL'] ?? '';
 
         return $arParams;
+    }
+
+    /**
+     * Загрузка вариантов списков (для свойств типа L)
+     */
+    protected function loadEnumValues()
+    {
+        $this->enumValues = [];
+        
+        // Получаем свойства типа "Список" для данного инфоблока
+        $rsProps = \CIBlockProperty::GetList(
+            ['SORT' => 'ASC'],
+            ['IBLOCK_ID' => $this->iblockId, 'PROPERTY_TYPE' => 'L', 'ACTIVE' => 'Y']
+        );
+        
+        while ($prop = $rsProps->Fetch()) {
+            $propCode = $prop['CODE'];
+            $this->enumValues[$propCode] = [];
+            
+            // Получаем варианты для этого свойства
+            $rsEnum = \CIBlockPropertyEnum:: GetList(
+                ['SORT' => 'ASC'],
+                ['PROPERTY_ID' => $prop['ID']]
+            );
+            
+            while ($enum = $rsEnum->Fetch()) {
+                $this->enumValues[$propCode][$enum['XML_ID']] = [
+                    'ID' => $enum['ID'],
+                    'VALUE' => $enum['VALUE'],
+                    'XML_ID' => $enum['XML_ID'],
+                ];
+            }
+        }
+    }
+
+    /**
+     * Получить ID варианта списка по XML_ID
+     */
+    protected function getEnumIdByXmlId($propCode, $xmlId)
+    {
+        if (isset($this->enumValues[$propCode][$xmlId])) {
+            return $this->enumValues[$propCode][$xmlId]['ID'];
+        }
+        return null;
     }
 
     /**
@@ -63,7 +108,7 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         while ($prop = $rsProps->Fetch()) {
             $code = $prop['CODE'];
 
-            // Для множественных свойств (например OPTIONS) собираем в массив
+            // Для множественных свойств собираем в массив
             if ($prop['MULTIPLE'] === 'Y') {
                 if (! isset($this->properties[$code])) {
                     $this->properties[$code] = [
@@ -73,7 +118,6 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
                         'VALUES' => [],
                     ];
                 }
-                // Добавляем значение в массив (только если есть данные)
                 if (!empty($prop['VALUE']) || !empty($prop['DESCRIPTION'])) {
                     $this->properties[$code]['VALUES'][] = [
                         'VALUE' => $prop['VALUE'],
@@ -135,7 +179,7 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         $propValues = $_POST['PROPERTY_VALUES'] ?? [];
 
         // Валидация символьного кода
-        $fieldCode = trim($propValues['FIELD_CODE'] ?? '');
+        $fieldCode = trim($propValues['FIELD_CODE'] ??  '');
         if (empty($fieldCode)) {
             $this->arResult['ERRORS'][] = 'Не указан символьный код поля';
             return false;
@@ -146,18 +190,29 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         }
 
         // Валидация типа поля
-        $fieldType = $propValues['FIELD_TYPE'] ?? '';
+        $fieldTypeXmlId = $propValues['FIELD_TYPE'] ?? '';
         $allowedTypes = ['number', 'text', 'checkbox', 'select'];
-        if (empty($fieldType) || !in_array($fieldType, $allowedTypes)) {
+        if (empty($fieldTypeXmlId) || !in_array($fieldTypeXmlId, $allowedTypes)) {
             $this->arResult['ERRORS'][] = 'Не выбран тип поля';
             return false;
         }
 
+        // Получаем ID варианта списка для FIELD_TYPE
+        $fieldTypeEnumId = $this->getEnumIdByXmlId('FIELD_TYPE', $fieldTypeXmlId);
+        if (!$fieldTypeEnumId) {
+            $this->arResult['ERRORS'][] = 'Ошибка:  не найден вариант типа поля "' . $fieldTypeXmlId .  '"';
+            return false;
+        }
+
+        // Получаем ID варианта списка для IS_REQUIRED
+        $isRequiredXmlId = ! empty($propValues['IS_REQUIRED']) ? 'Y' : 'N';
+        $isRequiredEnumId = $this->getEnumIdByXmlId('IS_REQUIRED', $isRequiredXmlId);
+
         // Обработка значения по умолчанию
         $defaultValue = '';
-        if ($fieldType === 'checkbox') {
+        if ($fieldTypeXmlId === 'checkbox') {
             $defaultValue = ! empty($propValues['DEFAULT_VALUE']) ? 'Y' : 'N';
-        } elseif ($fieldType === 'select') {
+        } elseif ($fieldTypeXmlId === 'select') {
             // Для select берём из DEFAULT_OPTION (radio)
             $defaultValue = $_POST['DEFAULT_OPTION'] ?? '';
         } else {
@@ -166,9 +221,9 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
 
         // Обработка OPTIONS для select
         $optionsValues = [];
-        if ($fieldType === 'select' && !empty($propValues['OPTIONS'])) {
+        if ($fieldTypeXmlId === 'select' && !empty($propValues['OPTIONS'])) {
             foreach ($propValues['OPTIONS'] as $opt) {
-                $optValue = trim($opt['VALUE'] ?? '');
+                $optValue = trim($opt['VALUE'] ??  '');
                 $optDesc = trim($opt['DESCRIPTION'] ?? '');
                 if (!empty($optValue) || !empty($optDesc)) {
                     $optionsValues[] = [
@@ -180,16 +235,17 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         }
 
         // Формируем массив свойств
+        // ВАЖНО:  для свойств типа L передаём ID варианта (VALUE_ENUM_ID)
         $arFields['PROPERTY_VALUES'] = [
             'FIELD_CODE' => $fieldCode,
-            'FIELD_TYPE' => $fieldType,
+            'FIELD_TYPE' => $fieldTypeEnumId, // ID варианта списка! 
             'DEFAULT_VALUE' => $defaultValue,
-            'IS_REQUIRED' => ! empty($propValues['IS_REQUIRED']) ? 'Y' : 'N',
-            'UNIT' => $fieldType === 'number' ? trim($propValues['UNIT'] ?? '') : '',
-            'MIN_VALUE' => $fieldType === 'number' ? $propValues['MIN_VALUE'] :  '',
-            'MAX_VALUE' => $fieldType === 'number' ? $propValues['MAX_VALUE'] : '',
-            'STEP_VALUE' => $fieldType === 'number' ? $propValues['STEP_VALUE'] : '',
-            'MAX_LENGTH' => $fieldType === 'text' ? $propValues['MAX_LENGTH'] : '',
+            'IS_REQUIRED' => $isRequiredEnumId, // ID варианта списка! 
+            'UNIT' => $fieldTypeXmlId === 'number' ? trim($propValues['UNIT'] ??  '') : '',
+            'MIN_VALUE' => $fieldTypeXmlId === 'number' ?  $propValues['MIN_VALUE'] :  '',
+            'MAX_VALUE' => $fieldTypeXmlId === 'number' ? $propValues['MAX_VALUE'] : '',
+            'STEP_VALUE' => $fieldTypeXmlId === 'number' ? $propValues['STEP_VALUE'] : '',
+            'MAX_LENGTH' => $fieldTypeXmlId === 'text' ? $propValues['MAX_LENGTH'] : '',
             'OPTIONS' => $optionsValues,
             'SORT_ORDER' => (int)($propValues['SORT_ORDER'] ?? 500),
         ];
@@ -245,10 +301,13 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         $this->arResult['ERRORS'] = [];
         $this->arResult['IS_NEW'] = ($this->elementId <= 0);
 
+        // Загружаем варианты списков (нужно для сохранения)
+        $this->loadEnumValues();
+
         // Сначала пытаемся сохранить
         $this->saveElement();
 
-        // Затем загружаем данные (или загружаем заново после применения)
+        // Затем загружаем данные
         if (empty($this->arResult['SUCCESS_MESSAGE'])) {
             $this->loadElement();
         }
@@ -256,6 +315,7 @@ class CalcCustomFieldEditComponent extends CBitrixComponent
         // Передаём данные в шаблон
         $this->arResult['ELEMENT'] = $this->element ??  [];
         $this->arResult['PROPERTIES'] = $this->properties ?? [];
+        $this->arResult['ENUM_VALUES'] = $this->enumValues;
 
         $this->includeComponentTemplate();
     }
