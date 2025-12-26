@@ -449,7 +449,10 @@ class AdminHandler
 		}
 		
 		$currentPage = $APPLICATION->GetCurPage();
-		if (strpos($currentPage, 'iblock_element_edit.php') === false) {
+		if (
+			strpos($currentPage, 'iblock_element_edit.php') === false
+			&& strpos($currentPage, 'iblock_subelement_edit.php') === false
+		) {
 			return;
 		}
 
