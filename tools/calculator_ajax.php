@@ -120,6 +120,14 @@ try {
             handleGetInitData($request);
             break;
 
+        case 'checkPresets':
+            handleCheckPresets($request);
+            break;
+
+        case 'createAndAssignPreset':
+            handleCreateAndAssignPreset($request);
+            break;
+
         case 'save':
             handleSave($request);
             break;
@@ -162,10 +170,7 @@ function handleGetInitData($request): void
         sendJsonResponse(['error' => 'Missing parameter', 'message' => 'Параметр offerIds обязателен'], 400);
     }
 
-    // Парсим offerIds (может быть строка или массив)
-    $offerIds = is_array($offerIdsRaw) ? $offerIdsRaw : explode(',', $offerIdsRaw);
-    $offerIds = array_map('intval', $offerIds);
-    $offerIds = array_filter($offerIds, function($id) { return $id > 0; });
+    $offerIds = parseOfferIds($offerIdsRaw);
 
     if (empty($offerIds)) {
         sendJsonResponse(['error' => 'Invalid parameter', 'message' => 'Некорректные ID торговых предложений'], 400);
@@ -181,6 +186,132 @@ function handleGetInitData($request): void
         logError('GetInitData error: ' . $e->getMessage());
         sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
     }
+}
+
+/**
+ * Обработка запроса checkPresets - проверка CALC_PRESET у торговых предложений
+ */
+function handleCheckPresets($request): void
+{
+    $offerIdsRaw = $request->get('offerIds');
+
+    if (empty($offerIdsRaw)) {
+        sendJsonResponse(['error' => 'Missing parameter', 'message' => 'Параметр offerIds обязателен'], 400);
+    }
+
+    $offerIds = parseOfferIds($offerIdsRaw);
+
+    if (empty($offerIds)) {
+        sendJsonResponse(['error' => 'Invalid parameter', 'message' => 'Некорректные ID торговых предложений'], 400);
+    }
+
+    try {
+        // Загружаем CALC_PRESET для каждого ТП
+        $presets = [];
+        $uniquePresets = [];
+        
+        foreach ($offerIds as $offerId) {
+            $elementObject = \CIBlockElement::GetList(
+                [],
+                ['ID' => $offerId],
+                false,
+                false,
+                ['ID', 'NAME', 'PROPERTY_CALC_PRESET']
+            )->GetNextElement();
+            
+            if (!$elementObject) {
+                continue;
+            }
+            
+            $element = $elementObject->GetFields();
+            $properties = $elementObject->GetProperties();
+            
+            $presetId = null;
+            if (isset($properties['CALC_PRESET']) && !empty($properties['CALC_PRESET']['VALUE'])) {
+                $presetId = (int)$properties['CALC_PRESET']['VALUE'];
+            }
+            
+            $presets[$offerId] = [
+                'offerId' => $offerId,
+                'offerName' => $element['NAME'] ?? '',
+                'presetId' => $presetId,
+            ];
+            
+            if ($presetId !== null && $presetId > 0) {
+                $uniquePresets[$presetId] = $presetId;
+            }
+        }
+        
+        // Определяем сценарий
+        $hasPreset = !empty($uniquePresets);
+        $hasMultiplePresets = count($uniquePresets) > 1;
+        $hasOffersWithoutPreset = false;
+        
+        foreach ($presets as $preset) {
+            if ($preset['presetId'] === null || $preset['presetId'] === 0) {
+                $hasOffersWithoutPreset = true;
+                break;
+            }
+        }
+        
+        $samePresetForAll = $hasPreset && !$hasMultiplePresets && !$hasOffersWithoutPreset;
+        // Confirmation is needed when offers don't all have the same preset
+        // This includes cases where: no presets exist, multiple different presets, or some offers missing presets
+        $needsConfirmation = !$samePresetForAll;
+        
+        logInfo('CheckPresets for offers: ' . implode(',', $offerIds) . ', needsConfirmation=' . ($needsConfirmation ? 'yes' : 'no'));
+        
+        sendJsonResponse([
+            'success' => true,
+            'data' => [
+                'presets' => array_values($presets),
+                'uniquePresets' => array_values($uniquePresets),
+                'needsConfirmation' => $needsConfirmation,
+                'samePresetForAll' => $samePresetForAll,
+            ],
+        ]);
+    } catch (\Exception $e) {
+        logError('CheckPresets error: ' . $e->getMessage());
+        sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Обработка запроса createAndAssignPreset - создание CALC_PRESET и привязка к торговым предложениям
+ */
+function handleCreateAndAssignPreset($request): void
+{
+    $offerIdsRaw = $request->get('offerIds');
+    $siteId = $request->get('siteId') ?: SITE_ID;
+
+    if (empty($offerIdsRaw)) {
+        sendJsonResponse(['error' => 'Missing parameter', 'message' => 'Параметр offerIds обязателен'], 400);
+    }
+
+    $offerIds = parseOfferIds($offerIdsRaw);
+
+    if (empty($offerIds)) {
+        sendJsonResponse(['error' => 'Invalid parameter', 'message' => 'Некорректные ID торговых предложений'], 400);
+    }
+
+    try {
+        $bundleHandler = new BundleHandler();
+        $presetId = $bundleHandler->createPreset($offerIds);
+        
+        logInfo('CreateAndAssignPreset success for offers: ' . implode(',', $offerIds) . ', presetId=' . $presetId);
+        
+        sendJsonResponse([
+            'success' => true,
+            'data' => [
+                'presetId' => $presetId,
+                'offerIds' => $offerIds,
+            ],
+        ]);
+    } catch (\Exception $e) {
+        logError('CreateAndAssignPreset error: ' . $e->getMessage());
+        sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
+    }
+}
 }
 
 /**
@@ -342,6 +473,26 @@ function handleHeaderTabsAdd($request): void
             'items' => $items,
         ],
     ]);
+}
+
+/**
+ * Парсинг и валидация offer IDs
+ * 
+ * @param mixed $offerIdsRaw Raw offer IDs (string or array)
+ * @return array Validated array of offer IDs
+ */
+function parseOfferIds($offerIdsRaw): array
+{
+    if (empty($offerIdsRaw)) {
+        return [];
+    }
+    
+    // Парсим offerIds (может быть строка или массив)
+    $offerIds = is_array($offerIdsRaw) ? $offerIdsRaw : explode(',', $offerIdsRaw);
+    $offerIds = array_map('intval', $offerIds);
+    $offerIds = array_filter($offerIds, function($id) { return $id > 0; });
+    
+    return $offerIds;
 }
 
 /**

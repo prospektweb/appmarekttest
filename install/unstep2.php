@@ -179,22 +179,22 @@ if ($deleteData) {
         $errors[] = Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_MODULES_NOT_LOADED');
     }
 
-    // Удаление свойства PRESET из инфоблока ТП
+    // Удаление свойства CALC_PRESET из инфоблока ТП
     $skuIblockId = (int)Option::get($moduleId, 'SKU_IBLOCK_ID', 0);
     if ($skuIblockId > 0) {
-        uninstallLog('Удаление свойства PRESET из инфоблока ТП... ', 'header');
+        uninstallLog('Удаление свойства CALC_PRESET из инфоблока ТП... ', 'header');
         $rsProperty = \CIBlockProperty::GetList([], [
             'IBLOCK_ID' => $skuIblockId,
-            'CODE' => 'PRESET'
+            'CODE' => 'CALC_PRESET'
         ]);
         if ($arProperty = $rsProperty->Fetch()) {
             if (\CIBlockProperty::Delete($arProperty['ID'])) {
-                uninstallLog("  → PRESET (ID: {$arProperty['ID']}): " .  Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
+                uninstallLog("  → CALC_PRESET (ID: {$arProperty['ID']}): " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
             } else {
-                uninstallLog("  → PRESET:  " . Loc:: getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_ERROR'), 'error');
+                uninstallLog("  → CALC_PRESET:  " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_ERROR'), 'error');
             }
         } else {
-            uninstallLog("  → PRESET:  свойство не найдено", 'warning');
+            uninstallLog("  → CALC_PRESET:  свойство не найдено", 'warning');
         }
         uninstallLog('');
     }
