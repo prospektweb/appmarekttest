@@ -60,15 +60,17 @@ if ($deleteData) {
         
         // Порядок важен: сначала варианты (SKU), потом родительские
         $iblockCodes = [
+            'CALC_STAGES_VARIANTS',
             'CALC_MATERIALS_VARIANTS',
             'CALC_OPERATIONS_VARIANTS',
             'CALC_DETAILS_VARIANTS',
+            'CALC_STAGES',
             'CALC_MATERIALS',
             'CALC_OPERATIONS',
             'CALC_DETAILS',
             'CALC_EQUIPMENT',
-            'CALC_BUNDLES',
-            'CALC_STAGES',
+            'CALC_PRESETS',
+            'CALC_CUSTOM_FIELDS',
             'CALC_SETTINGS',
         ];
 
@@ -129,6 +131,7 @@ if ($deleteData) {
         // Шаг 1.3: Разрываем SKU-связи
         uninstallLog(Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_STEP1_3'), 'header');
         $skuRelations = [
+            'CALC_STAGES' => 'CALC_STAGES_VARIANTS',
             'CALC_MATERIALS' => 'CALC_MATERIALS_VARIANTS',
             'CALC_OPERATIONS' => 'CALC_OPERATIONS_VARIANTS',
             'CALC_DETAILS' => 'CALC_DETAILS_VARIANTS',
@@ -176,22 +179,22 @@ if ($deleteData) {
         $errors[] = Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_MODULES_NOT_LOADED');
     }
 
-    // Удаление свойства BUNDLE из инфоблока ТП
+    // Удаление свойства PRESET из инфоблока ТП
     $skuIblockId = (int)Option::get($moduleId, 'SKU_IBLOCK_ID', 0);
     if ($skuIblockId > 0) {
-        uninstallLog('Удаление свойства BUNDLE из инфоблока ТП... ', 'header');
+        uninstallLog('Удаление свойства PRESET из инфоблока ТП... ', 'header');
         $rsProperty = \CIBlockProperty::GetList([], [
             'IBLOCK_ID' => $skuIblockId,
-            'CODE' => 'BUNDLE'
+            'CODE' => 'PRESET'
         ]);
         if ($arProperty = $rsProperty->Fetch()) {
             if (\CIBlockProperty::Delete($arProperty['ID'])) {
-                uninstallLog("  → BUNDLE (ID: {$arProperty['ID']}): " .  Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
+                uninstallLog("  → PRESET (ID: {$arProperty['ID']}): " .  Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
             } else {
-                uninstallLog("  → BUNDLE:  " . Loc:: getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_ERROR'), 'error');
+                uninstallLog("  → PRESET:  " . Loc:: getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_ERROR'), 'error');
             }
         } else {
-            uninstallLog("  → BUNDLE:  свойство не найдено", 'warning');
+            uninstallLog("  → PRESET:  свойство не найдено", 'warning');
         }
         uninstallLog('');
     }
