@@ -225,7 +225,6 @@ function handleGetInitData($request): void
 function handleCheckPresets($request): void
 {
     $offerIdsRaw = $request->get('offerIds');
-    $siteId = $request->get('siteId') ?: SITE_ID;
 
     if (empty($offerIdsRaw)) {
         sendJsonResponse(['error' => 'Missing parameter', 'message' => 'Параметр offerIds обязателен'], 400);
@@ -238,17 +237,47 @@ function handleCheckPresets($request): void
     }
 
     try {
-        // Use InitPayloadService to generate the initialization payload directly
-        $service = new InitPayloadService();
-        $payload = $service->prepareInitPayload($offerIds, $siteId, false);
-        
-        logInfo('CheckPresets for offers: ' . implode(',', $offerIds) . ' - payload generated successfully');
-        
+        $uniquePresets = [];
+        $offersWithoutPreset = [];
+
+        $dbRes = \CIBlockElement::GetList(
+            [],
+            ['ID' => $offerIds],
+            false,
+            false,
+            ['ID', 'PROPERTY_CALC_PRESET']
+        );
+
+        while ($item = $dbRes->Fetch()) {
+            $presetId = isset($item['PROPERTY_CALC_PRESET_VALUE']) ? (int)$item['PROPERTY_CALC_PRESET_VALUE'] : 0;
+            $offerId = (int)$item['ID'];
+
+            if ($presetId > 0) {
+                $uniquePresets[$presetId] = $presetId;
+            } else {
+                $offersWithoutPreset[] = $offerId;
+            }
+        }
+
+        $uniquePresetList = array_values($uniquePresets);
+        $samePresetForAll = count($uniquePresetList) === 1 && empty($offersWithoutPreset);
+        $needsConfirmation = !$samePresetForAll;
+
+        logInfo(sprintf(
+            'CheckPresets for offers: %s. uniquePresets=%s, offersWithoutPreset=%s, needsConfirmation=%s',
+            implode(',', $offerIds),
+            implode(',', $uniquePresetList),
+            implode(',', $offersWithoutPreset),
+            $needsConfirmation ? 'yes' : 'no'
+        ));
+
         sendJsonResponse([
             'success' => true,
             'data' => [
-                'payload' => $payload,
-                'needsConfirmation' => false, // Skip client-side confirmation as InitPayloadService handles preset creation
+                'needsConfirmation' => $needsConfirmation,
+                'samePresetForAll' => $samePresetForAll,
+                'uniquePresets' => $uniquePresetList,
+                'offersWithoutPreset' => $offersWithoutPreset,
             ],
         ]);
     } catch (\Exception $e) {

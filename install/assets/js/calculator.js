@@ -278,7 +278,6 @@ var ProspekwebCalc = {
             siteId: BX.message('SITE_ID') || (typeof SITE_ID !== 'undefined' ? SITE_ID : 's1'),
             sessid: BX.bitrix_sessid(),
             presetCheckResult: presetCheck,
-            initPayload: presetCheck.initPayload,
             onClose: function() {
                 self.closeDialog();
             },
@@ -324,8 +323,7 @@ var ProspekwebCalc = {
     /**
      * Предварительная проверка/создание CALC_PRESET для выбранных ТП
      * @param {Array} offers
-     * @returns {Promise<{success: boolean, presetId?: number, skipPresetCheck: boolean, cancelled?: boolean, error?: boolean, initPayload?: object}>}
-     * When payload is available from server: {success: true, initPayload: object, skipPresetCheck: true}
+     * @returns {Promise<{success: boolean, presetId?: number, skipPresetCheck: boolean, cancelled?: boolean, error?: boolean}>}
      * When preset exists: {success: true, presetId: number, skipPresetCheck: true}
      * When cancelled: {success: false, cancelled: true, skipPresetCheck: true}
      * When error: {success: false, error: true, skipPresetCheck: true}
@@ -354,22 +352,20 @@ var ProspekwebCalc = {
                 throw new Error((checkData && (checkData.message || checkData.error)) || 'Ошибка проверки пресетов');
             }
 
-            // Check if response contains data.payload from InitPayloadService
-            if (checkData.data && checkData.data.payload) {
-                return { 
-                    success: true, 
-                    initPayload: checkData.data.payload, 
-                    skipPresetCheck: true 
-                };
+            if (!checkData.data || typeof checkData.data.needsConfirmation === 'undefined' || typeof checkData.data.samePresetForAll === 'undefined') {
+                throw new Error('Некорректный ответ проверки пресетов');
             }
 
-            // Fallback to old logic if payload is not present
+            var needsConfirmation = Boolean(checkData.data.needsConfirmation);
+            var samePresetForAll = Boolean(checkData.data.samePresetForAll);
+            var uniquePresets = Array.isArray(checkData.data.uniquePresets) ? checkData.data.uniquePresets : [];
+
             var presetId = null;
-            if (checkData.data && checkData.data.samePresetForAll && Array.isArray(checkData.data.uniquePresets) && checkData.data.uniquePresets.length === 1) {
-                presetId = parseInt(checkData.data.uniquePresets[0], 10) || null;
+            if (samePresetForAll && uniquePresets.length === 1) {
+                presetId = parseInt(uniquePresets[0], 10) || null;
             }
 
-            if (!checkData.data.needsConfirmation) {
+            if (!needsConfirmation) {
                 return { success: true, presetId: presetId, skipPresetCheck: true };
             }
 

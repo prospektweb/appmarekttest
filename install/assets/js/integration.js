@@ -1628,18 +1628,10 @@
             }
 
             try {
-                let initData;
-                
-                // Check if we already have initPayload from the preset check phase
-                if (this.config.initPayload) {
-                    this.logDebug('[CalcIntegration] Using pre-loaded initPayload from preset check');
-                    this.logBridge('[BitrixBridge] Using cached initPayload, skipping getInitData AJAX call');
-                    initData = this.config.initPayload;
-                } else {
-                    // Fallback: fetch init data via AJAX
-                    this.logDebug('[CalcIntegration] Fetching init data via AJAX');
-                    initData = await this.fetchInitData();
-                }
+                // Всегда запрашиваем init payload после отображения диалога,
+                // чтобы избежать зависимости от предварительных проверок пресетов
+                this.logDebug('[CalcIntegration] Fetching init data via AJAX');
+                const initData = await this.fetchInitData();
 
                 this.initData = initData;
 
