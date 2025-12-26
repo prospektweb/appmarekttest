@@ -11,9 +11,10 @@ $MESS['PROSPEKTWEB_CALC_TAB_IBLOCKS_TITLE'] = 'Инфоблоки модуля';
 $MESS['PROSPEKTWEB_CALC_DEFAULT_PRICE_TYPE'] = 'Тип цены по умолчанию';
 $MESS['PROSPEKTWEB_CALC_DEFAULT_CURRENCY'] = 'Валюта по умолчанию';
 $MESS['PROSPEKTWEB_CALC_LOGGING_ENABLED'] = 'Включить логирование';
+$MESS['PROSPEKTWEB_CALC_PRICE_ROUNDING'] = 'Округление цен составляющих элементов';
 
 $MESS['PROSPEKTWEB_CALC_IBLOCK_BUNDLES'] = 'Сборки для расчётов';
-$MESS['PROSPEKTWEB_CALC_IBLOCK_CALC_CONFIG'] = 'Этапы калькуляций';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_CALC_STAGES'] = 'Этапы калькуляций';
 $MESS['PROSPEKTWEB_CALC_TEMP_BUNDLES_LIMIT'] = 'Количество временных сборок';
 $MESS['PROSPEKTWEB_CALC_TEMP_BUNDLES_SECTION'] = 'Раздел временных сборок';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_CALC_SETTINGS'] = 'Настройки калькуляторов';

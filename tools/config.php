@@ -46,7 +46,7 @@ try {
             die();
         }
 
-        $iblockId = $configManager->getIblockId('CALC_CONFIG');
+        $iblockId = $configManager->getIblockId('CALC_STAGES');
 
         if ($iblockId <= 0) {
             echo json_encode(['error' => 'config_iblock_not_found', 'config' => null]);

@@ -347,6 +347,7 @@ class InitPayloadService
             'timestamp' => time(),
             'url' => $siteUrl,
             'menuLinks' => $this->buildMenuLinks($siteUrl, $languageId),
+            'priceRounding' => (float)Option::get(self::MODULE_ID, 'PRICE_ROUNDING', 1),
         ];
     }
 
@@ -385,7 +386,7 @@ class InitPayloadService
             'calculators' => (int)Option::get(self::MODULE_ID, 'IBLOCK_CALCULATORS', 0),
             'configurations' => (int)Option::get(self::MODULE_ID, 'IBLOCK_CONFIGURATIONS', 0),
             'calcBundles' => (int)($moduleIblocks['CALC_BUNDLES'] ?? 0),
-            'calcConfig' => (int)($moduleIblocks['CALC_CONFIG'] ?? 0),
+            'calcStages' => (int)($moduleIblocks['CALC_STAGES'] ?? 0),
             'calcSettings' => (int)($moduleIblocks['CALC_SETTINGS'] ?? 0),
             'calcCustomFields' => (int)($moduleIblocks['CALC_CUSTOM_FIELDS'] ?? 0),
             'calcMaterials' => (int)($moduleIblocks['CALC_MATERIALS'] ?? 0),

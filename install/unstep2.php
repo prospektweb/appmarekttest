@@ -68,7 +68,7 @@ if ($deleteData) {
             'CALC_DETAILS',
             'CALC_EQUIPMENT',
             'CALC_BUNDLES',
-            'CALC_CONFIG',
+            'CALC_STAGES',
             'CALC_SETTINGS',
         ];
 

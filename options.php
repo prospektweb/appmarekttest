@@ -57,6 +57,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && check_bitrix_sessid()) {
     Option::set($module_id, 'TEMP_BUNDLES_LIMIT', (int)($_POST['TEMP_BUNDLES_LIMIT'] ?? 5));
     Option::set($module_id, 'TEMP_BUNDLES_SECTION_ID', (int)($_POST['TEMP_BUNDLES_SECTION_ID'] ?? 0));
 
+    // Сохраняем настройки округления цен
+    Option::set($module_id, 'PRICE_ROUNDING', (float)($_POST['PRICE_ROUNDING'] ?? 1));
+
     LocalRedirect($APPLICATION->GetCurPage() . '?mid=' . urlencode($module_id) . '&lang=' . LANGUAGE_ID . '&saved=Y');
 }
 
@@ -155,6 +158,23 @@ $tabControl->Begin();
         </td>
     </tr>
 
+    <tr>
+        <td><?= Loc::getMessage('PROSPEKTWEB_CALC_PRICE_ROUNDING') ?></td>
+        <td>
+            <select name="PRICE_ROUNDING">
+                <?php 
+                $roundingOptions = [0.1, 0.5, 1, 5, 10, 50, 100];
+                $currentRounding = (float)Option::get($module_id, 'PRICE_ROUNDING', 1);
+                foreach ($roundingOptions as $value): 
+                ?>
+                <option value="<?= $value ?>" <?= abs($currentRounding - $value) < 0.001 ? 'selected' : '' ?>>
+                    <?= $value ?>
+                </option>
+                <?php endforeach; ?>
+            </select>
+        </td>
+    </tr>
+
     <?php $tabControl->BeginNextTab(); ?>
 
     <tr class="heading">
@@ -216,7 +236,7 @@ $tabControl->Begin();
     <?php
     $iblockCodes = [
         'CALC_BUNDLES' => Loc::getMessage('PROSPEKTWEB_CALC_IBLOCK_BUNDLES'),
-        'CALC_CONFIG' => Loc::getMessage('PROSPEKTWEB_CALC_IBLOCK_CALC_CONFIG'),
+        'CALC_STAGES' => Loc::getMessage('PROSPEKTWEB_CALC_IBLOCK_CALC_STAGES'),
         'CALC_SETTINGS' => Loc::getMessage('PROSPEKTWEB_CALC_IBLOCK_CALC_SETTINGS'),
         'CALC_MATERIALS' => Loc::getMessage('PROSPEKTWEB_CALC_IBLOCK_MATERIALS'),
         'CALC_MATERIALS_VARIANTS' => Loc::getMessage('PROSPEKTWEB_CALC_IBLOCK_MATERIALS_VARIANTS'),

@@ -81,7 +81,7 @@ class SyncVariantsHandler
     private function processItem(array $item): ?array
     {
         $detailsIblockId = $this->getIblockId('CALC_DETAILS');
-        $configIblockId = $this->getIblockId('CALC_CONFIG');
+        $configIblockId = $this->getIblockId('CALC_STAGES');
         
         if ($detailsIblockId <= 0 || $configIblockId <= 0) {
             $this->errors[] = ['itemId' => $item['id'], 'message' => 'Инфоблоки не настроены'];
@@ -109,7 +109,7 @@ class SyncVariantsHandler
         $processedCalculators = [];
         
         if ($type === 'detail') {
-            // Для деталей: создаём конфигурации и связываем через CALC_CONFIG
+            // Для деталей: создаём конфигурации и связываем через CALC_STAGES
             $configIds = [];
             foreach ($item['calculators'] ?? [] as $calc) {
                 $configId = $this->createOrUpdateConfig($configIblockId, $calc, $item['name']);
@@ -125,9 +125,9 @@ class SyncVariantsHandler
             
             // Обновляем связи детали
             $this->updateDetailBindings($detailsIblockId, $bitrixId, [
-                'CALC_CONFIG' => $configIds,
-                'CALC_CONFIG_BINDINGS' => [],
-                'CALC_CONFIG_BINDINGS_FINISHING' => [],
+                'CALC_STAGES' => $configIds,
+                'CALC_STAGES_BINDINGS' => [],
+                'CALC_STAGES_BINDINGS_FINISHING' => [],
                 'DETAILS' => [],
             ]);
             
@@ -159,9 +159,9 @@ class SyncVariantsHandler
             
             // Обновляем связи скрепления
             $this->updateDetailBindings($detailsIblockId, $bitrixId, [
-                'CALC_CONFIG' => [],
-                'CALC_CONFIG_BINDINGS' => $bindingConfigIds,
-                'CALC_CONFIG_BINDINGS_FINISHING' => $finishingConfigIds,
+                'CALC_STAGES' => [],
+                'CALC_STAGES_BINDINGS' => $bindingConfigIds,
+                'CALC_STAGES_BINDINGS_FINISHING' => $finishingConfigIds,
                 'DETAILS' => $childBitrixIds,
             ]);
         }
@@ -268,7 +268,7 @@ class SyncVariantsHandler
         $name = sprintf('Конфиг: %s / Этап', $detailName);
         
         $properties = [
-            'CALC_SETTING' => $calc['calculatorCode'] ?? null,
+            'CALC_SETTINGS' => $calc['calculatorCode'] ?? null,
             'OPERATION_VARIANT' => $calc['operationVariantId'] ?? null,
             'MATERIAL_VARIANT' => $calc['materialVariantId'] ?? null,
             'EQUIPMENT' => $calc['equipmentId'] ?? null,
