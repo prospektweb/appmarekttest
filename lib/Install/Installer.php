@@ -283,7 +283,7 @@ class Installer
 
         // Удаляем инфоблоки
         $iblockCodes = [
-            'CALC_CONFIG',
+            'CALC_STAGES',
             'CALC_SETTINGS',
             'CALC_MATERIALS',
             'CALC_MATERIALS_VARIANTS',
