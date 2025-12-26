@@ -232,7 +232,7 @@ class ResultWriter
     }
 
     /**
-     * Сохраняет конфигурацию расчёта в инфоблок CALC_CONFIG.
+     * Сохраняет конфигурацию расчёта в инфоблок CALC_STAGES.
      *
      * @param int    $productId ID товара.
      * @param array  $structure Структура расчёта.
@@ -251,7 +251,7 @@ class ResultWriter
             return false;
         }
 
-        $iblockId = $this->configManager->getIblockId('CALC_CONFIG');
+        $iblockId = $this->configManager->getIblockId('CALC_STAGES');
         if ($iblockId <= 0) {
             return false;
         }

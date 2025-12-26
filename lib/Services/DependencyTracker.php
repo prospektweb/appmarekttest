@@ -32,7 +32,7 @@ class DependencyTracker
             return [];
         }
 
-        $iblockId = $this->configManager->getIblockId('CALC_CONFIG');
+        $iblockId = $this->configManager->getIblockId('CALC_STAGES');
         if ($iblockId <= 0) {
             return [];
         }
@@ -85,7 +85,7 @@ class DependencyTracker
             return true;
         }
 
-        $iblockId = $this->configManager->getIblockId('CALC_CONFIG');
+        $iblockId = $this->configManager->getIblockId('CALC_STAGES');
         if ($iblockId <= 0) {
             return false;
         }
@@ -112,7 +112,7 @@ class DependencyTracker
             return [];
         }
 
-        $iblockId = $this->configManager->getIblockId('CALC_CONFIG');
+        $iblockId = $this->configManager->getIblockId('CALC_STAGES');
         if ($iblockId <= 0) {
             return [];
         }

@@ -468,12 +468,19 @@ switch ($currentStep) {
         installLog("ШАГ 2 из {$totalSteps}: СОЗДАНИЕ ИНФОБЛОКОВ", 'header');
         
         $configProps = [
-            'CALC_SETTING' => [
+            'CALC_SETTINGS' => [
                 'NAME' => 'Калькулятор',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'N',
                 'IS_REQUIRED' => 'N',
                 'SORT' => 100,
+            ],
+            'COST' => [
+                'NAME' => 'Стоимость этапа',
+                'TYPE' => 'N',
+                'MULTIPLE' => 'N',
+                'IS_REQUIRED' => 'N',
+                'SORT' => 150,
             ],
             'OPERATION_VARIANT' => [
                 'NAME' => 'Вариант операции',
@@ -736,8 +743,8 @@ switch ($currentStep) {
                     ['XML_ID' => 'BINDING', 'VALUE' => 'Скрепление'],
                 ],
             ],
-            'CALC_CONFIG' => [
-                'NAME' => 'Конфигурации',
+            'CALC_STAGES' => [
+                'NAME' => 'Этапы калькуляций',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
                 'MULTIPLE_CNT' => 1,
@@ -767,9 +774,18 @@ switch ($currentStep) {
                 'USER_TYPE' => 'HTML',
                 'SORT' => 100,
             ],
-            // Привязки к catalog (CALC_CONFIG, CALC_SETTINGS)
-            'CALC_CONFIG' => [
-                'NAME' => 'Конфигурации',
+            'CALC_DIMENSIONS_WEIGHT' => [
+                'NAME' => 'Расчёт габаритов и веса',
+                'TYPE' => 'L',
+                'SORT' => 150,
+                'VALUES' => [
+                    ['XML_ID' => 'Y', 'VALUE' => 'Да'],
+                    ['XML_ID' => 'N', 'VALUE' => 'Нет', 'DEF' => 'Y'],
+                ],
+            ],
+            // Привязки к catalog (CALC_STAGES, CALC_SETTINGS)
+            'CALC_STAGES' => [
+                'NAME' => 'Этапы калькуляций',
                 'TYPE' => 'E',
                 'MULTIPLE' => 'Y',
                 'MULTIPLE_CNT' => 1,
@@ -835,7 +851,7 @@ switch ($currentStep) {
         ];
 
         $installData['iblock_ids']['CALC_BUNDLES'] = createIblockWithLog('calculator', 'CALC_BUNDLES', 'Сборки для расчётов', $bundlesProps);
-        $installData['iblock_ids']['CALC_CONFIG'] = createIblockWithLog('calculator', 'CALC_CONFIG', 'Этапы калькуляций', $configProps);
+        $installData['iblock_ids']['CALC_STAGES'] = createIblockWithLog('calculator_catalog', 'CALC_STAGES', 'Этапы калькуляций', $configProps);
         $installData['iblock_ids']['CALC_SETTINGS'] = createIblockWithLog('calculator', 'CALC_SETTINGS', 'Настройки калькуляторов', $settingsProps);
         $installData['iblock_ids']['CALC_MATERIALS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS', 'Материалы', $materialsProps);
         $installData['iblock_ids']['CALC_MATERIALS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS_VARIANTS', 'Варианты материалов', $materialsVariantsProps);
@@ -929,20 +945,20 @@ switch ($currentStep) {
             }
         }
         
-        // Обновление свойств CALC_CONFIG с привязками к инфоблокам
-        if ($installData['iblock_ids']['CALC_CONFIG'] > 0) {
+        // Обновление свойств CALC_STAGES с привязками к инфоблокам
+        if ($installData['iblock_ids']['CALC_STAGES'] > 0) {
             installLog("");
-            installLog("Обновление свойств CALC_CONFIG с привязками к инфоблокам...", 'header');
+            installLog("Обновление свойств CALC_STAGES с привязками к инфоблокам...", 'header');
             
-            $configIblockId = $installData['iblock_ids']['CALC_CONFIG'];
+            $configIblockId = $installData['iblock_ids']['CALC_STAGES'];
             $ibp = new \CIBlockProperty();
             
-            // Обновляем CALC_SETTING
+            // Обновляем CALC_SETTINGS
             if ($installData['iblock_ids']['CALC_SETTINGS'] > 0) {
-                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $configIblockId, 'CODE' => 'CALC_SETTING']);
+                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $configIblockId, 'CODE' => 'CALC_SETTINGS']);
                 if ($arProperty = $rsProperty->Fetch()) {
                     $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_SETTINGS']]);
-                    installLog("  → Обновлено свойство CALC_SETTING", 'success');
+                    installLog("  → Обновлено свойство CALC_SETTINGS", 'success');
                 }
             }
             
@@ -982,12 +998,12 @@ switch ($currentStep) {
             $detailsIblockId = $installData['iblock_ids']['CALC_DETAILS'];
             $ibp = new \CIBlockProperty();
             
-            // Обновляем CALC_CONFIG
-            if ($installData['iblock_ids']['CALC_CONFIG'] > 0) {
-                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $detailsIblockId, 'CODE' => 'CALC_CONFIG']);
+            // Обновляем CALC_STAGES
+            if ($installData['iblock_ids']['CALC_STAGES'] > 0) {
+                $rsProperty = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $detailsIblockId, 'CODE' => 'CALC_STAGES']);
                 if ($arProperty = $rsProperty->Fetch()) {
-                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_CONFIG']]);
-                    installLog("  → Обновлено свойство CALC_CONFIG", 'success');
+                    $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_STAGES']]);
+                    installLog("  → Обновлено свойство CALC_STAGES", 'success');
                 }
             }
             
@@ -1006,7 +1022,7 @@ switch ($currentStep) {
                 $ibp = new \CIBlockProperty();
                 
                 $bundlesLinkProperties = [
-                    'CALC_CONFIG' => 'CALC_CONFIG',
+                    'CALC_STAGES' => 'CALC_STAGES',
                     'CALC_SETTINGS' => 'CALC_SETTINGS',
                     'CALC_MATERIALS' => 'CALC_MATERIALS',
                     'CALC_MATERIALS_VARIANTS' => 'CALC_MATERIALS_VARIANTS',
@@ -1032,6 +1048,91 @@ switch ($currentStep) {
         // Создание единиц измерения
         installLog("");
         createMeasuresWithLog();
+        
+        // Включение торгового каталога для CALC_STAGES
+        if ($installData['iblock_ids']['CALC_STAGES'] > 0) {
+            installLog("");
+            installLog("Включение торгового каталога для CALC_STAGES...", 'header');
+            
+            $stagesIblockId = $installData['iblock_ids']['CALC_STAGES'];
+            
+            // Проверяем, является ли уже каталогом
+            $catalogInfo = \CCatalog::GetByID($stagesIblockId);
+            if ($catalogInfo) {
+                installLog("  → CALC_STAGES уже является торговым каталогом", 'warning');
+            } else {
+                // Добавляем в каталоги
+                $result = \CCatalog::Add([
+                    'IBLOCK_ID' => $stagesIblockId,
+                    'YANDEX_EXPORT' => 'N',
+                    'SUBSCRIPTION' => 'N',
+                    'VAT_ID' => 0,
+                ]);
+                
+                if ($result) {
+                    installLog("  → CALC_STAGES успешно добавлен как торговый каталог", 'success');
+                } else {
+                    $error = getBitrixError();
+                    installLog("  → Ошибка добавления CALC_STAGES в каталоги: {$error}", 'error');
+                }
+            }
+        }
+        
+        // Создание валюты PRC
+        installLog("");
+        installLog("Создание валюты PRC...", 'header');
+        
+        if (Loader::includeModule('currency')) {
+            // Проверяем, существует ли валюта
+            $currencyExists = \CCurrency::GetByID('PRC');
+            
+            if ($currencyExists) {
+                installLog("  → Валюта PRC уже существует", 'warning');
+                
+                // Обновляем параметры валюты
+                $updateResult = \CCurrency::Update('PRC', [
+                    'SORT' => 999,
+                    'AMOUNT_CNT' => 1,
+                    'AMOUNT' => 1,
+                ]);
+                
+                if ($updateResult) {
+                    installLog("  → Параметры валюты PRC обновлены", 'success');
+                }
+            } else {
+                // Создаём валюту
+                $result = \CCurrency::Add([
+                    'CURRENCY' => 'PRC',
+                    'AMOUNT_CNT' => 1,
+                    'AMOUNT' => 1,
+                    'SORT' => 999,
+                    'BASE' => 'N',
+                ]);
+                
+                if ($result) {
+                    installLog("  → Создана валюта PRC", 'success');
+                    
+                    // Устанавливаем названия для языков
+                    $langs = ['ru', 'en'];
+                    foreach ($langs as $lang) {
+                        \CCurrencyLang::Add([
+                            'CURRENCY' => 'PRC',
+                            'LID' => $lang,
+                            'FORMAT_STRING' => '#',
+                            'FULL_NAME' => '%',
+                            'DEC_POINT' => '.',
+                            'THOUSANDS_SEP' => ' ',
+                            'DECIMALS' => 2,
+                        ]);
+                    }
+                    installLog("  → Названия валюты PRC установлены для всех языков", 'success');
+                } else {
+                    installLog("  → Ошибка создания валюты PRC", 'error');
+                }
+            }
+        } else {
+            installLog("  → Модуль currency не загружен, пропуск создания валюты", 'warning');
+        }
         
         installLog("--- Шаг 2 выполнен ---", 'header');
         break;

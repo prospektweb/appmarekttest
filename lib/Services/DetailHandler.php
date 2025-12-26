@@ -21,7 +21,7 @@ class DetailHandler
         Loader::includeModule('iblock');
         
         $this->detailsIblockId = (int)Option::get(self::MODULE_ID, 'IBLOCK_CALC_DETAILS', 0);
-        $this->configIblockId = (int)Option::get(self::MODULE_ID, 'IBLOCK_CALC_CONFIG', 0);
+        $this->configIblockId = (int)Option::get(self::MODULE_ID, 'IBLOCK_CALC_STAGES', 0);
     }
 
     /**
@@ -46,7 +46,7 @@ class DetailHandler
                 ];
             }
             
-            // 2. Создать элемент в CALC_CONFIG (пустой конфиг для первого этапа)
+            // 2. Создать элемент в CALC_STAGES (пустой конфиг для первого этапа)
             $configId = $this->createConfigElement($name);
             
             if (!$configId) {
@@ -58,7 +58,7 @@ class DetailHandler
                 ];
             }
             
-            // 3. Связать конфиг с деталью через свойство CALC_CONFIG
+            // 3. Связать конфиг с деталью через свойство CALC_STAGES
             $this->linkConfigToDetail($detailId, [$configId]);
             
             // 4. Вернуть данные
@@ -177,9 +177,9 @@ class DetailHandler
                 'DETAILS' => $detailIds,
             ]);
             
-            // 4. Связать через CALC_CONFIG (для групп используем CALC_CONFIG_BINDINGS)
+            // 4. Связать через CALC_STAGES (для групп используем CALC_STAGES_BINDINGS)
             \CIBlockElement::SetPropertyValuesEx($groupId, $this->detailsIblockId, [
-                'CALC_CONFIG_BINDINGS' => [$configId],
+                'CALC_STAGES_BINDINGS' => [$configId],
             ]);
             
             return [
@@ -231,7 +231,7 @@ class DetailHandler
                 ];
             }
             
-            // 1. Создать новый элемент в CALC_CONFIG
+            // 1. Создать новый элемент в CALC_STAGES
             $configName = $detail['NAME'] . ' - Этап ' . (count($detail['CONFIGS']) + 1);
             $configId = $this->createConfigElement($configName);
             
@@ -242,12 +242,12 @@ class DetailHandler
                 ];
             }
             
-            // 2. Добавить его ID в свойство CALC_CONFIG детали
+            // 2. Добавить его ID в свойство CALC_STAGES детали
             $existingConfigs = $detail['CONFIGS'];
             $existingConfigs[] = $configId;
             
             \CIBlockElement::SetPropertyValuesEx($detailId, $this->detailsIblockId, [
-                'CALC_CONFIG' => $existingConfigs,
+                'CALC_STAGES' => $existingConfigs,
             ]);
             
             return [
@@ -295,7 +295,7 @@ class DetailHandler
                 ];
             }
             
-            // 1. Удалить элемент из CALC_CONFIG
+            // 1. Удалить элемент из CALC_STAGES
             if (!\CIBlockElement::Delete($configId)) {
                 return [
                     'status' => 'error',
@@ -303,14 +303,14 @@ class DetailHandler
                 ];
             }
             
-            // 2. Убрать ID из свойства CALC_CONFIG детали
+            // 2. Убрать ID из свойства CALC_STAGES детали
             $existingConfigs = $detail['CONFIGS'];
             $newConfigs = array_filter($existingConfigs, function($id) use ($configId) {
                 return $id != $configId;
             });
             
             \CIBlockElement::SetPropertyValuesEx($detailId, $this->detailsIblockId, [
-                'CALC_CONFIG' => array_values($newConfigs),
+                'CALC_STAGES' => array_values($newConfigs),
             ]);
             
             return [
@@ -554,7 +554,7 @@ class DetailHandler
     private function linkConfigToDetail(int $detailId, array $configIds): void
     {
         \CIBlockElement::SetPropertyValuesEx($detailId, $this->detailsIblockId, [
-            'CALC_CONFIG' => $configIds,
+            'CALC_STAGES' => $configIds,
         ]);
     }
 
@@ -579,9 +579,9 @@ class DetailHandler
         $properties = $element->GetProperties();
         
         $type = $properties['TYPE']['VALUE'] ?? 'DETAIL';
-        $configIds = is_array($properties['CALC_CONFIG']['VALUE']) 
-            ? $properties['CALC_CONFIG']['VALUE'] 
-            : (!empty($properties['CALC_CONFIG']['VALUE']) ? [$properties['CALC_CONFIG']['VALUE']] : []);
+        $configIds = is_array($properties['CALC_STAGES']['VALUE']) 
+            ? $properties['CALC_STAGES']['VALUE'] 
+            : (!empty($properties['CALC_STAGES']['VALUE']) ? [$properties['CALC_STAGES']['VALUE']] : []);
         
         $detailIds = is_array($properties['DETAILS']['VALUE']) 
             ? $properties['DETAILS']['VALUE'] 
@@ -655,9 +655,9 @@ class DetailHandler
         if ($originalDetail['TYPE'] === 'DETAIL') {
             $this->linkConfigToDetail($newDetailId, $newConfigIds);
         } else {
-            // Для групп используем CALC_CONFIG_BINDINGS
+            // Для групп используем CALC_STAGES_BINDINGS
             \CIBlockElement::SetPropertyValuesEx($newDetailId, $this->detailsIblockId, [
-                'CALC_CONFIG_BINDINGS' => $newConfigIds,
+                'CALC_STAGES_BINDINGS' => $newConfigIds,
             ]);
         }
         

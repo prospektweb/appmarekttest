@@ -291,7 +291,7 @@ class BundleHandler
     private function buildPropertyValues(array $linkedElements): array
     {
         $map = [
-            'calcConfig' => 'CALC_CONFIG',
+            'calcConfig' => 'CALC_STAGES',
             'calcSettings' => 'CALC_SETTINGS',
             'materials' => 'CALC_MATERIALS',
             'materialsVariants' => 'CALC_MATERIALS_VARIANTS',

@@ -347,6 +347,7 @@ class InitPayloadService
             'timestamp' => time(),
             'url' => $siteUrl,
             'menuLinks' => $this->buildMenuLinks($siteUrl, $languageId),
+            'priceRounding' => (float)Option::get(self::MODULE_ID, 'PRICE_ROUNDING', 1),
         ];
     }
 
@@ -385,7 +386,7 @@ class InitPayloadService
             'calculators' => (int)Option::get(self::MODULE_ID, 'IBLOCK_CALCULATORS', 0),
             'configurations' => (int)Option::get(self::MODULE_ID, 'IBLOCK_CONFIGURATIONS', 0),
             'calcBundles' => (int)($moduleIblocks['CALC_BUNDLES'] ?? 0),
-            'calcConfig' => (int)($moduleIblocks['CALC_CONFIG'] ?? 0),
+            'calcStages' => (int)($moduleIblocks['CALC_STAGES'] ?? 0),
             'calcSettings' => (int)($moduleIblocks['CALC_SETTINGS'] ?? 0),
             'calcCustomFields' => (int)($moduleIblocks['CALC_CUSTOM_FIELDS'] ?? 0),
             'calcMaterials' => (int)($moduleIblocks['CALC_MATERIALS'] ?? 0),
@@ -537,7 +538,7 @@ class InitPayloadService
     {
         $propCodes = [
             'JSON',
-            'CALC_CONFIG',
+            'CALC_STAGES',
             'CALC_SETTINGS',
             'CALC_MATERIALS',
             'CALC_MATERIALS_VARIANTS',
@@ -579,7 +580,7 @@ class InitPayloadService
     private function collectLinkedElementIdsFromRaw(array $propertiesRaw): array
     {
         $map = [
-            'calcConfig' => 'CALC_CONFIG',
+            'calcConfig' => 'CALC_STAGES',
             'calcSettings' => 'CALC_SETTINGS',
             'materials' => 'CALC_MATERIALS',
             'materialsVariants' => 'CALC_MATERIALS_VARIANTS',
@@ -612,7 +613,7 @@ class InitPayloadService
         $configManager = new ConfigManager();
         
         $iblockMap = [
-            'calcConfig' => $configManager->getIblockId('CALC_CONFIG'),
+            'calcConfig' => $configManager->getIblockId('CALC_STAGES'),
             'calcSettings' => $configManager->getIblockId('CALC_SETTINGS'),
             'materials' => $configManager->getIblockId('CALC_MATERIALS'),
             'materialsVariants' => $configManager->getIblockId('CALC_MATERIALS_VARIANTS'),

@@ -89,7 +89,7 @@ $skuIblockId = $catalogInfo['IBLOCK_ID'] ?? null;
         <ul>
             <li><strong><?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_IBLOCK_TYPE_CALCULATOR') ?></strong> (calculator)
                 <ul>
-                    <li><?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_IBLOCK_CALC_CONFIG') ?></li>
+                    <li><?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_IBLOCK_CALC_STAGES') ?></li>
                     <li><?= Loc::getMessage('PROSPEKTWEB_CALC_INSTALL_IBLOCK_CALC_SETTINGS') ?></li>
                 </ul>
             </li>

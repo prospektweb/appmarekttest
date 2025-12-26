@@ -133,7 +133,7 @@ class Installer
         $iblocks = [];
 
         // Инфоблоки калькулятора
-        $iblocks['CALC_CONFIG'] = $this->iblockCreator->createCalcConfigIblock();
+        $iblocks['CALC_STAGES'] = $this->iblockCreator->createCalcConfigIblock();
         $iblocks['CALC_SETTINGS'] = $this->iblockCreator->createCalcSettingsIblock();
 
         // Справочники
@@ -283,7 +283,7 @@ class Installer
 
         // Удаляем инфоблоки
         $iblockCodes = [
-            'CALC_CONFIG',
+            'CALC_STAGES',
             'CALC_SETTINGS',
             'CALC_MATERIALS',
             'CALC_MATERIALS_VARIANTS',
