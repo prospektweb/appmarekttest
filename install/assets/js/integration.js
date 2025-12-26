@@ -1617,7 +1617,7 @@
          * Обработка READY
          */
         async handleReady(message, event) {
-            this.logDebug('[CalcIntegration] Iframe is ready, checking presets...');
+            this.logDebug('[CalcIntegration] Iframe is ready, loading init data...');
 
             if (event && event.origin) {
                 this.readyOrigin = event.origin;
@@ -1626,32 +1626,9 @@
             }
 
             try {
-                const skipPresetCheck = this.config.presetCheckResult && this.config.presetCheckResult.skipPresetCheck;
-
-                if (!skipPresetCheck) {
-                    // Сначала проверяем CALC_PRESET у всех торговых предложений
-                    const presetCheck = await this.checkPresets();
-                    
-                    // Если нужно подтверждение
-                    if (presetCheck.needsConfirmation) {
-                        const confirmed = confirm('Необходимо создать новый пресет калькуляции');
-                        
-                        if (!confirmed) {
-                            // Пользователь отказался - закрываем калькулятор
-                            this.logDebug('[CalcIntegration] User cancelled preset creation');
-                            if (typeof this.config.onClose === 'function') {
-                                this.config.onClose();
-                            }
-                            return;
-                        }
-                        
-                        // Пользователь подтвердил - создаём новый preset и привязываем к ТП
-                        this.logDebug('[CalcIntegration] User confirmed, creating preset...');
-                        await this.createAndAssignPreset();
-                    }
-                } else {
-                    this.logDebug('[CalcIntegration] Preset check skipped (handled before dialog opening)');
-                }
+                // Проверка пресетов теперь выполняется ДО создания диалога в calculator.js
+                // Здесь мы просто загружаем данные для инициализации
+                this.logDebug('[CalcIntegration] Preset check was handled before dialog opening');
                 
                 // Получаем данные для инициализации через AJAX
                 const initData = await this.fetchInitData();
@@ -1817,100 +1794,6 @@
                 this.logBridge('[BitrixBridge] AJAX getInitData failed', {
                     durationMs: Math.round(duration),
                     status: 'error',
-                    message: error.message,
-                });
-                throw error;
-            }
-        }
-
-        /**
-         * Проверка CALC_PRESET у торговых предложений
-         * @returns {Promise<Object>}
-         */
-        async checkPresets() {
-            const url = this.config.ajaxEndpoint +
-                '?action=checkPresets' +
-                '&offerIds=' + encodeURIComponent(this.config.offerIds.join(',')) +
-                '&sessid=' + encodeURIComponent(this.config.sessid);
-
-            this.logBridge('[BitrixBridge] AJAX checkPresets start', {
-                url: url,
-                offerIdsCount: this.config.offerIds.length,
-            });
-
-            try {
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                });
-
-                if (!response.ok) {
-                    throw new Error('HTTP error ' + response.status);
-                }
-
-                const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.message || data.error || 'Ошибка проверки пресетов');
-                }
-
-                this.logBridge('[BitrixBridge] AJAX checkPresets success', {
-                    needsConfirmation: data.data.needsConfirmation,
-                    samePresetForAll: data.data.samePresetForAll,
-                });
-
-                return data.data;
-            } catch (error) {
-                this.logBridge('[BitrixBridge] AJAX checkPresets failed', {
-                    message: error.message,
-                });
-                throw error;
-            }
-        }
-
-        /**
-         * Создание и привязка CALC_PRESET к торговым предложениям
-         * @returns {Promise<Object>}
-         */
-        async createAndAssignPreset() {
-            const url = this.config.ajaxEndpoint +
-                '?action=createAndAssignPreset' +
-                '&offerIds=' + encodeURIComponent(this.config.offerIds.join(',')) +
-                '&siteId=' + encodeURIComponent(this.config.siteId) +
-                '&sessid=' + encodeURIComponent(this.config.sessid);
-
-            this.logBridge('[BitrixBridge] AJAX createAndAssignPreset start', {
-                url: url,
-                offerIdsCount: this.config.offerIds.length,
-            });
-
-            try {
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                });
-
-                if (!response.ok) {
-                    throw new Error('HTTP error ' + response.status);
-                }
-
-                const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.message || data.error || 'Ошибка создания пресета');
-                }
-
-                this.logBridge('[BitrixBridge] AJAX createAndAssignPreset success', {
-                    presetId: data.data.presetId,
-                });
-
-                return data.data;
-            } catch (error) {
-                this.logBridge('[BitrixBridge] AJAX createAndAssignPreset failed', {
                     message: error.message,
                 });
                 throw error;

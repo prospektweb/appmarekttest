@@ -312,7 +312,6 @@ function handleCreateAndAssignPreset($request): void
         sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
     }
 }
-}
 
 /**
  * Обработка запроса save
