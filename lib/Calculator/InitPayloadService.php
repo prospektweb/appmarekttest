@@ -249,37 +249,21 @@ class InitPayloadService
             return [
                 'scenario' => 'EXISTING_PRESET',
                 'bundleId' => $uniquePresetIds[0],
-                'requiresConfirmation' => false,
             ];
         }
         
-        // Сценарий B: Ни у кого нет preset → создаём новый (с предупреждением)
+        // Сценарий B: Ни у кого нет preset → создаём новый
         if (empty($uniquePresetIds)) {
             return [
                 'scenario' => 'NEW_BUNDLE',
                 'bundleId' => null,
-                'requiresConfirmation' => false,
             ];
         }
         
-        // Сценарий C: Смешанная ситуация → нужно предупреждение
-        $bundleHandler = new BundleHandler();
-        $presetsSummary = $bundleHandler->loadPresetsSummary($uniquePresetIds);
-        
-        // Добавляем offerIds к каждому пресету
-        $existingPresets = [];
-        foreach ($presetsSummary as $id => $info) {
-            $info['offerIds'] = array_keys(array_filter($offersWithPreset, fn($pid) => $pid === $id));
-            $existingPresets[] = $info;
-        }
-        
+        // Сценарий C: Смешанная ситуация → создаём новый
         return [
             'scenario' => 'CONFLICT',
             'bundleId' => null,
-            'requiresConfirmation' => true,
-            'existingBundles' => $existingPresets,
-            'offersWithBundle' => $offersWithPreset,
-            'offersWithoutBundle' => $offersWithoutPreset,
         ];
     }
 
