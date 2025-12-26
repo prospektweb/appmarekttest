@@ -36,6 +36,7 @@ var ProspekwebCalc = {
     
     // Константы
     DOM_STABILIZATION_DELAY: 50, // Задержка в мс для стабилизации DOM после AJAX-обновлений
+    PRESET_CONFIRM_MESSAGE: 'Необходимо создать новый пресет калькуляции',
     
     // Состояние
     dialog: null,
@@ -209,7 +210,7 @@ var ProspekwebCalc = {
     /**
      * Открытие диалога с iframe
      */
-    openCalculatorDialog: function() {
+    openCalculatorDialog: async function() {
         this.loadCss(this.cssPath);
         var self = this;
 
@@ -218,6 +219,12 @@ var ProspekwebCalc = {
 
         if (offers.length === 0) {
             alert('Не выбраны торговые предложения');
+            return;
+        }
+
+        // Проверяем CALC_PRESET перед созданием диалога
+        var presetCheck = await this.ensurePresetAvailability(offers);
+        if (!presetCheck || presetCheck.cancelled || presetCheck.error) {
             return;
         }
 
@@ -270,6 +277,7 @@ var ProspekwebCalc = {
             offerIds: offers.map(function(o) { return o.id; }),
             siteId: BX.message('SITE_ID') || (typeof SITE_ID !== 'undefined' ? SITE_ID : 's1'),
             sessid: BX.bitrix_sessid(),
+            presetCheckResult: presetCheck,
             onClose: function() {
                 self.closeDialog();
             },
@@ -285,6 +293,77 @@ var ProspekwebCalc = {
         });
 
         dialog.Show();
+    },
+
+    /**
+     * Предварительная проверка/создание CALC_PRESET для выбранных ТП
+     * @param {Array} offers
+     * @returns {Promise<{success: boolean, presetId?: number, skipPresetCheck: boolean, cancelled?: boolean, error?: boolean}>}
+     */
+    ensurePresetAvailability: async function(offers) {
+        var offerIds = offers.map(function(o) { return o.id; });
+        var ajaxEndpoint = '/bitrix/tools/prospektweb.calc/calculator_ajax.php';
+        var sessid = BX.bitrix_sessid();
+        var siteId = BX.message('SITE_ID') || (typeof SITE_ID !== 'undefined' ? SITE_ID : 's1');
+
+        try {
+            var checkUrl = ajaxEndpoint +
+                '?action=checkPresets' +
+                '&offerIds=' + encodeURIComponent(offerIds.join(',')) +
+                '&sessid=' + encodeURIComponent(sessid);
+
+            var checkResponse = await fetch(checkUrl, {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+
+            var checkData = await checkResponse.json();
+
+            if (!checkResponse.ok || !checkData.success) {
+                throw new Error((checkData && (checkData.message || checkData.error)) || 'Ошибка проверки пресетов');
+            }
+
+            var presetId = null;
+            if (checkData.data && checkData.data.samePresetForAll && Array.isArray(checkData.data.uniquePresets) && checkData.data.uniquePresets.length === 1) {
+                presetId = parseInt(checkData.data.uniquePresets[0], 10) || null;
+            }
+
+            if (!checkData.data.needsConfirmation) {
+                return { success: true, presetId: presetId, skipPresetCheck: true };
+            }
+
+            var confirmed = confirm(this.PRESET_CONFIRM_MESSAGE);
+            if (!confirmed) {
+                return { success: false, cancelled: true, skipPresetCheck: true };
+            }
+
+            var createUrl = ajaxEndpoint +
+                '?action=createAndAssignPreset' +
+                '&offerIds=' + encodeURIComponent(offerIds.join(',')) +
+                '&siteId=' + encodeURIComponent(siteId) +
+                '&sessid=' + encodeURIComponent(sessid);
+
+            var createResponse = await fetch(createUrl, {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+
+            var createData = await createResponse.json();
+
+            if (!createResponse.ok || !createData.success) {
+                throw new Error((createData && (createData.message || createData.error)) || 'Ошибка создания пресета');
+            }
+
+            return {
+                success: true,
+                presetId: createData.data ? createData.data.presetId : null,
+                skipPresetCheck: true,
+            };
+        } catch (error) {
+            console.error('[ProspektwebCalc] Preset check error:', error);
+            alert('Ошибка проверки/создания пресета: ' + error.message);
+            return { success: false, error: true, skipPresetCheck: true };
+        }
     },
 
     /**
