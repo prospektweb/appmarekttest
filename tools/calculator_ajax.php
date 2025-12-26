@@ -529,6 +529,7 @@ function sendJsonResponse(array $data, int $statusCode = 200): void
         http_response_code($statusCode);
     }
 
+    // Explicitly set Content-Type header (defensive practice, also set globally at line 12)
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     die();
