@@ -37,6 +37,7 @@
                 sessid: config.sessid || '',
                 onClose: config.onClose || null,
                 onError: config.onError || null,
+                presetCheckResult: config.presetCheckResult || null,
             };
 
             this.iframe = null;
@@ -1625,25 +1626,31 @@
             }
 
             try {
-                // Сначала проверяем CALC_PRESET у всех торговых предложений
-                const presetCheck = await this.checkPresets();
-                
-                // Если нужно подтверждение
-                if (presetCheck.needsConfirmation) {
-                    const confirmed = confirm('Необходимо создать новый пресет калькуляции');
+                const skipPresetCheck = this.config.presetCheckResult && this.config.presetCheckResult.skipPresetCheck;
+
+                if (!skipPresetCheck) {
+                    // Сначала проверяем CALC_PRESET у всех торговых предложений
+                    const presetCheck = await this.checkPresets();
                     
-                    if (!confirmed) {
-                        // Пользователь отказался - закрываем калькулятор
-                        this.logDebug('[CalcIntegration] User cancelled preset creation');
-                        if (typeof this.config.onClose === 'function') {
-                            this.config.onClose();
+                    // Если нужно подтверждение
+                    if (presetCheck.needsConfirmation) {
+                        const confirmed = confirm('Необходимо создать новый пресет калькуляции');
+                        
+                        if (!confirmed) {
+                            // Пользователь отказался - закрываем калькулятор
+                            this.logDebug('[CalcIntegration] User cancelled preset creation');
+                            if (typeof this.config.onClose === 'function') {
+                                this.config.onClose();
+                            }
+                            return;
                         }
-                        return;
+                        
+                        // Пользователь подтвердил - создаём новый preset и привязываем к ТП
+                        this.logDebug('[CalcIntegration] User confirmed, creating preset...');
+                        await this.createAndAssignPreset();
                     }
-                    
-                    // Пользователь подтвердил - создаём новый preset и привязываем к ТП
-                    this.logDebug('[CalcIntegration] User confirmed, creating preset...');
-                    await this.createAndAssignPreset();
+                } else {
+                    this.logDebug('[CalcIntegration] Preset check skipped (handled before dialog opening)');
                 }
                 
                 // Получаем данные для инициализации через AJAX
