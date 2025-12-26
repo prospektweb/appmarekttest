@@ -296,6 +296,30 @@ var ProspekwebCalc = {
     },
 
     /**
+     * Helper function to safely parse JSON response
+     * @param {Response} response - Fetch API response object
+     * @returns {Promise<Object>} Parsed JSON data
+     * @throws {Error} If response is not JSON or parsing fails
+     */
+    parseJsonResponse: async function(response) {
+        // Check Content-Type before parsing
+        var contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // Response is not JSON, likely an error page
+            var textResponse = await response.text();
+            console.error('[ProspektwebCalc] Non-JSON response received:', textResponse.substring(0, 500));
+            throw new Error('Сервер вернул некорректный ответ (HTML вместо JSON). Статус: ' + response.status);
+        }
+
+        try {
+            return await response.json();
+        } catch (parseError) {
+            console.error('[ProspektwebCalc] JSON parse error:', parseError);
+            throw new Error('Ошибка парсинга ответа сервера. Возможно, сервер вернул HTML вместо JSON.');
+        }
+    },
+
+    /**
      * Предварительная проверка/создание CALC_PRESET для выбранных ТП
      * @param {Array} offers
      * @returns {Promise<{success: boolean, presetId?: number, skipPresetCheck: boolean, cancelled?: boolean, error?: boolean}>}
@@ -317,22 +341,7 @@ var ProspekwebCalc = {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             });
 
-            // Check Content-Type before parsing
-            var contentType = checkResponse.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                // Response is not JSON, likely an error page
-                var textResponse = await checkResponse.text();
-                console.error('[ProspektwebCalc] Non-JSON response received:', textResponse.substring(0, 500));
-                throw new Error('Сервер вернул некорректный ответ (HTML вместо JSON). Статус: ' + checkResponse.status);
-            }
-
-            var checkData;
-            try {
-                checkData = await checkResponse.json();
-            } catch (parseError) {
-                console.error('[ProspektwebCalc] JSON parse error:', parseError);
-                throw new Error('Ошибка парсинга ответа сервера. Возможно, сервер вернул HTML вместо JSON.');
-            }
+            var checkData = await this.parseJsonResponse(checkResponse);
 
             if (!checkResponse.ok || !checkData.success) {
                 throw new Error((checkData && (checkData.message || checkData.error)) || 'Ошибка проверки пресетов');
@@ -363,22 +372,7 @@ var ProspekwebCalc = {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             });
 
-            // Check Content-Type before parsing
-            contentType = createResponse.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                // Response is not JSON, likely an error page
-                textResponse = await createResponse.text();
-                console.error('[ProspektwebCalc] Non-JSON response received:', textResponse.substring(0, 500));
-                throw new Error('Сервер вернул некорректный ответ (HTML вместо JSON). Статус: ' + createResponse.status);
-            }
-
-            var createData;
-            try {
-                createData = await createResponse.json();
-            } catch (parseError) {
-                console.error('[ProspektwebCalc] JSON parse error:', parseError);
-                throw new Error('Ошибка парсинга ответа сервера. Возможно, сервер вернул HTML вместо JSON.');
-            }
+            var createData = await this.parseJsonResponse(createResponse);
 
             if (!createResponse.ok || !createData.success) {
                 throw new Error((createData && (createData.message || createData.error)) || 'Ошибка создания пресета');

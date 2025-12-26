@@ -28,12 +28,15 @@ const LOG_FILE = '/local/logs/prospektweb.calc.ajax.log';
 register_shutdown_function(function() {
     $error = error_get_last();
     if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
-        // Clear any output that might have been sent
-        if (ob_get_level()) {
-            ob_clean();
+        // Clear all output buffer levels
+        while (ob_get_level() > 0) {
+            ob_end_clean();
         }
         http_response_code(500);
-        header('Content-Type: application/json; charset=utf-8');
+        // Only set header if not already sent
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=utf-8');
+        }
         echo json_encode([
             'error' => 'Internal Server Error',
             'message' => 'A fatal error occurred',
