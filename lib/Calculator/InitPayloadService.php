@@ -36,27 +36,8 @@ class InitPayloadService
         // Загружаем информацию о ТП
         $selectedOffers = $this->loadOffers($offerIds);
         
-        // Анализируем состояние BUNDLE у ТП
+        // Анализируем состояние CALC_PRESET у ТП
         $analysis = $this->analyzeBundles($selectedOffers);
-        
-        // Если конфликт и не подтверждено — возвращаем данные для попапа
-        if ($analysis['scenario'] === 'CONFLICT' && !$forceCreatePreset) {
-            return [
-                'requiresConfirmation' => true,
-                'confirmationMessage' => 'Для запуска необходимо создать новый пресет. Кнопки - Подтвердить/Отмена',
-                'existingBundles' => $analysis['existingBundles'],
-                'offersWithBundle' => $analysis['offersWithBundle'],
-                'offersWithoutBundle' => $analysis['offersWithoutBundle'],
-            ];
-        }
-        
-        // Если нет bundle И не подтверждено создание — также требуем подтверждения
-        if ($analysis['scenario'] === 'NEW_BUNDLE' && !$forceCreatePreset) {
-            return [
-                'requiresConfirmation' => true,
-                'confirmationMessage' => 'Для запуска необходимо создать новый пресет. Кнопки - Подтвердить/Отмена',
-            ];
-        }
         
         // Определяем presetId
         $presetId = $analysis['bundleId'];
@@ -77,7 +58,7 @@ class InitPayloadService
         $iblocks = $this->getIblocks();
         $iblocksTypes = $this->getIblockTypes($iblocks);
 
-        // Формируем payload БЕЗ mode!
+        // Формируем payload
         return [
             'context' => $context,
             'iblocks' => $iblocks,
