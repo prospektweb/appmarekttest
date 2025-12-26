@@ -43,7 +43,7 @@ class InitPayloadService
         if ($analysis['scenario'] === 'CONFLICT' && !$forceCreatePreset) {
             return [
                 'requiresConfirmation' => true,
-                'confirmationMessage' => 'Для запуска необходимо создать новый пресет',
+                'confirmationMessage' => 'Для запуска необходимо создать новый пресет. Кнопки - Подтвердить/Отмена',
                 'existingBundles' => $analysis['existingBundles'],
                 'offersWithBundle' => $analysis['offersWithBundle'],
                 'offersWithoutBundle' => $analysis['offersWithoutBundle'],
@@ -54,7 +54,7 @@ class InitPayloadService
         if ($analysis['scenario'] === 'NEW_BUNDLE' && !$forceCreatePreset) {
             return [
                 'requiresConfirmation' => true,
-                'confirmationMessage' => 'Для запуска необходимо создать новый пресет',
+                'confirmationMessage' => 'Для запуска необходимо создать новый пресет. Кнопки - Подтвердить/Отмена',
             ];
         }
         

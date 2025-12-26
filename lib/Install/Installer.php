@@ -195,21 +195,21 @@ class Installer
             return;
         }
 
-        // Добавляем свойство BUNDLE
-        $bundlesId = (int)($iblockIds['CALC_BUNDLES'] ?? 0);
+        // Добавляем свойство PRESET
+        $presetsId = (int)($iblockIds['CALC_PRESETS'] ?? 0);
         
-        $this->log[] = "Попытка создания свойства BUNDLE: SKU ID={$skuIblockId}, CALC_BUNDLES ID={$bundlesId}";
+        $this->log[] = "Попытка создания свойства PRESET: SKU ID={$skuIblockId}, CALC_PRESETS ID={$presetsId}";
         
-        if ($bundlesId > 0) {
-            $propId = $this->propertyCreator->addDetailsVariantsProperty($skuIblockId, $bundlesId);
+        if ($presetsId > 0) {
+            $propId = $this->propertyCreator->addDetailsVariantsProperty($skuIblockId, $presetsId);
             
             if ($propId > 0) {
-                $this->log[] = "Добавлено свойство BUNDLE в инфоблок ТП (ID свойства: {$propId})";
+                $this->log[] = "Добавлено свойство PRESET в инфоблок ТП (ID свойства: {$propId})";
             } else {
-                $this->errors[] = "Не удалось создать свойство BUNDLE (SKU ID={$skuIblockId}, Link ID={$bundlesId})";
+                $this->errors[] = "Не удалось создать свойство PRESET (SKU ID={$skuIblockId}, Link ID={$presetsId})";
             }
         } else {
-            $this->errors[] = "CALC_BUNDLES iblock ID is empty or 0. Available iblock_ids: " . json_encode(array_keys($iblockIds));
+            $this->errors[] = "CALC_PRESETS iblock ID is empty or 0. Available iblock_ids: " . json_encode(array_keys($iblockIds));
         }
     }
 
