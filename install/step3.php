@@ -602,16 +602,6 @@ switch ($currentStep) {
                 'MULTIPLE_CNT' => 3,
                 // LINK_IBLOCK_ID будет установлен позже в секции обновления свойств
             ],
-            'USE_TYPE_PRICE' => [
-                'NAME' => 'Тип цен для составляющих',
-                'TYPE' => 'L',
-                'SORT' => 800,
-                'IS_REQUIRED' => 'Y',
-                'VALUES' => [
-                    ['XML_ID' => 'BASE_PRICE', 'VALUE' => 'Базовая стоимость', 'SORT' => 400, 'DEF' => 'Y'],
-                    ['XML_ID' => 'PURCHASING_PRICE', 'VALUE' => 'Закупочная стоимость', 'SORT' => 500],
-                ],
-            ],
         ];
         
         $materialsProps = [
