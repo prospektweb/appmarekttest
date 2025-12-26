@@ -32,14 +32,14 @@ class BundleHandler
      */
     public function createPreset(array $offerIds, ?string $name = null): int
     {
-        $iblockId = $this->configManager->getIblockId('CALC_BUNDLES');
+        $iblockId = $this->configManager->getIblockId('CALC_PRESETS');
         
         if ($iblockId <= 0) {
-            throw new \Exception('Инфоблок CALC_BUNDLES не настроен');
+            throw new \Exception('Инфоблок CALC_PRESETS не настроен');
         }
         
         $el = new \CIBlockElement();
-        $bundleId = $el->Add([
+        $presetId = $el->Add([
             'IBLOCK_ID' => $iblockId,
             'NAME' => $name ?: 'Новый пресет ' . date('Y-m-d H:i:s'),
             'ACTIVE' => 'Y',
@@ -48,33 +48,33 @@ class BundleHandler
             ],
         ]);
         
-        if (!$bundleId) {
+        if (!$presetId) {
             throw new \Exception('Ошибка создания пресета: ' . $el->LAST_ERROR);
         }
         
-        // Привязываем bundle к выбранным ТП
+        // Привязываем preset к выбранным ТП
         foreach ($offerIds as $offerId) {
             \CIBlockElement::SetPropertyValuesEx((int)$offerId, false, [
-                'BUNDLE' => $bundleId,
+                'PRESET' => $presetId,
             ]);
         }
         
-        return (int)$bundleId;
+        return (int)$presetId;
     }
     
     /**
-     * Сохранить данные bundle (SAVE_BUNDLE_REQUEST)
+     * Сохранить данные preset (SAVE_PRESET_REQUEST)
      * 
      * @param array $payload Данные от React
      * @return array Результат сохранения
      * @throws \Exception
      */
-    public function saveBundle(array $payload): array
+    public function savePreset(array $payload): array
     {
-        $bundleId = (int)($payload['bundleId'] ?? 0);
+        $presetId = (int)($payload['presetId'] ?? 0);
         
-        if ($bundleId <= 0) {
-            throw new \Exception('bundleId не указан');
+        if ($presetId <= 0) {
+            throw new \Exception('presetId не указан');
         }
         
         $linkedElements = $payload['linkedElements'] ?? [];
@@ -98,32 +98,32 @@ class BundleHandler
             $fields['NAME'] = $meta['name'];
         }
         
-        if (!$el->Update($bundleId, $fields)) {
-            throw new \Exception('Ошибка сохранения сборки: ' . $el->LAST_ERROR);
+        if (!$el->Update($presetId, $fields)) {
+            throw new \Exception('Ошибка сохранения пресета: ' . $el->LAST_ERROR);
         }
         
         return [
             'status' => 'ok',
-            'bundleId' => $bundleId,
+            'presetId' => $presetId,
         ];
     }
     
     /**
-     * Финализировать bundle уже не требуется, т.к. создаются только постоянные пресеты.
+     * Финализировать preset уже не требуется, т.к. создаются только постоянные пресеты.
      * Эта функция теперь может использоваться только для переименования preset'а.
      * 
-     * @param int $bundleId ID сборки
+     * @param int $presetId ID пресета
      * @param string|null $name Новое название (опционально)
      * @return array Результат
      * @throws \Exception
      */
-    public function finalizeBundle(int $bundleId, ?string $name = null): array
+    public function finalizePreset(int $presetId, ?string $name = null): array
     {
         if (!$name) {
             // Если имя не передано, ничего не делаем
             return [
                 'status' => 'ok',
-                'bundleId' => $bundleId,
+                'presetId' => $presetId,
                 'finalized' => true,
             ];
         }
@@ -134,23 +134,23 @@ class BundleHandler
             'NAME' => $name,
         ];
         
-        if (!$el->Update($bundleId, $fields)) {
+        if (!$el->Update($presetId, $fields)) {
             throw new \Exception('Ошибка переименования пресета: ' . $el->LAST_ERROR);
         }
         
         return [
             'status' => 'ok',
-            'bundleId' => $bundleId,
+            'presetId' => $presetId,
             'finalized' => true,
         ];
     }
     
     /**
-     * Удалить bundle и очистить привязки в ТП
+     * Удалить preset и очистить привязки в ТП
      * 
-     * @param int $bundleId ID сборки
+     * @param int $presetId ID пресета
      */
-    public function deleteBundle(int $bundleId): void
+    public function deletePreset(int $presetId): void
     {
         // Очищаем привязки в ТП
         $skuIblockId = $this->configManager->getSkuIblockId();
@@ -158,7 +158,7 @@ class BundleHandler
         if ($skuIblockId > 0) {
             $rsOffers = \CIBlockElement::GetList(
                 [],
-                ['IBLOCK_ID' => $skuIblockId, 'PROPERTY_BUNDLE' => $bundleId],
+                ['IBLOCK_ID' => $skuIblockId, 'PROPERTY_PRESET' => $presetId],
                 false,
                 false,
                 ['ID']
@@ -166,33 +166,33 @@ class BundleHandler
             
             while ($arOffer = $rsOffers->Fetch()) {
                 \CIBlockElement::SetPropertyValuesEx((int)$arOffer['ID'], false, [
-                    'BUNDLE' => false,
+                    'PRESET' => false,
                 ]);
             }
         }
         
-        // Удаляем элемент bundle
-        \CIBlockElement::Delete($bundleId);
+        // Удаляем элемент preset
+        \CIBlockElement::Delete($presetId);
     }
     
     /**
-     * Загрузить краткую информацию о сборках (для попапа предупреждения)
+     * Загрузить краткую информацию о пресетах (для попапа предупреждения)
      * 
-     * @param array $bundleIds ID сборок
+     * @param array $presetIds ID пресетов
      * @return array
      */
-    public function loadBundlesSummary(array $bundleIds): array
+    public function loadPresetsSummary(array $presetIds): array
     {
-        if (empty($bundleIds)) {
+        if (empty($presetIds)) {
             return [];
         }
         
-        $iblockId = $this->configManager->getIblockId('CALC_BUNDLES');
+        $iblockId = $this->configManager->getIblockId('CALC_PRESETS');
         $result = [];
         
         $rsElements = \CIBlockElement::GetList(
             [],
-            ['ID' => $bundleIds, 'IBLOCK_ID' => $iblockId],
+            ['ID' => $presetIds, 'IBLOCK_ID' => $iblockId],
             false,
             false,
             ['ID', 'NAME']

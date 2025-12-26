@@ -231,7 +231,7 @@ $tabControl->Begin();
 
     <?php
     $iblockCodes = [
-        'CALC_BUNDLES' => Loc::getMessage('PROSPEKTWEB_CALC_IBLOCK_BUNDLES'),
+        'CALC_PRESETS' => Loc::getMessage('PROSPEKTWEB_CALC_IBLOCK_PRESETS'),
         'CALC_STAGES' => Loc::getMessage('PROSPEKTWEB_CALC_IBLOCK_CALC_STAGES'),
         'CALC_STAGES_VARIANTS' => Loc::getMessage('PROSPEKTWEB_CALC_IBLOCK_CALC_STAGES_VARIANTS'),
         'CALC_SETTINGS' => Loc::getMessage('PROSPEKTWEB_CALC_IBLOCK_CALC_SETTINGS'),
