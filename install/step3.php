@@ -458,7 +458,7 @@ switch ($currentStep) {
         installLog("Модуль: {$moduleId}");
         installLog("Сайт по умолчанию: " . \CSite::GetDefSite());
         
-        createIblockTypeWithLog('calculator', 'Калькулятор');
+        createIblockTypeWithLog('calculator', 'Калькуляторы');
         createIblockTypeWithLog('calculator_catalog', 'Справочники калькулятора');
         
         installLog("--- Шаг 1 выполнен ---", 'header');
@@ -601,6 +601,16 @@ switch ($currentStep) {
                 'MULTIPLE' => 'Y',
                 'MULTIPLE_CNT' => 3,
                 // LINK_IBLOCK_ID будет установлен позже в секции обновления свойств
+            ],
+            'USE_TYPE_PRICE' => [
+                'NAME' => 'Тип цен для составляющих',
+                'TYPE' => 'L',
+                'SORT' => 800,
+                'IS_REQUIRED' => 'Y',
+                'VALUES' => [
+                    ['XML_ID' => 'BASE_PRICE', 'VALUE' => 'Базовая стоимость', 'SORT' => 400, 'DEF' => 'Y'],
+                    ['XML_ID' => 'PURCHASING_PRICE', 'VALUE' => 'Закупочная стоимость', 'SORT' => 500],
+                ],
             ],
         ];
         
@@ -835,7 +845,7 @@ switch ($currentStep) {
         ];
 
         $installData['iblock_ids']['CALC_BUNDLES'] = createIblockWithLog('calculator', 'CALC_BUNDLES', 'Сборки для расчётов', $bundlesProps);
-        $installData['iblock_ids']['CALC_CONFIG'] = createIblockWithLog('calculator', 'CALC_CONFIG', 'Конфигурации калькуляций', $configProps);
+        $installData['iblock_ids']['CALC_CONFIG'] = createIblockWithLog('calculator', 'CALC_CONFIG', 'Этапы калькуляций', $configProps);
         $installData['iblock_ids']['CALC_SETTINGS'] = createIblockWithLog('calculator', 'CALC_SETTINGS', 'Настройки калькуляторов', $settingsProps);
         $installData['iblock_ids']['CALC_MATERIALS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS', 'Материалы', $materialsProps);
         $installData['iblock_ids']['CALC_MATERIALS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS_VARIANTS', 'Варианты материалов', $materialsVariantsProps);
@@ -845,9 +855,12 @@ switch ($currentStep) {
         $installData['iblock_ids']['CALC_CUSTOM_FIELDS'] = createIblockWithLog(
             'calculator', 
             'CALC_CUSTOM_FIELDS', 
-            'Дополнительные поля калькуляторов', 
+            'Дополнительные поля', 
             $customFieldsProps,
-            ['EDIT_FILE_AFTER' => '/bitrix/admin/prospektweb_calc_custom_field.php']
+            [
+                'EDIT_FILE_AFTER' => '/bitrix/admin/prospektweb_calc_custom_field.php',
+                'SORT' => 900,
+            ]
         );
         $installData['iblock_ids']['CALC_DETAILS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS', 'Детали', $detailsProps);
         $installData['iblock_ids']['CALC_DETAILS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS_VARIANTS', 'Варианты деталей', $detailsVariantsProps);

@@ -13,7 +13,7 @@ $MESS['PROSPEKTWEB_CALC_DEFAULT_CURRENCY'] = 'Валюта по умолчани
 $MESS['PROSPEKTWEB_CALC_LOGGING_ENABLED'] = 'Включить логирование';
 
 $MESS['PROSPEKTWEB_CALC_IBLOCK_BUNDLES'] = 'Сборки для расчётов';
-$MESS['PROSPEKTWEB_CALC_IBLOCK_CALC_CONFIG'] = 'Конфигурации калькуляций';
+$MESS['PROSPEKTWEB_CALC_IBLOCK_CALC_CONFIG'] = 'Этапы калькуляций';
 $MESS['PROSPEKTWEB_CALC_TEMP_BUNDLES_LIMIT'] = 'Количество временных сборок';
 $MESS['PROSPEKTWEB_CALC_TEMP_BUNDLES_SECTION'] = 'Раздел временных сборок';
 $MESS['PROSPEKTWEB_CALC_IBLOCK_CALC_SETTINGS'] = 'Настройки калькуляторов';

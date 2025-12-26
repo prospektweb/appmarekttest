@@ -20,7 +20,7 @@ $hasData = false;
 if (Loader::includeModule('iblock')) {
     $iblockCodes = [
         'CALC_BUNDLES' => 'Сборки для расчётов',
-        'CALC_CONFIG' => 'Конфигурации калькуляций',
+        'CALC_CONFIG' => 'Этапы калькуляций',
         'CALC_SETTINGS' => 'Настройки калькуляторов',
         'CALC_MATERIALS' => 'Материалы',
         'CALC_MATERIALS_VARIANTS' => 'Варианты материалов',
