@@ -68,6 +68,11 @@ if (!Loader::includeModule('prospektweb.calc')) {
     sendJsonResponse(['error' => 'Module error', 'message' => 'Модуль не загружен'], 500);
 }
 
+// Загружаем модуль iblock (необходим для работы с CIBlockElement)
+if (!Loader::includeModule('iblock')) {
+    sendJsonResponse(['error' => 'Module error', 'message' => 'Модуль iblock не загружен'], 500);
+}
+
 // Получаем данные запроса
 $request = Application::getInstance()->getContext()->getRequest();
 
