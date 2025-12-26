@@ -307,7 +307,8 @@ var ProspekwebCalc = {
         if (!contentType || !contentType.includes('application/json')) {
             // Response is not JSON, likely an error page
             var textResponse = await response.text();
-            console.error('[ProspektwebCalc] Non-JSON response received:', textResponse.substring(0, 500));
+            // Log only first 200 characters to avoid exposing sensitive data
+            console.error('[ProspektwebCalc] Non-JSON response received:', textResponse.substring(0, 200));
             throw new Error('Сервер вернул некорректный ответ (HTML вместо JSON). Статус: ' + response.status);
         }
 

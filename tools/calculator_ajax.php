@@ -28,8 +28,9 @@ const LOG_FILE = '/local/logs/prospektweb.calc.ajax.log';
 register_shutdown_function(function() {
     $error = error_get_last();
     if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
-        // Clear all output buffer levels
-        while (ob_get_level() > 0) {
+        // Clear all output buffer levels (with safety limit)
+        $maxLevels = 10;
+        while (ob_get_level() > 0 && $maxLevels-- > 0) {
             ob_end_clean();
         }
         http_response_code(500);
@@ -39,8 +40,8 @@ register_shutdown_function(function() {
         }
         echo json_encode([
             'error' => 'Internal Server Error',
-            'message' => 'A fatal error occurred',
-            'details' => $error['message']
+            'message' => 'A fatal error occurred'
+            // Note: Not including error details for security reasons
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
