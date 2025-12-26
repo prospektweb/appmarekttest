@@ -8,6 +8,9 @@ define('NOT_CHECK_PERMISSIONS', false);
 
 require_once($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_before.php');
 
+// Set JSON Content-Type header early to ensure all responses are JSON
+header('Content-Type: application/json; charset=utf-8');
+
 use Bitrix\Main\Loader;
 use Bitrix\Main\Application;
 use Bitrix\Main\Config\Option;
@@ -20,6 +23,29 @@ use Prospektweb\Calc\Services\SyncVariantsHandler;
 
 // Constants
 const LOG_FILE = '/local/logs/prospektweb.calc.ajax.log';
+
+// Global error handler to ensure JSON responses on fatal errors
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        // Clear all output buffer levels (with safety limit)
+        $maxLevels = 10;
+        while (ob_get_level() > 0 && $maxLevels-- > 0) {
+            ob_end_clean();
+        }
+        http_response_code(500);
+        // Only set header if not already sent
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=utf-8');
+        }
+        echo json_encode([
+            'error' => 'Internal Server Error',
+            'message' => 'A fatal error occurred'
+            // Note: Not including error details for security reasons
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+});
 
 // Проверка авторизации
 global $USER;
@@ -503,6 +529,7 @@ function sendJsonResponse(array $data, int $statusCode = 200): void
         http_response_code($statusCode);
     }
 
+    // Explicitly set Content-Type header (defensive practice, also set globally at line 12)
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     die();
