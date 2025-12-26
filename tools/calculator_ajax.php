@@ -8,6 +8,9 @@ define('NOT_CHECK_PERMISSIONS', false);
 
 require_once($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_before.php');
 
+// Set JSON Content-Type header early to ensure all responses are JSON
+header('Content-Type: application/json; charset=utf-8');
+
 use Bitrix\Main\Loader;
 use Bitrix\Main\Application;
 use Bitrix\Main\Config\Option;
@@ -20,6 +23,25 @@ use Prospektweb\Calc\Services\SyncVariantsHandler;
 
 // Constants
 const LOG_FILE = '/local/logs/prospektweb.calc.ajax.log';
+
+// Global error handler to ensure JSON responses on fatal errors
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        // Clear any output that might have been sent
+        if (ob_get_level()) {
+            ob_clean();
+        }
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'error' => 'Internal Server Error',
+            'message' => 'A fatal error occurred',
+            'details' => $error['message']
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+});
 
 // Проверка авторизации
 global $USER;
