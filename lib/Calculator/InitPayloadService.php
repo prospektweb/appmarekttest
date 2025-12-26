@@ -310,7 +310,7 @@ class InitPayloadService
      */
     private function extractPresetId(array $offer): ?int
     {
-        $value = $offer['properties']['PRESET']['VALUE'] ?? null;
+        $value = $offer['properties']['CALC_PRESET']['VALUE'] ?? null;
         
         if ($value === null || $value === false || $value === '' || $value === '0') {
             return null;

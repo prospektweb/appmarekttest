@@ -55,7 +55,7 @@ class BundleHandler
         // Привязываем preset к выбранным ТП
         foreach ($offerIds as $offerId) {
             \CIBlockElement::SetPropertyValuesEx((int)$offerId, false, [
-                'PRESET' => $presetId,
+                'CALC_PRESET' => $presetId,
             ]);
         }
         
@@ -158,7 +158,7 @@ class BundleHandler
         if ($skuIblockId > 0) {
             $rsOffers = \CIBlockElement::GetList(
                 [],
-                ['IBLOCK_ID' => $skuIblockId, 'PROPERTY_PRESET' => $presetId],
+                ['IBLOCK_ID' => $skuIblockId, 'PROPERTY_CALC_PRESET' => $presetId],
                 false,
                 false,
                 ['ID']
@@ -166,7 +166,7 @@ class BundleHandler
             
             while ($arOffer = $rsOffers->Fetch()) {
                 \CIBlockElement::SetPropertyValuesEx((int)$arOffer['ID'], false, [
-                    'PRESET' => false,
+                    'CALC_PRESET' => false,
                 ]);
             }
         }

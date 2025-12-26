@@ -1205,9 +1205,9 @@ switch ($currentStep) {
 
         if ($skuIblockId > 0 && $presetsIblockId > 0) {
             installLog("");
-            installLog("Добавление свойства PRESET в инфоблок ТП...", 'header');
+            installLog("Добавление свойства CALC_PRESET в инфоблок ТП...", 'header');
             
-            $propertyCode = 'PRESET';
+            $propertyCode = 'CALC_PRESET';
             
             // Проверяем, существует ли свойство
             $rsProperty = \CIBlockProperty::GetList(
@@ -1223,7 +1223,7 @@ switch ($currentStep) {
                     'IBLOCK_ID' => $skuIblockId,
                     'ACTIVE' => 'Y',
                     'CODE' => $propertyCode,
-                    'NAME' => 'Пресеты калькуляции',
+                    'NAME' => 'Пресет калькуляции',
                     'PROPERTY_TYPE' => 'E',
                     'MULTIPLE' => 'N',
                     'MULTIPLE_CNT' => 1,
@@ -1246,10 +1246,10 @@ switch ($currentStep) {
             }
         } else {
             if ($skuIblockId <= 0) {
-                installLog("  → Пропуск создания PRESET: SKU Iblock ID не задан", 'warning');
+                installLog("  → Пропуск создания CALC_PRESET: SKU Iblock ID не задан", 'warning');
             }
             if ($presetsIblockId <= 0) {
-                installLog("  → Пропуск создания PRESET: CALC_PRESETS не создан", 'warning');
+                installLog("  → Пропуск создания CALC_PRESET: CALC_PRESETS не создан", 'warning');
             }
         }
         
