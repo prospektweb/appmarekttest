@@ -458,8 +458,8 @@ switch ($currentStep) {
         installLog("Модуль: {$moduleId}");
         installLog("Сайт по умолчанию: " . \CSite::GetDefSite());
         
-        createIblockTypeWithLog('calculator', 'Калькуляторы');
-        createIblockTypeWithLog('calculator_catalog', 'Справочники калькулятора');
+        createIblockTypeWithLog('calculator', 'Настройки калькуляторов');
+        createIblockTypeWithLog('calculator_catalog', 'Справочники калькуляторов');
         
         installLog("--- Шаг 1 выполнен ---", 'header');
         break;
@@ -532,7 +532,7 @@ switch ($currentStep) {
         
         $settingsProps = [
             'PATH_TO_SCRIPT' => [
-                'NAME' => 'Путь к скрипту расчёта',
+                'NAME' => 'Скрипт калькуляции',
                 'TYPE' => 'S',
                 'USER_TYPE' => 'FileMan',
                 'SORT' => 100,
@@ -766,6 +766,11 @@ switch ($currentStep) {
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
         ];
 
+        // Свойства инфоблока: Варианты этапов
+        $stagesVariantsProps = [
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
+        ];
+
         // Свойства инфоблока:  Сборки для расчётов
         $bundlesProps = [
             'JSON' => [
@@ -851,8 +856,9 @@ switch ($currentStep) {
         ];
 
         $installData['iblock_ids']['CALC_BUNDLES'] = createIblockWithLog('calculator', 'CALC_BUNDLES', 'Сборки для расчётов', $bundlesProps);
-        $installData['iblock_ids']['CALC_STAGES'] = createIblockWithLog('calculator_catalog', 'CALC_STAGES', 'Этапы калькуляций', $configProps);
-        $installData['iblock_ids']['CALC_SETTINGS'] = createIblockWithLog('calculator', 'CALC_SETTINGS', 'Настройки калькуляторов', $settingsProps);
+        $installData['iblock_ids']['CALC_STAGES'] = createIblockWithLog('calculator_catalog', 'CALC_STAGES', 'Этапы', $configProps);
+        $installData['iblock_ids']['CALC_STAGES_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_STAGES_VARIANTS', 'Варианты этапов', $stagesVariantsProps);
+        $installData['iblock_ids']['CALC_SETTINGS'] = createIblockWithLog('calculator', 'CALC_SETTINGS', 'Калькуляторы', $settingsProps);
         $installData['iblock_ids']['CALC_MATERIALS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS', 'Материалы', $materialsProps);
         $installData['iblock_ids']['CALC_MATERIALS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS_VARIANTS', 'Варианты материалов', $materialsVariantsProps);
         $installData['iblock_ids']['CALC_OPERATIONS'] = createIblockWithLog('calculator_catalog', 'CALC_OPERATIONS', 'Операции', $operationsProps);
@@ -872,7 +878,7 @@ switch ($currentStep) {
         $installData['iblock_ids']['CALC_DETAILS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS_VARIANTS', 'Варианты деталей', $detailsVariantsProps);
 
         $created = count(array_filter($installData['iblock_ids'], fn($id) => $id > 0));
-        $expected = 11;
+        $expected = 12;
         installLog("Создано инфоблоков: {$created}/{$expected}", $created === $expected ? 'success' : 'warning');
         
         // Обновление свойств CALC_SETTINGS с привязками к инфоблокам
@@ -1141,6 +1147,7 @@ switch ($currentStep) {
         installLog("ШАГ 3 из {$totalSteps}: НАСТРОЙКА SKU-СВЯЗЕЙ", 'header');
 
         $ids = $installData['iblock_ids'];
+        createSkuRelationWithLog($ids['CALC_STAGES'] ??  0, $ids['CALC_STAGES_VARIANTS'] ??  0, 'Этапы');
         createSkuRelationWithLog($ids['CALC_MATERIALS'] ??  0, $ids['CALC_MATERIALS_VARIANTS'] ??  0, 'Материалы');
         createSkuRelationWithLog($ids['CALC_OPERATIONS'] ?? 0, $ids['CALC_OPERATIONS_VARIANTS'] ?? 0, 'Операции');
         createSkuRelationWithLog($ids['CALC_DETAILS'] ?? 0, $ids['CALC_DETAILS_VARIANTS'] ?? 0, 'Детали');

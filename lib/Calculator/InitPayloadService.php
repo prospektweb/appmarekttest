@@ -387,6 +387,7 @@ class InitPayloadService
             'configurations' => (int)Option::get(self::MODULE_ID, 'IBLOCK_CONFIGURATIONS', 0),
             'calcBundles' => (int)($moduleIblocks['CALC_BUNDLES'] ?? 0),
             'calcStages' => (int)($moduleIblocks['CALC_STAGES'] ?? 0),
+            'calcStagesVariants' => (int)($moduleIblocks['CALC_STAGES_VARIANTS'] ?? 0),
             'calcSettings' => (int)($moduleIblocks['CALC_SETTINGS'] ?? 0),
             'calcCustomFields' => (int)($moduleIblocks['CALC_CUSTOM_FIELDS'] ?? 0),
             'calcMaterials' => (int)($moduleIblocks['CALC_MATERIALS'] ?? 0),

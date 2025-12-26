@@ -111,8 +111,8 @@ class Installer
     protected function createIblockTypes(): void
     {
         $types = [
-            ['id' => 'calculator', 'name' => 'Калькуляторы'],
-            ['id' => 'calculator_catalog', 'name' => 'Справочники калькулятора'],
+            ['id' => 'calculator', 'name' => 'Настройки калькуляторов'],
+            ['id' => 'calculator_catalog', 'name' => 'Справочники калькуляторов'],
         ];
 
         foreach ($types as $type) {
@@ -284,6 +284,7 @@ class Installer
         // Удаляем инфоблоки
         $iblockCodes = [
             'CALC_STAGES',
+            'CALC_STAGES_VARIANTS',
             'CALC_SETTINGS',
             'CALC_MATERIALS',
             'CALC_MATERIALS_VARIANTS',
