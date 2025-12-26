@@ -170,10 +170,7 @@ function handleGetInitData($request): void
         sendJsonResponse(['error' => 'Missing parameter', 'message' => 'Параметр offerIds обязателен'], 400);
     }
 
-    // Парсим offerIds (может быть строка или массив)
-    $offerIds = is_array($offerIdsRaw) ? $offerIdsRaw : explode(',', $offerIdsRaw);
-    $offerIds = array_map('intval', $offerIds);
-    $offerIds = array_filter($offerIds, function($id) { return $id > 0; });
+    $offerIds = parseOfferIds($offerIdsRaw);
 
     if (empty($offerIds)) {
         sendJsonResponse(['error' => 'Invalid parameter', 'message' => 'Некорректные ID торговых предложений'], 400);
@@ -202,10 +199,7 @@ function handleCheckPresets($request): void
         sendJsonResponse(['error' => 'Missing parameter', 'message' => 'Параметр offerIds обязателен'], 400);
     }
 
-    // Парсим offerIds (может быть строка или массив)
-    $offerIds = is_array($offerIdsRaw) ? $offerIdsRaw : explode(',', $offerIdsRaw);
-    $offerIds = array_map('intval', $offerIds);
-    $offerIds = array_filter($offerIds, function($id) { return $id > 0; });
+    $offerIds = parseOfferIds($offerIdsRaw);
 
     if (empty($offerIds)) {
         sendJsonResponse(['error' => 'Invalid parameter', 'message' => 'Некорректные ID торговых предложений'], 400);
@@ -260,8 +254,8 @@ function handleCheckPresets($request): void
             }
         }
         
-        $needsConfirmation = !$hasPreset || $hasMultiplePresets || $hasOffersWithoutPreset;
         $samePresetForAll = $hasPreset && !$hasMultiplePresets && !$hasOffersWithoutPreset;
+        $needsConfirmation = !$samePresetForAll; // Confirmation needed when not all offers have the same preset
         
         logInfo('CheckPresets for offers: ' . implode(',', $offerIds) . ', needsConfirmation=' . ($needsConfirmation ? 'yes' : 'no'));
         
@@ -292,10 +286,7 @@ function handleCreateAndAssignPreset($request): void
         sendJsonResponse(['error' => 'Missing parameter', 'message' => 'Параметр offerIds обязателен'], 400);
     }
 
-    // Парсим offerIds (может быть строка или массив)
-    $offerIds = is_array($offerIdsRaw) ? $offerIdsRaw : explode(',', $offerIdsRaw);
-    $offerIds = array_map('intval', $offerIds);
-    $offerIds = array_filter($offerIds, function($id) { return $id > 0; });
+    $offerIds = parseOfferIds($offerIdsRaw);
 
     if (empty($offerIds)) {
         sendJsonResponse(['error' => 'Invalid parameter', 'message' => 'Некорректные ID торговых предложений'], 400);
@@ -480,6 +471,26 @@ function handleHeaderTabsAdd($request): void
             'items' => $items,
         ],
     ]);
+}
+
+/**
+ * Парсинг и валидация offer IDs
+ * 
+ * @param mixed $offerIdsRaw Raw offer IDs (string or array)
+ * @return array Validated array of offer IDs
+ */
+function parseOfferIds($offerIdsRaw): array
+{
+    if (empty($offerIdsRaw)) {
+        return [];
+    }
+    
+    // Парсим offerIds (может быть строка или массив)
+    $offerIds = is_array($offerIdsRaw) ? $offerIdsRaw : explode(',', $offerIdsRaw);
+    $offerIds = array_map('intval', $offerIds);
+    $offerIds = array_filter($offerIds, function($id) { return $id > 0; });
+    
+    return $offerIds;
 }
 
 /**
