@@ -53,16 +53,19 @@
             lang = BX.message('LANGUAGE_ID') || 'ru';
         }
 
+        const linkUrl = getElementLinkUrl({
+            iblockId,
+            iblockType,
+            elementId,
+            lang,
+        });
+
+        if (!linkUrl) {
+            return;
+        }
+
         const link = document.createElement('a');
-        link.href =
-            '/bitrix/admin/iblock_element_edit.php?IBLOCK_ID=' +
-            iblockId +
-            '&type=' +
-            iblockType +
-            '&ID=' +
-            elementId +
-            '&lang=' +
-            lang;
+        link.href = linkUrl;
         link.textContent = linkText;
         link.style.cssText = 'color: #2067b0; text-decoration: none;';
         link.title = 'Открыть элемент ID: ' + elementId;
@@ -125,6 +128,56 @@
         // Это fallback, основной источник — PROSPEKTWEB_CALC_IBLOCK_TYPES
         return 'calculator';
     }
+
+    function getProductId() {
+        const productInput = document.querySelector('input[name="PRODUCT_ID"]');
+        if (productInput && productInput.value) {
+            const value = productInput.value.trim();
+            if (/^\d+$/.test(value)) {
+                return value;
+            }
+        }
+
+        const searchParams = new URLSearchParams(window.location.search);
+        const productIdFromUrl = searchParams.get('PRODUCT_ID');
+        if (productIdFromUrl && /^\d+$/.test(productIdFromUrl)) {
+            return productIdFromUrl;
+        }
+
+        return null;
+    }
+
+    function getElementLinkUrl(params) {
+        const { iblockId, iblockType, elementId, lang } = params;
+        const isSkuEditor = window.location.pathname.indexOf('iblock_subelement_edit.php') !== -1;
+        const productId = isSkuEditor ? getProductId() : null;
+
+        if (isSkuEditor && productId) {
+            return (
+                '/bitrix/admin/iblock_subelement_edit.php?IBLOCK_ID=' +
+                iblockId +
+                '&type=' +
+                iblockType +
+                '&PRODUCT_ID=' +
+                productId +
+                '&ID=' +
+                elementId +
+                '&lang=' +
+                lang
+            );
+        }
+
+        return (
+            '/bitrix/admin/iblock_element_edit.php?IBLOCK_ID=' +
+            iblockId +
+            '&type=' +
+            iblockType +
+            '&ID=' +
+            elementId +
+            '&lang=' +
+            lang
+        );
+    }
     
     // Запускаем после загрузки DOM
     if (document.readyState === 'loading') {
@@ -157,7 +210,10 @@
     });
     
     // Наблюдаем за изменениями в форме
-    const form = document.querySelector('form[name="post_form"], form[name="form1"]');
+    const form =
+        document.querySelector(
+            'form[name="post_form"], form[name="form1"], form[name="form_element"], form[name="form_e_list"]'
+        ) || document.querySelector('form') || document.body;
     if (form) {
         observer.observe(form, { childList: true, subtree: true, characterData: true });
     }
