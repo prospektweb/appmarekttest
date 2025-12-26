@@ -20,11 +20,11 @@ class InitPayloadService
      *
      * @param array $offerIds ID торговых предложений
      * @param string $siteId ID сайта
-     * @param bool $force Принудительное создание нового bundle (после подтверждения)
+     * @param bool $forceCreatePreset Принудительное создание нового preset (после подтверждения пользователя)
      * @return array
      * @throws \Exception
      */
-    public function prepareInitPayload(array $offerIds, string $siteId, bool $force = false): array
+    public function prepareInitPayload(array $offerIds, string $siteId, bool $forceCreatePreset = false): array
     {
         if (empty($offerIds)) {
             throw new \Exception('Список торговых предложений не может быть пустым');
@@ -40,22 +40,31 @@ class InitPayloadService
         $analysis = $this->analyzeBundles($selectedOffers);
         
         // Если конфликт и не подтверждено — возвращаем данные для попапа
-        if ($analysis['scenario'] === 'CONFLICT' && !$force) {
+        if ($analysis['scenario'] === 'CONFLICT' && !$forceCreatePreset) {
             return [
                 'requiresConfirmation' => true,
+                'confirmationMessage' => 'Для запуска необходимо создать новый пресет',
                 'existingBundles' => $analysis['existingBundles'],
                 'offersWithBundle' => $analysis['offersWithBundle'],
                 'offersWithoutBundle' => $analysis['offersWithoutBundle'],
             ];
         }
         
+        // Если нет bundle И не подтверждено создание — также требуем подтверждения
+        if ($analysis['scenario'] === 'NEW_BUNDLE' && !$forceCreatePreset) {
+            return [
+                'requiresConfirmation' => true,
+                'confirmationMessage' => 'Для запуска необходимо создать новый пресет',
+            ];
+        }
+        
         // Определяем bundleId
         $bundleId = $analysis['bundleId'];
         
-        if ($bundleId === null || $force) {
-            // Создаём новый временный bundle
+        if ($bundleId === null || $forceCreatePreset) {
+            // Создаём новый постоянный preset
             $bundleHandler = new BundleHandler();
-            $bundleId = $bundleHandler->createTemporaryBundle($offerIds);
+            $bundleId = $bundleHandler->createPreset($offerIds);
         }
         
         // Загружаем bundle с данными
@@ -513,16 +522,11 @@ class InitPayloadService
         
         // Загружаем данные связанных элементов
         $elements = $this->loadBundleElements($linkedElementIds);
-        
-        // Определяем, временная ли сборка
-        $bundleHandler = new BundleHandler();
-        $isTemporary = $bundleHandler->isTemporaryBundle($bundleId);
 
         return [
             'id' => $bundleId,
             'name' => $fields['NAME'] ?? '',
             'code' => $fields['CODE'] ?? '',
-            'isTemporary' => $isTemporary,
             'json' => $json,
             'elements' => $elements,
         ];

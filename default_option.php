@@ -18,7 +18,4 @@ $prospektweb_calc_default_option = [
     // Связи ТП
     'FORMAT_FIELD_CODE' => 'FORMAT',
     'VOLUME_FIELD_CODE' => 'VOLUME',
-    // Настройки временных сборок
-    'TEMP_BUNDLES_LIMIT' => 5,
-    'TEMP_BUNDLES_SECTION_ID' => 0,
 ];

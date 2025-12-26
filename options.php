@@ -53,10 +53,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && check_bitrix_sessid()) {
     Option::set($module_id, 'FORMAT_FIELD_CODE', (string)($_POST['FORMAT_FIELD_CODE'] ?? 'FORMAT'));
     Option::set($module_id, 'VOLUME_FIELD_CODE', (string)($_POST['VOLUME_FIELD_CODE'] ?? 'VOLUME'));
 
-    // Сохраняем настройки временных сборок
-    Option::set($module_id, 'TEMP_BUNDLES_LIMIT', (int)($_POST['TEMP_BUNDLES_LIMIT'] ?? 5));
-    Option::set($module_id, 'TEMP_BUNDLES_SECTION_ID', (int)($_POST['TEMP_BUNDLES_SECTION_ID'] ?? 0));
-
     // Сохраняем настройки округления цен
     Option::set($module_id, 'PRICE_ROUNDING', (float)($_POST['PRICE_ROUNDING'] ?? 1));
 
@@ -306,53 +302,6 @@ $tabControl->Begin();
         <td><?= Loc::getMessage('PROSPEKTWEB_CALC_IBLOCK_CONFIGURATIONS_INTEGRATION') ?></td>
         <td>
             <input type="number" name="IBLOCK_CONFIGURATIONS" value="<?= (int)Option::get($module_id, 'IBLOCK_CONFIGURATIONS', 0) ?>" min="0" style="width: 100px;">
-        </td>
-    </tr>
-
-    <tr class="heading">
-        <td colspan="2"><?= Loc::getMessage('PROSPEKTWEB_CALC_TEMP_BUNDLES_SECTION') ?></td>
-    </tr>
-
-    <tr>
-        <td width="40%"><?= Loc::getMessage('PROSPEKTWEB_CALC_TEMP_BUNDLES_LIMIT') ?>:</td>
-        <td width="60%">
-            <input type="number" name="TEMP_BUNDLES_LIMIT" value="<?= (int)Option::get($module_id, 'TEMP_BUNDLES_LIMIT', 5) ?>" min="1" max="100" style="width: 100px;">
-        </td>
-    </tr>
-
-    <tr>
-        <td><?= Loc::getMessage('PROSPEKTWEB_CALC_TEMP_BUNDLES_SECTION') ?>:</td>
-        <td>
-            <?php
-            $bundlesIblockId = $configManager->getIblockId('CALC_BUNDLES');
-            $currentSectionId = (int)Option::get($module_id, 'TEMP_BUNDLES_SECTION_ID', 0);
-            
-            if ($bundlesIblockId > 0):
-                $sections = [];
-                $rsSections = \CIBlockSection::GetList(
-                    ['SORT' => 'ASC', 'NAME' => 'ASC'],
-                    ['IBLOCK_ID' => $bundlesIblockId, 'ACTIVE' => 'Y'],
-                    false,
-                    ['ID', 'NAME', 'DEPTH_LEVEL']
-                );
-                while ($arSection = $rsSections->Fetch()) {
-                    $sections[] = $arSection;
-                }
-            ?>
-                <select name="TEMP_BUNDLES_SECTION_ID" style="width: 300px;">
-                    <option value="0"><?= Loc::getMessage('PROSPEKTWEB_CALC_SELECT_PROPERTY') ?></option>
-                    <?php foreach ($sections as $section): 
-                        $indent = str_repeat('&nbsp;&nbsp;', (int)$section['DEPTH_LEVEL'] - 1);
-                    ?>
-                    <option value="<?= (int)$section['ID'] ?>" <?= $currentSectionId === (int)$section['ID'] ? 'selected' : '' ?>>
-                        <?= $indent . htmlspecialcharsbx($section['NAME']) ?> [<?= $section['ID'] ?>]
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-            <?php else: ?>
-                <input type="number" name="TEMP_BUNDLES_SECTION_ID" value="<?= $currentSectionId ?>" min="0" style="width: 100px;">
-                <br><span class="adm-info-message">Инфоблок CALC_BUNDLES не создан</span>
-            <?php endif; ?>
         </td>
     </tr>
 

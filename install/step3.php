@@ -1084,6 +1084,35 @@ switch ($currentStep) {
             }
         }
         
+        // Включение торгового каталога для CALC_BUNDLES (Пресеты)
+        if ($installData['iblock_ids']['CALC_BUNDLES'] > 0) {
+            installLog("");
+            installLog("Включение торгового каталога для CALC_BUNDLES (Пресеты)...", 'header');
+            
+            $bundlesIblockId = $installData['iblock_ids']['CALC_BUNDLES'];
+            
+            // Проверяем, является ли уже каталогом
+            $catalogInfo = \CCatalog::GetByID($bundlesIblockId);
+            if ($catalogInfo) {
+                installLog("  → CALC_BUNDLES уже является торговым каталогом", 'warning');
+            } else {
+                // Добавляем в каталоги
+                $result = \CCatalog::Add([
+                    'IBLOCK_ID' => $bundlesIblockId,
+                    'YANDEX_EXPORT' => 'N',
+                    'SUBSCRIPTION' => 'N',
+                    'VAT_ID' => 0,
+                ]);
+                
+                if ($result) {
+                    installLog("  → CALC_BUNDLES успешно добавлен как торговый каталог", 'success');
+                } else {
+                    $error = getBitrixError();
+                    installLog("  → Ошибка добавления CALC_BUNDLES в каталоги: {$error}", 'error');
+                }
+            }
+        }
+        
         // Создание валюты PRC
         installLog("");
         installLog("Создание валюты PRC...", 'header');
@@ -1170,56 +1199,9 @@ switch ($currentStep) {
         installLog("Сохранено: PRODUCT_IBLOCK_ID = " . $installData['product_iblock_id'], 'success');
         installLog("Сохранено: SKU_IBLOCK_ID = " . $installData['sku_iblock_id'], 'success');
 
-        // Создание раздела для временных сборок и добавление свойства BUNDLE в инфоблок торговых предложений
+        // Добавление свойства BUNDLE в инфоблок торговых предложений
         $skuIblockId = $installData['sku_iblock_id'];
         $bundlesIblockId = $installData['iblock_ids']['CALC_BUNDLES'] ?? 0;
-
-        if ($bundlesIblockId > 0) {
-            installLog("");
-            installLog("Создание раздела для временных сборок...", 'header');
-            
-            $sectionCode = 'TEMP_BUNDLES';
-            $sectionName = 'Временные сборки';
-            
-            // Проверяем, существует ли раздел
-            $rsSection = \CIBlockSection:: GetList(
-                [],
-                ['IBLOCK_ID' => $bundlesIblockId, 'CODE' => $sectionCode],
-                false,
-                ['ID']
-            );
-            
-            if ($arSection = $rsSection->Fetch()) {
-                $tempSectionId = (int)$arSection['ID'];
-                installLog("  → Раздел '{$sectionName}' уже существует (ID: {$tempSectionId})", 'warning');
-            } else {
-                // Создаём раздел
-                $bs = new \CIBlockSection();
-                $tempSectionId = $bs->Add([
-                    'IBLOCK_ID' => $bundlesIblockId,
-                    'ACTIVE' => 'Y',
-                    'NAME' => $sectionName,
-                    'CODE' => $sectionCode,
-                    'SORT' => 999,
-                ]);
-                
-                if ($tempSectionId) {
-                    installLog("  → Создан раздел '{$sectionName}' (ID: {$tempSectionId})", 'success');
-                } else {
-                    $error = $bs->LAST_ERROR ?: 'Неизвестная ошибка';
-                    installLog("  → Ошибка создания раздела: {$error}", 'error');
-                    $tempSectionId = 0;
-                }
-            }
-            
-            // Сохраняем ID раздела в настройках модуля
-            if ($tempSectionId > 0) {
-                Option::set($moduleId, 'TEMP_BUNDLES_SECTION_ID', $tempSectionId);
-                installLog("  → Сохранено в настройках:  TEMP_BUNDLES_SECTION_ID = {$tempSectionId}", 'success');
-            }
-        } else {
-            installLog("  → Пропуск создания раздела:  CALC_BUNDLES не создан", 'warning');
-        }
 
         if ($skuIblockId > 0 && $bundlesIblockId > 0) {
             installLog("");

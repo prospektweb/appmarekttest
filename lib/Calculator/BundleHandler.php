@@ -22,19 +22,17 @@ class BundleHandler
     }
     
     /**
-     * Создать временный bundle при открытии калькулятора
+     * Создать новый preset (постоянный)
+     * Вместо временного bundle теперь всегда создаём постоянный preset.
      * 
      * @param array $offerIds ID торговых предложений
-     * @return int ID созданного bundle
+     * @param string|null $name Название preset'а (опционально)
+     * @return int ID созданного preset'а
      * @throws \Exception
      */
-    public function createTemporaryBundle(array $offerIds): int
+    public function createPreset(array $offerIds, ?string $name = null): int
     {
-        // Сначала ротация — удаляем старые если превышен лимит
-        $this->rotateTemporaryBundles();
-        
         $iblockId = $this->configManager->getIblockId('CALC_BUNDLES');
-        $sectionId = (int)Option::get(self::MODULE_ID, 'TEMP_BUNDLES_SECTION_ID', 0);
         
         if ($iblockId <= 0) {
             throw new \Exception('Инфоблок CALC_BUNDLES не настроен');
@@ -43,8 +41,7 @@ class BundleHandler
         $el = new \CIBlockElement();
         $bundleId = $el->Add([
             'IBLOCK_ID' => $iblockId,
-            'IBLOCK_SECTION_ID' => $sectionId > 0 ? $sectionId : null,
-            'NAME' => 'Временная сборка ' . date('Y-m-d H:i:s'),
+            'NAME' => $name ?: 'Новый пресет ' . date('Y-m-d H:i:s'),
             'ACTIVE' => 'Y',
             'PROPERTY_VALUES' => [
                 'JSON' => ['VALUE' => ['TEXT' => '{}', 'TYPE' => 'HTML']],
@@ -52,7 +49,7 @@ class BundleHandler
         ]);
         
         if (!$bundleId) {
-            throw new \Exception('Ошибка создания временной сборки: ' . $el->LAST_ERROR);
+            throw new \Exception('Ошибка создания пресета: ' . $el->LAST_ERROR);
         }
         
         // Привязываем bundle к выбранным ТП
@@ -63,52 +60,6 @@ class BundleHandler
         }
         
         return (int)$bundleId;
-    }
-    
-    /**
-     * Ротация временных сборок — удаляем старые при превышении лимита
-     */
-    private function rotateTemporaryBundles(): void
-    {
-        $limit = (int)Option::get(self::MODULE_ID, 'TEMP_BUNDLES_LIMIT', 5);
-        $sectionId = (int)Option::get(self::MODULE_ID, 'TEMP_BUNDLES_SECTION_ID', 0);
-        
-        if ($sectionId <= 0 || $limit <= 0) {
-            return;
-        }
-        
-        $iblockId = $this->configManager->getIblockId('CALC_BUNDLES');
-        
-        if ($iblockId <= 0) {
-            return;
-        }
-        
-        // Считаем текущее количество временных сборок
-        $rsCount = \CIBlockElement::GetList(
-            [],
-            ['IBLOCK_ID' => $iblockId, 'SECTION_ID' => $sectionId],
-            false,
-            false,
-            ['ID']
-        );
-        $currentCount = $rsCount->SelectedRowsCount();
-        
-        // Если достигнут лимит — удаляем самые старые
-        if ($currentCount >= $limit) {
-            $toDelete = $currentCount - $limit + 1;
-            
-            $rsOldest = \CIBlockElement::GetList(
-                ['ID' => 'ASC'], // Самые старые первыми (меньший ID = раньше создан)
-                ['IBLOCK_ID' => $iblockId, 'SECTION_ID' => $sectionId],
-                false,
-                ['nTopCount' => $toDelete],
-                ['ID']
-            );
-            
-            while ($arElement = $rsOldest->Fetch()) {
-                $this->deleteBundle((int)$arElement['ID']);
-            }
-        }
     }
     
     /**
@@ -158,7 +109,8 @@ class BundleHandler
     }
     
     /**
-     * Финализировать bundle — перенести из временного раздела в корень
+     * Финализировать bundle уже не требуется, т.к. создаются только постоянные пресеты.
+     * Эта функция теперь может использоваться только для переименования preset'а.
      * 
      * @param int $bundleId ID сборки
      * @param string|null $name Новое название (опционально)
@@ -167,18 +119,23 @@ class BundleHandler
      */
     public function finalizeBundle(int $bundleId, ?string $name = null): array
     {
+        if (!$name) {
+            // Если имя не передано, ничего не делаем
+            return [
+                'status' => 'ok',
+                'bundleId' => $bundleId,
+                'finalized' => true,
+            ];
+        }
+        
         $el = new \CIBlockElement();
         
         $fields = [
-            'IBLOCK_SECTION_ID' => false, // Перемещаем в корень (без раздела)
+            'NAME' => $name,
         ];
         
-        if ($name) {
-            $fields['NAME'] = $name;
-        }
-        
         if (!$el->Update($bundleId, $fields)) {
-            throw new \Exception('Ошибка финализации сборки: ' . $el->LAST_ERROR);
+            throw new \Exception('Ошибка переименования пресета: ' . $el->LAST_ERROR);
         }
         
         return [
@@ -216,37 +173,6 @@ class BundleHandler
         
         // Удаляем элемент bundle
         \CIBlockElement::Delete($bundleId);
-    }
-    
-    /**
-     * Проверить, является ли bundle временным (находится в разделе временных)
-     * 
-     * @param int $bundleId ID сборки
-     * @return bool
-     */
-    public function isTemporaryBundle(int $bundleId): bool
-    {
-        $sectionId = (int)Option::get(self::MODULE_ID, 'TEMP_BUNDLES_SECTION_ID', 0);
-        
-        if ($sectionId <= 0) {
-            return false;
-        }
-        
-        $iblockId = $this->configManager->getIblockId('CALC_BUNDLES');
-        
-        $rsElement = \CIBlockElement::GetList(
-            [],
-            ['ID' => $bundleId, 'IBLOCK_ID' => $iblockId],
-            false,
-            ['nTopCount' => 1],
-            ['ID', 'IBLOCK_SECTION_ID']
-        );
-        
-        if ($arElement = $rsElement->Fetch()) {
-            return (int)$arElement['IBLOCK_SECTION_ID'] === $sectionId;
-        }
-        
-        return false;
     }
     
     /**
