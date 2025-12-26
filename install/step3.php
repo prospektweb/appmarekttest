@@ -458,8 +458,8 @@ switch ($currentStep) {
         installLog("Модуль: {$moduleId}");
         installLog("Сайт по умолчанию: " . \CSite::GetDefSite());
         
-        createIblockTypeWithLog('calculator', 'Калькуляторы');
-        createIblockTypeWithLog('calculator_catalog', 'Справочники калькулятора');
+        createIblockTypeWithLog('calculator', 'Настройки калькуляторов');
+        createIblockTypeWithLog('calculator_catalog', 'Справочники калькуляторов');
         
         installLog("--- Шаг 1 выполнен ---", 'header');
         break;
@@ -532,7 +532,7 @@ switch ($currentStep) {
         
         $settingsProps = [
             'PATH_TO_SCRIPT' => [
-                'NAME' => 'Путь к скрипту расчёта',
+                'NAME' => 'Скрипт калькуляции',
                 'TYPE' => 'S',
                 'USER_TYPE' => 'FileMan',
                 'SORT' => 100,
@@ -766,6 +766,11 @@ switch ($currentStep) {
             'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
         ];
 
+        // Свойства инфоблока: Варианты этапов
+        $stagesVariantsProps = [
+            'PARAMETRS' => ['NAME' => 'Параметры', 'TYPE' => 'S', 'MULTIPLE' => 'Y', 'MULTIPLE_CNT' => 1],
+        ];
+
         // Свойства инфоблока:  Сборки для расчётов
         $bundlesProps = [
             'JSON' => [
@@ -850,9 +855,10 @@ switch ($currentStep) {
             ],
         ];
 
-        $installData['iblock_ids']['CALC_BUNDLES'] = createIblockWithLog('calculator', 'CALC_BUNDLES', 'Сборки для расчётов', $bundlesProps);
-        $installData['iblock_ids']['CALC_STAGES'] = createIblockWithLog('calculator_catalog', 'CALC_STAGES', 'Этапы калькуляций', $configProps);
-        $installData['iblock_ids']['CALC_SETTINGS'] = createIblockWithLog('calculator', 'CALC_SETTINGS', 'Настройки калькуляторов', $settingsProps);
+        $installData['iblock_ids']['CALC_PRESETS'] = createIblockWithLog('calculator', 'CALC_PRESETS', 'Пресеты', $bundlesProps);
+        $installData['iblock_ids']['CALC_STAGES'] = createIblockWithLog('calculator_catalog', 'CALC_STAGES', 'Этапы', $configProps);
+        $installData['iblock_ids']['CALC_STAGES_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_STAGES_VARIANTS', 'Варианты этапов', $stagesVariantsProps);
+        $installData['iblock_ids']['CALC_SETTINGS'] = createIblockWithLog('calculator', 'CALC_SETTINGS', 'Калькуляторы', $settingsProps);
         $installData['iblock_ids']['CALC_MATERIALS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS', 'Материалы', $materialsProps);
         $installData['iblock_ids']['CALC_MATERIALS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_MATERIALS_VARIANTS', 'Варианты материалов', $materialsVariantsProps);
         $installData['iblock_ids']['CALC_OPERATIONS'] = createIblockWithLog('calculator_catalog', 'CALC_OPERATIONS', 'Операции', $operationsProps);
@@ -872,7 +878,7 @@ switch ($currentStep) {
         $installData['iblock_ids']['CALC_DETAILS_VARIANTS'] = createIblockWithLog('calculator_catalog', 'CALC_DETAILS_VARIANTS', 'Варианты деталей', $detailsVariantsProps);
 
         $created = count(array_filter($installData['iblock_ids'], fn($id) => $id > 0));
-        $expected = 11;
+        $expected = 12;
         installLog("Создано инфоблоков: {$created}/{$expected}", $created === $expected ? 'success' : 'warning');
         
         // Обновление свойств CALC_SETTINGS с привязками к инфоблокам
@@ -1014,14 +1020,14 @@ switch ($currentStep) {
                 installLog("  → Обновлено свойство DETAILS (self-reference)", 'success');
             }
 
-            if ($installData['iblock_ids']['CALC_BUNDLES'] > 0) {
+            if ($installData['iblock_ids']['CALC_PRESETS'] > 0) {
                 installLog("");
-                installLog("Обновление свойств CALC_BUNDLES с привязками к инфоблокам.. .", 'header');
+                installLog("Обновление свойств CALC_PRESETS с привязками к инфоблокам.. .", 'header');
                 
-                $bundlesIblockId = $installData['iblock_ids']['CALC_BUNDLES'];
+                $presetsIblockId = $installData['iblock_ids']['CALC_PRESETS'];
                 $ibp = new \CIBlockProperty();
                 
-                $bundlesLinkProperties = [
+                $presetsLinkProperties = [
                     'CALC_STAGES' => 'CALC_STAGES',
                     'CALC_SETTINGS' => 'CALC_SETTINGS',
                     'CALC_MATERIALS' => 'CALC_MATERIALS',
@@ -1033,9 +1039,9 @@ switch ($currentStep) {
                     'CALC_DETAILS_VARIANTS' => 'CALC_DETAILS_VARIANTS',
                 ];
                 
-                foreach ($bundlesLinkProperties as $propCode => $linkIblockCode) {
+                foreach ($presetsLinkProperties as $propCode => $linkIblockCode) {
                     if (isset($installData['iblock_ids'][$linkIblockCode]) && $installData['iblock_ids'][$linkIblockCode] > 0) {
-                        $rsProperty = \CIBlockProperty:: GetList([], ['IBLOCK_ID' => $bundlesIblockId, 'CODE' => $propCode]);
+                        $rsProperty = \CIBlockProperty:: GetList([], ['IBLOCK_ID' => $presetsIblockId, 'CODE' => $propCode]);
                         if ($arProperty = $rsProperty->Fetch()) {
                             $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids'][$linkIblockCode]]);
                             installLog("  → Обновлено свойство {$propCode}", 'success');
@@ -1074,6 +1080,35 @@ switch ($currentStep) {
                 } else {
                     $error = getBitrixError();
                     installLog("  → Ошибка добавления CALC_STAGES в каталоги: {$error}", 'error');
+                }
+            }
+        }
+        
+        // Включение торгового каталога для CALC_PRESETS (Пресеты)
+        if ($installData['iblock_ids']['CALC_PRESETS'] > 0) {
+            installLog("");
+            installLog("Включение торгового каталога для CALC_PRESETS (Пресеты)...", 'header');
+            
+            $presetsIblockId = $installData['iblock_ids']['CALC_PRESETS'];
+            
+            // Проверяем, является ли уже каталогом
+            $catalogInfo = \CCatalog::GetByID($presetsIblockId);
+            if ($catalogInfo) {
+                installLog("  → CALC_PRESETS уже является торговым каталогом", 'warning');
+            } else {
+                // Добавляем в каталоги
+                $result = \CCatalog::Add([
+                    'IBLOCK_ID' => $presetsIblockId,
+                    'YANDEX_EXPORT' => 'N',
+                    'SUBSCRIPTION' => 'N',
+                    'VAT_ID' => 0,
+                ]);
+                
+                if ($result) {
+                    installLog("  → CALC_PRESETS успешно добавлен как торговый каталог", 'success');
+                } else {
+                    $error = getBitrixError();
+                    installLog("  → Ошибка добавления CALC_PRESETS в каталоги: {$error}", 'error');
                 }
             }
         }
@@ -1141,6 +1176,7 @@ switch ($currentStep) {
         installLog("ШАГ 3 из {$totalSteps}: НАСТРОЙКА SKU-СВЯЗЕЙ", 'header');
 
         $ids = $installData['iblock_ids'];
+        createSkuRelationWithLog($ids['CALC_STAGES'] ??  0, $ids['CALC_STAGES_VARIANTS'] ??  0, 'Этапы');
         createSkuRelationWithLog($ids['CALC_MATERIALS'] ??  0, $ids['CALC_MATERIALS_VARIANTS'] ??  0, 'Материалы');
         createSkuRelationWithLog($ids['CALC_OPERATIONS'] ?? 0, $ids['CALC_OPERATIONS_VARIANTS'] ?? 0, 'Операции');
         createSkuRelationWithLog($ids['CALC_DETAILS'] ?? 0, $ids['CALC_DETAILS_VARIANTS'] ?? 0, 'Детали');
@@ -1163,62 +1199,15 @@ switch ($currentStep) {
         installLog("Сохранено: PRODUCT_IBLOCK_ID = " . $installData['product_iblock_id'], 'success');
         installLog("Сохранено: SKU_IBLOCK_ID = " . $installData['sku_iblock_id'], 'success');
 
-        // Создание раздела для временных сборок и добавление свойства BUNDLE в инфоблок торговых предложений
+        // Добавление свойства PRESET в инфоблок торговых предложений
         $skuIblockId = $installData['sku_iblock_id'];
-        $bundlesIblockId = $installData['iblock_ids']['CALC_BUNDLES'] ?? 0;
+        $presetsIblockId = $installData['iblock_ids']['CALC_PRESETS'] ?? 0;
 
-        if ($bundlesIblockId > 0) {
+        if ($skuIblockId > 0 && $presetsIblockId > 0) {
             installLog("");
-            installLog("Создание раздела для временных сборок...", 'header');
+            installLog("Добавление свойства PRESET в инфоблок ТП...", 'header');
             
-            $sectionCode = 'TEMP_BUNDLES';
-            $sectionName = 'Временные сборки';
-            
-            // Проверяем, существует ли раздел
-            $rsSection = \CIBlockSection:: GetList(
-                [],
-                ['IBLOCK_ID' => $bundlesIblockId, 'CODE' => $sectionCode],
-                false,
-                ['ID']
-            );
-            
-            if ($arSection = $rsSection->Fetch()) {
-                $tempSectionId = (int)$arSection['ID'];
-                installLog("  → Раздел '{$sectionName}' уже существует (ID: {$tempSectionId})", 'warning');
-            } else {
-                // Создаём раздел
-                $bs = new \CIBlockSection();
-                $tempSectionId = $bs->Add([
-                    'IBLOCK_ID' => $bundlesIblockId,
-                    'ACTIVE' => 'Y',
-                    'NAME' => $sectionName,
-                    'CODE' => $sectionCode,
-                    'SORT' => 999,
-                ]);
-                
-                if ($tempSectionId) {
-                    installLog("  → Создан раздел '{$sectionName}' (ID: {$tempSectionId})", 'success');
-                } else {
-                    $error = $bs->LAST_ERROR ?: 'Неизвестная ошибка';
-                    installLog("  → Ошибка создания раздела: {$error}", 'error');
-                    $tempSectionId = 0;
-                }
-            }
-            
-            // Сохраняем ID раздела в настройках модуля
-            if ($tempSectionId > 0) {
-                Option::set($moduleId, 'TEMP_BUNDLES_SECTION_ID', $tempSectionId);
-                installLog("  → Сохранено в настройках:  TEMP_BUNDLES_SECTION_ID = {$tempSectionId}", 'success');
-            }
-        } else {
-            installLog("  → Пропуск создания раздела:  CALC_BUNDLES не создан", 'warning');
-        }
-
-        if ($skuIblockId > 0 && $bundlesIblockId > 0) {
-            installLog("");
-            installLog("Добавление свойства BUNDLE в инфоблок ТП...", 'header');
-            
-            $propertyCode = 'BUNDLE';
+            $propertyCode = 'PRESET';
             
             // Проверяем, существует ли свойство
             $rsProperty = \CIBlockProperty::GetList(
@@ -1234,14 +1223,14 @@ switch ($currentStep) {
                     'IBLOCK_ID' => $skuIblockId,
                     'ACTIVE' => 'Y',
                     'CODE' => $propertyCode,
-                    'NAME' => 'Сборки для расчётов',
+                    'NAME' => 'Пресеты калькуляции',
                     'PROPERTY_TYPE' => 'E',
                     'MULTIPLE' => 'N',
                     'MULTIPLE_CNT' => 1,
                     'IS_REQUIRED' => 'N',
                     'SORT' => 999,
                     'COL_COUNT' => 1,
-                    'LINK_IBLOCK_ID' => $bundlesIblockId,
+                    'LINK_IBLOCK_ID' => $presetsIblockId,
                 ];
                 
                 $ibp = new \CIBlockProperty();
@@ -1257,10 +1246,10 @@ switch ($currentStep) {
             }
         } else {
             if ($skuIblockId <= 0) {
-                installLog("  → Пропуск создания BUNDLE: SKU Iblock ID не задан", 'warning');
+                installLog("  → Пропуск создания PRESET: SKU Iblock ID не задан", 'warning');
             }
-            if ($bundlesIblockId <= 0) {
-                installLog("  → Пропуск создания BUNDLE: CALC_BUNDLES не создан", 'warning');
+            if ($presetsIblockId <= 0) {
+                installLog("  → Пропуск создания PRESET: CALC_PRESETS не создан", 'warning');
             }
         }
         

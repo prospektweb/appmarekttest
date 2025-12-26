@@ -20,11 +20,11 @@ class InitPayloadService
      *
      * @param array $offerIds ID торговых предложений
      * @param string $siteId ID сайта
-     * @param bool $force Принудительное создание нового bundle (после подтверждения)
+     * @param bool $forceCreatePreset Принудительное создание нового preset (после подтверждения пользователя)
      * @return array
      * @throws \Exception
      */
-    public function prepareInitPayload(array $offerIds, string $siteId, bool $force = false): array
+    public function prepareInitPayload(array $offerIds, string $siteId, bool $forceCreatePreset = false): array
     {
         if (empty($offerIds)) {
             throw new \Exception('Список торговых предложений не может быть пустым');
@@ -40,26 +40,35 @@ class InitPayloadService
         $analysis = $this->analyzeBundles($selectedOffers);
         
         // Если конфликт и не подтверждено — возвращаем данные для попапа
-        if ($analysis['scenario'] === 'CONFLICT' && !$force) {
+        if ($analysis['scenario'] === 'CONFLICT' && !$forceCreatePreset) {
             return [
                 'requiresConfirmation' => true,
+                'confirmationMessage' => 'Для запуска необходимо создать новый пресет. Кнопки - Подтвердить/Отмена',
                 'existingBundles' => $analysis['existingBundles'],
                 'offersWithBundle' => $analysis['offersWithBundle'],
                 'offersWithoutBundle' => $analysis['offersWithoutBundle'],
             ];
         }
         
-        // Определяем bundleId
-        $bundleId = $analysis['bundleId'];
-        
-        if ($bundleId === null || $force) {
-            // Создаём новый временный bundle
-            $bundleHandler = new BundleHandler();
-            $bundleId = $bundleHandler->createTemporaryBundle($offerIds);
+        // Если нет bundle И не подтверждено создание — также требуем подтверждения
+        if ($analysis['scenario'] === 'NEW_BUNDLE' && !$forceCreatePreset) {
+            return [
+                'requiresConfirmation' => true,
+                'confirmationMessage' => 'Для запуска необходимо создать новый пресет. Кнопки - Подтвердить/Отмена',
+            ];
         }
         
-        // Загружаем bundle с данными
-        $bundle = $this->loadBundle($bundleId);
+        // Определяем presetId
+        $presetId = $analysis['bundleId'];
+        
+        if ($presetId === null || $forceCreatePreset) {
+            // Создаём новый постоянный preset
+            $bundleHandler = new BundleHandler();
+            $presetId = $bundleHandler->createPreset($offerIds);
+        }
+        
+        // Загружаем preset с данными
+        $preset = $this->loadPreset($presetId);
 
         // Собираем контекст
         $context = $this->buildContext($siteId);
@@ -76,7 +85,7 @@ class InitPayloadService
             'iblocksTree' => $this->buildIblocksTree(),
             'selectedOffers' => $selectedOffers,
             'priceTypes' => $this->getPriceTypes(),
-            'bundle' => $bundle,
+            'preset' => $preset,
         ];
     }
 
@@ -230,41 +239,41 @@ class InitPayloadService
     }
 
     /**
-     * Анализировать состояние BUNDLE у торговых предложений
+     * Анализировать состояние PRESET у торговых предложений
      * 
      * @param array $offers Массив ТП
      * @return array Результат анализа
      */
     private function analyzeBundles(array $offers): array
     {
-        $bundleIds = [];
-        $offersWithBundle = [];
-        $offersWithoutBundle = [];
+        $presetIds = [];
+        $offersWithPreset = [];
+        $offersWithoutPreset = [];
         
         foreach ($offers as $offer) {
-            $bundleId = $this->extractBundleId($offer);
+            $presetId = $this->extractPresetId($offer);
             
-            if ($bundleId !== null && $bundleId > 0) {
-                $bundleIds[$bundleId] = $bundleId;
-                $offersWithBundle[$offer['id']] = $bundleId;
+            if ($presetId !== null && $presetId > 0) {
+                $presetIds[$presetId] = $presetId;
+                $offersWithPreset[$offer['id']] = $presetId;
             } else {
-                $offersWithoutBundle[] = $offer['id'];
+                $offersWithoutPreset[] = $offer['id'];
             }
         }
         
-        $uniqueBundleIds = array_values($bundleIds);
+        $uniquePresetIds = array_values($presetIds);
         
-        // Сценарий A: У всех одинаковый bundle → используем существующий
-        if (count($uniqueBundleIds) === 1 && empty($offersWithoutBundle)) {
+        // Сценарий A: У всех одинаковый preset → используем существующий
+        if (count($uniquePresetIds) === 1 && empty($offersWithoutPreset)) {
             return [
-                'scenario' => 'EXISTING_BUNDLE',
-                'bundleId' => $uniqueBundleIds[0],
+                'scenario' => 'EXISTING_PRESET',
+                'bundleId' => $uniquePresetIds[0],
                 'requiresConfirmation' => false,
             ];
         }
         
-        // Сценарий B: Ни у кого нет bundle → создаём новый (без предупреждения)
-        if (empty($uniqueBundleIds)) {
+        // Сценарий B: Ни у кого нет preset → создаём новый (с предупреждением)
+        if (empty($uniquePresetIds)) {
             return [
                 'scenario' => 'NEW_BUNDLE',
                 'bundleId' => null,
@@ -274,34 +283,34 @@ class InitPayloadService
         
         // Сценарий C: Смешанная ситуация → нужно предупреждение
         $bundleHandler = new BundleHandler();
-        $bundlesSummary = $bundleHandler->loadBundlesSummary($uniqueBundleIds);
+        $presetsSummary = $bundleHandler->loadPresetsSummary($uniquePresetIds);
         
-        // Добавляем offerIds к каждой сборке
-        $existingBundles = [];
-        foreach ($bundlesSummary as $id => $info) {
-            $info['offerIds'] = array_keys(array_filter($offersWithBundle, fn($bid) => $bid === $id));
-            $existingBundles[] = $info;
+        // Добавляем offerIds к каждому пресету
+        $existingPresets = [];
+        foreach ($presetsSummary as $id => $info) {
+            $info['offerIds'] = array_keys(array_filter($offersWithPreset, fn($pid) => $pid === $id));
+            $existingPresets[] = $info;
         }
         
         return [
             'scenario' => 'CONFLICT',
             'bundleId' => null,
             'requiresConfirmation' => true,
-            'existingBundles' => $existingBundles,
-            'offersWithBundle' => $offersWithBundle,
-            'offersWithoutBundle' => $offersWithoutBundle,
+            'existingBundles' => $existingPresets,
+            'offersWithBundle' => $offersWithPreset,
+            'offersWithoutBundle' => $offersWithoutPreset,
         ];
     }
 
     /**
-     * Извлечь bundleId из offer
+     * Извлечь presetId из offer
      * 
      * @param array $offer Данные ТП
      * @return int|null
      */
-    private function extractBundleId(array $offer): ?int
+    private function extractPresetId(array $offer): ?int
     {
-        $value = $offer['properties']['BUNDLE']['VALUE'] ?? null;
+        $value = $offer['properties']['PRESET']['VALUE'] ?? null;
         
         if ($value === null || $value === false || $value === '' || $value === '0') {
             return null;
@@ -385,8 +394,9 @@ class InitPayloadService
             'details' => (int)Option::get(self::MODULE_ID, 'IBLOCK_DETAILS', 0),
             'calculators' => (int)Option::get(self::MODULE_ID, 'IBLOCK_CALCULATORS', 0),
             'configurations' => (int)Option::get(self::MODULE_ID, 'IBLOCK_CONFIGURATIONS', 0),
-            'calcBundles' => (int)($moduleIblocks['CALC_BUNDLES'] ?? 0),
+            'calcPresets' => (int)($moduleIblocks['CALC_PRESETS'] ?? 0),
             'calcStages' => (int)($moduleIblocks['CALC_STAGES'] ?? 0),
+            'calcStagesVariants' => (int)($moduleIblocks['CALC_STAGES_VARIANTS'] ?? 0),
             'calcSettings' => (int)($moduleIblocks['CALC_SETTINGS'] ?? 0),
             'calcCustomFields' => (int)($moduleIblocks['CALC_CUSTOM_FIELDS'] ?? 0),
             'calcMaterials' => (int)($moduleIblocks['CALC_MATERIALS'] ?? 0),
@@ -455,19 +465,19 @@ class InitPayloadService
 
 
     /**
-    * Загрузить bundle со всеми данными
+    * Загрузить preset со всеми данными
     * 
-    * @param int $bundleId ID сборки
+    * @param int $presetId ID пресета
     * @return array|null
     */
-    private function loadBundle(int $bundleId): ?array
+    private function loadPreset(int $presetId): ?array
     {
-        if ($bundleId <= 0) {
+        if ($presetId <= 0) {
             return null;
         }
 
         $configManager = new ConfigManager();
-        $iblockId = $configManager->getIblockId('CALC_BUNDLES');
+        $iblockId = $configManager->getIblockId('CALC_PRESETS');
         
         if ($iblockId <= 0) {
             return null;
@@ -476,7 +486,7 @@ class InitPayloadService
         // Получаем основные поля элемента
         $rsElement = \CIBlockElement:: GetList(
             [],
-            ['ID' => $bundleId, 'IBLOCK_ID' => $iblockId],
+            ['ID' => $presetId, 'IBLOCK_ID' => $iblockId],
             false,
             ['nTopCount' => 1],
             ['ID', 'NAME', 'CODE', 'IBLOCK_SECTION_ID']
@@ -488,7 +498,7 @@ class InitPayloadService
         }
 
         // Получаем свойства через GetProperty (работает для версии 2)
-        $propertiesRaw = $this->loadBundleProperties($iblockId, $bundleId);
+        $propertiesRaw = $this->loadPresetProperties($iblockId, $presetId);
 
         // Парсим JSON-свойство
         $json = [];
@@ -511,30 +521,25 @@ class InitPayloadService
         $linkedElementIds = $this->collectLinkedElementIdsFromRaw($propertiesRaw);
         
         // Загружаем данные связанных элементов
-        $elements = $this->loadBundleElements($linkedElementIds);
-        
-        // Определяем, временная ли сборка
-        $bundleHandler = new BundleHandler();
-        $isTemporary = $bundleHandler->isTemporaryBundle($bundleId);
+        $elements = $this->loadPresetElements($linkedElementIds);
 
         return [
-            'id' => $bundleId,
+            'id' => $presetId,
             'name' => $fields['NAME'] ?? '',
             'code' => $fields['CODE'] ?? '',
-            'isTemporary' => $isTemporary,
             'json' => $json,
             'elements' => $elements,
         ];
     }
 
     /**
-    * Загрузить свойства bundle через GetProperty (для инфоблоков версии 2)
+    * Загрузить свойства preset через GetProperty (для инфоблоков версии 2)
     * 
     * @param int $iblockId ID инфоблока
     * @param int $elementId ID элемента
     * @return array Массив [CODE => [values]]
     */
-    private function loadBundleProperties(int $iblockId, int $elementId): array
+    private function loadPresetProperties(int $iblockId, int $elementId): array
     {
         $propCodes = [
             'JSON',
@@ -607,7 +612,7 @@ class InitPayloadService
      * @param array $linkedIds Массив ID по категориям
      * @return array
      */
-    private function loadBundleElements(array $linkedIds): array
+    private function loadPresetElements(array $linkedIds): array
     {
         $elementDataService = new ElementDataService();
         $configManager = new ConfigManager();

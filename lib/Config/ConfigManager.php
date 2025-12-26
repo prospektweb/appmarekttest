@@ -20,8 +20,9 @@ class ConfigManager
      * Используется как fallback, если ID не сохранён в настройках.
      */
     private const IBLOCK_TYPES = [
-        'CALC_BUNDLES' => 'calculator',
+        'CALC_PRESETS' => 'calculator',
         'CALC_STAGES' => 'calculator_catalog',
+        'CALC_STAGES_VARIANTS' => 'calculator_catalog',
         'CALC_SETTINGS' => 'calculator',
         'CALC_CUSTOM_FIELDS' => 'calculator',
         'CALC_MATERIALS' => 'calculator_catalog',
