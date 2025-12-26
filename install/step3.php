@@ -458,7 +458,7 @@ switch ($currentStep) {
         installLog("Модуль: {$moduleId}");
         installLog("Сайт по умолчанию: " . \CSite::GetDefSite());
         
-        createIblockTypeWithLog('calculator', 'Настройки калькуляторов');
+        createIblockTypeWithLog('calculator', 'Калькуляторы');
         createIblockTypeWithLog('calculator_catalog', 'Справочники калькуляторов');
         
         installLog("--- Шаг 1 выполнен ---", 'header');

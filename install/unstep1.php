@@ -19,9 +19,9 @@ $hasData = false;
 
 if (Loader::includeModule('iblock')) {
     $iblockCodes = [
-        'CALC_BUNDLES' => 'Сборки для расчётов',
-        'CALC_STAGES' => 'Этапы калькуляций',
-        'CALC_SETTINGS' => 'Настройки калькуляторов',
+        'CALC_PRESETS' => 'Пресеты',
+        'CALC_STAGES' => 'Этапы',
+        'CALC_SETTINGS' => 'Калькуляторы',
         'CALC_MATERIALS' => 'Материалы',
         'CALC_MATERIALS_VARIANTS' => 'Варианты материалов',
         'CALC_OPERATIONS' => 'Операции',

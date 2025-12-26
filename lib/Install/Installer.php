@@ -111,7 +111,7 @@ class Installer
     protected function createIblockTypes(): void
     {
         $types = [
-            ['id' => 'calculator', 'name' => 'Настройки калькуляторов'],
+            ['id' => 'calculator', 'name' => 'Калькуляторы'],
             ['id' => 'calculator_catalog', 'name' => 'Справочники калькуляторов'],
         ];
 
