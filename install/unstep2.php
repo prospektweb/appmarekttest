@@ -189,9 +189,9 @@ if ($deleteData) {
         ]);
         if ($arProperty = $rsProperty->Fetch()) {
             if (\CIBlockProperty::Delete($arProperty['ID'])) {
-                uninstallLog("  → CALC_PRESET (ID: {$arProperty['ID']}): " .  Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
+                uninstallLog("  → CALC_PRESET (ID: {$arProperty['ID']}): " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETED_SUCCESS'), 'success');
             } else {
-                uninstallLog("  → CALC_PRESET:  " . Loc:: getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_ERROR'), 'error');
+                uninstallLog("  → CALC_PRESET:  " . Loc::getMessage('PROSPEKTWEB_CALC_UNINSTALL_DELETE_ERROR'), 'error');
             }
         } else {
             uninstallLog("  → CALC_PRESET:  свойство не найдено", 'warning');

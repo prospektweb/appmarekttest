@@ -255,7 +255,9 @@ function handleCheckPresets($request): void
         }
         
         $samePresetForAll = $hasPreset && !$hasMultiplePresets && !$hasOffersWithoutPreset;
-        $needsConfirmation = !$samePresetForAll; // Confirmation needed when not all offers have the same preset
+        // Confirmation is needed when offers don't all have the same preset
+        // This includes cases where: no presets exist, multiple different presets, or some offers missing presets
+        $needsConfirmation = !$samePresetForAll;
         
         logInfo('CheckPresets for offers: ' . implode(',', $offerIds) . ', needsConfirmation=' . ($needsConfirmation ? 'yes' : 'no'));
         
