@@ -325,6 +325,10 @@ var ProspekwebCalc = {
      * Предварительная проверка/создание CALC_PRESET для выбранных ТП
      * @param {Array} offers
      * @returns {Promise<{success: boolean, presetId?: number, skipPresetCheck: boolean, cancelled?: boolean, error?: boolean, initPayload?: object}>}
+     * When payload is available from server: {success: true, initPayload: object, skipPresetCheck: true}
+     * When preset exists: {success: true, presetId: number, skipPresetCheck: true}
+     * When cancelled: {success: false, cancelled: true, skipPresetCheck: true}
+     * When error: {success: false, error: true, skipPresetCheck: true}
      */
     ensurePresetAvailability: async function(offers) {
         var offerIds = offers.map(function(o) { return o.id; });
