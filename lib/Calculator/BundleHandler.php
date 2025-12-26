@@ -17,7 +17,9 @@ class BundleHandler
     
     public function __construct()
     {
-        Loader::includeModule('iblock');
+        if (!Loader::includeModule('iblock')) {
+            throw new \RuntimeException('Требуется модуль Bitrix iblock');
+        }
         $this->configManager = new ConfigManager();
     }
     

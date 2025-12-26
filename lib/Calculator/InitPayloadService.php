@@ -30,8 +30,7 @@ class InitPayloadService
             throw new \Exception('Список торговых предложений не может быть пустым');
         }
 
-        Loader::includeModule('iblock');
-        Loader::includeModule('catalog');
+        $this->ensureBitrixModulesLoaded();
 
         // Загружаем информацию о ТП
         $selectedOffers = $this->loadOffers($offerIds);
@@ -68,6 +67,22 @@ class InitPayloadService
             'priceTypes' => $this->getPriceTypes(),
             'preset' => $preset,
         ];
+    }
+
+    /**
+     * Проверяет наличие необходимых модулей Bitrix
+     *
+     * @throws \RuntimeException
+     */
+    private function ensureBitrixModulesLoaded(): void
+    {
+        if (!Loader::includeModule('iblock')) {
+            throw new \RuntimeException('Требуется модуль Bitrix iblock');
+        }
+
+        if (!Loader::includeModule('catalog')) {
+            throw new \RuntimeException('Требуется модуль Bitrix catalog');
+        }
     }
 
     /**

@@ -8,8 +8,23 @@ class ElementDataService
 {
     public function __construct()
     {
-        Loader::includeModule('iblock');
-        Loader::includeModule('catalog');
+        $this->ensureBitrixModulesLoaded();
+    }
+
+    /**
+     * Проверяет, что модули Bitrix загружены перед использованием API
+     *
+     * @throws \RuntimeException
+     */
+    private function ensureBitrixModulesLoaded(): void
+    {
+        if (!Loader::includeModule('iblock')) {
+            throw new \RuntimeException('Требуется модуль Bitrix iblock');
+        }
+
+        if (!Loader::includeModule('catalog')) {
+            throw new \RuntimeException('Требуется модуль Bitrix catalog');
+        }
     }
 
     public function prepareRefreshPayload(array $requests): array

@@ -22,7 +22,9 @@ class CustomFieldsService
             return [];
         }
 
-        Loader::includeModule('iblock');
+        if (!Loader::includeModule('iblock')) {
+            throw new \RuntimeException('Требуется модуль Bitrix iblock');
+        }
 
         $result = [];
         

@@ -184,7 +184,7 @@ try {
     }
 } catch (\Exception $e) {
     logError('Exception in calculator_ajax.php: ' . $e->getMessage());
-    sendJsonResponse(['error' => 'Server error', 'message' => $e->getMessage()], 500);
+    sendJsonResponse(['error' => resolveErrorType($e), 'message' => $e->getMessage()], 500);
 }
 }
 
@@ -215,7 +215,7 @@ function handleGetInitData($request): void
         sendJsonResponse(['success' => true, 'data' => $payload]);
     } catch (\Exception $e) {
         logError('GetInitData error: ' . $e->getMessage());
-        sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
+        sendJsonResponse(['error' => resolveErrorType($e), 'message' => $e->getMessage()], 500);
     }
 }
 
@@ -282,7 +282,7 @@ function handleCheckPresets($request): void
         ]);
     } catch (\Exception $e) {
         logError('CheckPresets error: ' . $e->getMessage());
-        sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
+        sendJsonResponse(['error' => resolveErrorType($e), 'message' => $e->getMessage()], 500);
     }
 }
 
@@ -319,7 +319,7 @@ function handleCreateAndAssignPreset($request): void
         ]);
     } catch (\Exception $e) {
         logError('CreateAndAssignPreset error: ' . $e->getMessage());
-        sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
+        sendJsonResponse(['error' => resolveErrorType($e), 'message' => $e->getMessage()], 500);
     }
 }
 
@@ -352,7 +352,7 @@ function handleSave($request): void
         sendJsonResponse(['success' => $result['status'] !== 'error', 'data' => $result]);
     } catch (\Exception $e) {
         logError('Save error: ' . $e->getMessage());
-        sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
+        sendJsonResponse(['error' => resolveErrorType($e), 'message' => $e->getMessage()], 500);
     }
 }
 
@@ -385,7 +385,7 @@ function handleSaveBundle($request): void
         sendJsonResponse(['success' => true, 'data' => $result]);
     } catch (\Exception $e) {
         logError('SaveBundle error: ' . $e->getMessage());
-        sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
+        sendJsonResponse(['error' => resolveErrorType($e), 'message' => $e->getMessage()], 500);
     }
 }
 
@@ -409,7 +409,7 @@ function handleFinalizeBundle($request): void
         sendJsonResponse(['success' => true, 'data' => $result]);
     } catch (\Exception $e) {
         logError('FinalizeBundle error: ' . $e->getMessage());
-        sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
+        sendJsonResponse(['error' => resolveErrorType($e), 'message' => $e->getMessage()], 500);
     }
 }
 
@@ -441,7 +441,7 @@ function handleRefreshData($request): void
         sendJsonResponse(['success' => true, 'data' => $result]);
     } catch (\Exception $e) {
         logError('RefreshData error: ' . $e->getMessage());
-        sendJsonResponse(['error' => 'Processing error', 'message' => $e->getMessage()], 500);
+        sendJsonResponse(['error' => resolveErrorType($e), 'message' => $e->getMessage()], 500);
     }
 }
 
@@ -517,6 +517,20 @@ function sendJsonResponse(array $data, int $statusCode = 200): void
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     die();
+}
+
+/**
+ * Определить тип ошибки для JSON-ответа
+ */
+function resolveErrorType(\Exception $e): string
+{
+    $message = $e->getMessage();
+
+    if (stripos($message, 'модуль Bitrix') !== false || stripos($message, 'Bitrix module') !== false) {
+        return 'Module error';
+    }
+
+    return 'Processing error';
 }
 
 /**
