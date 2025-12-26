@@ -488,7 +488,7 @@ class AdminHandler
         // Карта типов инфоблоков (соответствует ConfigManager::IBLOCK_TYPES)
         $iblockTypes = [
             'CALC_BUNDLES' => 'calculator',
-            'CALC_CONFIG' => 'calculator',
+            'CALC_STAGES' => 'calculator_catalog',
             'CALC_SETTINGS' => 'calculator',
             'CALC_CUSTOM_FIELDS' => 'calculator',
             'CALC_MATERIALS' => 'calculator_catalog',

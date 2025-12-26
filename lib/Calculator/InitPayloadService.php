@@ -538,7 +538,7 @@ class InitPayloadService
     {
         $propCodes = [
             'JSON',
-            'CALC_CONFIG',
+            'CALC_STAGES',
             'CALC_SETTINGS',
             'CALC_MATERIALS',
             'CALC_MATERIALS_VARIANTS',
@@ -580,7 +580,7 @@ class InitPayloadService
     private function collectLinkedElementIdsFromRaw(array $propertiesRaw): array
     {
         $map = [
-            'calcConfig' => 'CALC_CONFIG',
+            'calcConfig' => 'CALC_STAGES',
             'calcSettings' => 'CALC_SETTINGS',
             'materials' => 'CALC_MATERIALS',
             'materialsVariants' => 'CALC_MATERIALS_VARIANTS',
@@ -613,7 +613,7 @@ class InitPayloadService
         $configManager = new ConfigManager();
         
         $iblockMap = [
-            'calcConfig' => $configManager->getIblockId('CALC_CONFIG'),
+            'calcConfig' => $configManager->getIblockId('CALC_STAGES'),
             'calcSettings' => $configManager->getIblockId('CALC_SETTINGS'),
             'materials' => $configManager->getIblockId('CALC_MATERIALS'),
             'materialsVariants' => $configManager->getIblockId('CALC_MATERIALS_VARIANTS'),
