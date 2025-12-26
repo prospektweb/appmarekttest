@@ -225,6 +225,7 @@ function handleGetInitData($request): void
 function handleCheckPresets($request): void
 {
     $offerIdsRaw = $request->get('offerIds');
+    $siteId = $request->get('siteId') ?: SITE_ID;
 
     if (empty($offerIdsRaw)) {
         sendJsonResponse(['error' => 'Missing parameter', 'message' => 'Параметр offerIds обязателен'], 400);
@@ -237,68 +238,17 @@ function handleCheckPresets($request): void
     }
 
     try {
-        // Загружаем CALC_PRESET для каждого ТП
-        $presets = [];
-        $uniquePresets = [];
+        // Use InitPayloadService to generate the initialization payload directly
+        $service = new InitPayloadService();
+        $payload = $service->prepareInitPayload($offerIds, $siteId, false);
         
-        foreach ($offerIds as $offerId) {
-            $elementObject = \CIBlockElement::GetList(
-                [],
-                ['ID' => $offerId],
-                false,
-                false,
-                ['ID', 'NAME', 'PROPERTY_CALC_PRESET']
-            )->GetNextElement();
-            
-            if (!$elementObject) {
-                continue;
-            }
-            
-            $element = $elementObject->GetFields();
-            $properties = $elementObject->GetProperties();
-            
-            $presetId = null;
-            if (isset($properties['CALC_PRESET']) && !empty($properties['CALC_PRESET']['VALUE'])) {
-                $presetId = (int)$properties['CALC_PRESET']['VALUE'];
-            }
-            
-            $presets[$offerId] = [
-                'offerId' => $offerId,
-                'offerName' => $element['NAME'] ?? '',
-                'presetId' => $presetId,
-            ];
-            
-            if ($presetId !== null && $presetId > 0) {
-                $uniquePresets[$presetId] = $presetId;
-            }
-        }
-        
-        // Определяем сценарий
-        $hasPreset = !empty($uniquePresets);
-        $hasMultiplePresets = count($uniquePresets) > 1;
-        $hasOffersWithoutPreset = false;
-        
-        foreach ($presets as $preset) {
-            if ($preset['presetId'] === null || $preset['presetId'] === 0) {
-                $hasOffersWithoutPreset = true;
-                break;
-            }
-        }
-        
-        $samePresetForAll = $hasPreset && !$hasMultiplePresets && !$hasOffersWithoutPreset;
-        // Confirmation is needed when offers don't all have the same preset
-        // This includes cases where: no presets exist, multiple different presets, or some offers missing presets
-        $needsConfirmation = !$samePresetForAll;
-        
-        logInfo('CheckPresets for offers: ' . implode(',', $offerIds) . ', needsConfirmation=' . ($needsConfirmation ? 'yes' : 'no'));
+        logInfo('CheckPresets for offers: ' . implode(',', $offerIds) . ' - payload generated successfully');
         
         sendJsonResponse([
             'success' => true,
             'data' => [
-                'presets' => array_values($presets),
-                'uniquePresets' => array_values($uniquePresets),
-                'needsConfirmation' => $needsConfirmation,
-                'samePresetForAll' => $samePresetForAll,
+                'payload' => $payload,
+                'needsConfirmation' => false, // Skip client-side confirmation as InitPayloadService handles preset creation
             ],
         ]);
     } catch (\Exception $e) {

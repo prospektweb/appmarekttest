@@ -38,6 +38,7 @@
                 onClose: config.onClose || null,
                 onError: config.onError || null,
                 presetCheckResult: config.presetCheckResult || null,
+                initPayload: config.initPayload || null,
             };
 
             this.iframe = null;
@@ -58,6 +59,7 @@
                 iframe: config.iframe ? this.describeIframe(config.iframe) : this.config.iframeSelector,
                 ajaxUrl: this.config.ajaxEndpoint,
                 offerIds: this.config.offerIds,
+                hasInitPayload: !!this.config.initPayload,
             });
 
             this.init();
@@ -1626,12 +1628,18 @@
             }
 
             try {
-                // Проверка пресетов теперь выполняется ДО создания диалога в calculator.js
-                // Здесь мы просто загружаем данные для инициализации
-                this.logDebug('[CalcIntegration] Preset check was handled before dialog opening');
+                let initData;
                 
-                // Получаем данные для инициализации через AJAX
-                const initData = await this.fetchInitData();
+                // Check if we already have initPayload from the preset check phase
+                if (this.config.initPayload) {
+                    this.logDebug('[CalcIntegration] Using pre-loaded initPayload from preset check');
+                    this.logBridge('[BitrixBridge] Using cached initPayload, skipping getInitData AJAX call');
+                    initData = this.config.initPayload;
+                } else {
+                    // Fallback: fetch init data via AJAX
+                    this.logDebug('[CalcIntegration] Fetching init data via AJAX');
+                    initData = await this.fetchInitData();
+                }
 
                 this.initData = initData;
 
