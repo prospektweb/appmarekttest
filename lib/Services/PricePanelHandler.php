@@ -18,8 +18,13 @@ class PricePanelHandler
 
     public function __construct()
     {
-        Loader::includeModule('iblock');
-        Loader::includeModule('catalog');
+        if (!Loader::includeModule('iblock')) {
+            throw new \RuntimeException('Требуется модуль Bitrix iblock');
+        }
+
+        if (!Loader::includeModule('catalog')) {
+            throw new \RuntimeException('Требуется модуль Bitrix catalog');
+        }
         
         $this->elementDataService = new ElementDataService();
     }
