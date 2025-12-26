@@ -278,6 +278,7 @@ var ProspekwebCalc = {
             siteId: BX.message('SITE_ID') || (typeof SITE_ID !== 'undefined' ? SITE_ID : 's1'),
             sessid: BX.bitrix_sessid(),
             presetCheckResult: presetCheck,
+            initPayload: presetCheck.initPayload,
             onClose: function() {
                 self.closeDialog();
             },
@@ -323,7 +324,11 @@ var ProspekwebCalc = {
     /**
      * Предварительная проверка/создание CALC_PRESET для выбранных ТП
      * @param {Array} offers
-     * @returns {Promise<{success: boolean, presetId?: number, skipPresetCheck: boolean, cancelled?: boolean, error?: boolean}>}
+     * @returns {Promise<{success: boolean, presetId?: number, skipPresetCheck: boolean, cancelled?: boolean, error?: boolean, initPayload?: object}>}
+     * When payload is available from server: {success: true, initPayload: object, skipPresetCheck: true}
+     * When preset exists: {success: true, presetId: number, skipPresetCheck: true}
+     * When cancelled: {success: false, cancelled: true, skipPresetCheck: true}
+     * When error: {success: false, error: true, skipPresetCheck: true}
      */
     ensurePresetAvailability: async function(offers) {
         var offerIds = offers.map(function(o) { return o.id; });
@@ -335,6 +340,7 @@ var ProspekwebCalc = {
             var checkUrl = ajaxEndpoint +
                 '?action=checkPresets' +
                 '&offerIds=' + encodeURIComponent(offerIds.join(',')) +
+                '&siteId=' + encodeURIComponent(siteId) +
                 '&sessid=' + encodeURIComponent(sessid);
 
             var checkResponse = await fetch(checkUrl, {
@@ -348,6 +354,16 @@ var ProspekwebCalc = {
                 throw new Error((checkData && (checkData.message || checkData.error)) || 'Ошибка проверки пресетов');
             }
 
+            // Check if response contains data.payload from InitPayloadService
+            if (checkData.data && checkData.data.payload) {
+                return { 
+                    success: true, 
+                    initPayload: checkData.data.payload, 
+                    skipPresetCheck: true 
+                };
+            }
+
+            // Fallback to old logic if payload is not present
             var presetId = null;
             if (checkData.data && checkData.data.samePresetForAll && Array.isArray(checkData.data.uniquePresets) && checkData.data.uniquePresets.length === 1) {
                 presetId = parseInt(checkData.data.uniquePresets[0], 10) || null;
