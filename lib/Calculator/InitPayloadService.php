@@ -343,7 +343,6 @@ class InitPayloadService
             'lang' => $languageId,
             'timestamp' => time(),
             'url' => $siteUrl,
-            'menuLinks' => $this->buildMenuLinks($siteUrl, $languageId),
             'priceRounding' => (float)Option::get(self::MODULE_ID, 'PRICE_ROUNDING', 1),
         ];
     }
@@ -903,29 +902,6 @@ class InitPayloadService
         }
 
         return $tree;
-    }
-
-    /**
-     * Построить массив ссылок для меню
-     *
-     * @param string $siteUrl URL сайта
-     * @param string $lang Язык интерфейса
-     * @return array
-     */
-    private function buildMenuLinks(string $siteUrl, string $lang): array
-    {
-        return [
-            [
-                'name' => 'Типы цен',
-                'url' => "{$siteUrl}/bitrix/admin/cat_group_admin.php?lang={$lang}",
-                'target' => '_blank',
-            ],
-            [
-                'name' => 'Единицы измерения',
-                'url' => "{$siteUrl}/bitrix/admin/cat_measure_list.php?lang={$lang}",
-                'target' => '_blank',
-            ],
-        ];
     }
 
     /**
