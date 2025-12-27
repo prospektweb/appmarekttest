@@ -15,6 +15,9 @@ class InitPayloadService
     /** @var string ID модуля */
     private const MODULE_ID = 'prospektweb.calc';
 
+    /** @var array Кэш элементов для preset */
+    private array $elementsStore = [];
+
     /**
      * Подготовить INIT payload для отправки в iframe
      *
@@ -47,25 +50,26 @@ class InitPayloadService
             $presetId = $bundleHandler->createPreset($offerIds);
         }
         
+        $this->elementsStore = [];
+
         // Загружаем preset с данными
         $preset = $this->loadPreset($presetId);
 
         // Собираем контекст
         $context = $this->buildContext($siteId);
 
-        // Собираем ID инфоблоков
+        // Собираем информацию об инфоблоках
         $iblocks = $this->getIblocks();
-        $iblocksTypes = $this->getIblockTypes($iblocks);
 
         // Формируем payload
         return [
             'context' => $context,
             'iblocks' => $iblocks,
-            'iblocksTypes' => $iblocksTypes,
             'iblocksTree' => $this->buildIblocksTree(),
             'selectedOffers' => $selectedOffers,
             'priceTypes' => $this->getPriceTypes(),
             'preset' => $preset,
+            'elementsStore' => $this->elementsStore ?? [],
         ];
     }
 
@@ -127,6 +131,8 @@ class InitPayloadService
             $measureInfo = $this->getMeasureInfo((int)($productData['MEASURE'] ?? 0));
             $measureRatio = $this->getMeasureRatio($offerId);
             $prices = $this->getPrices($offerId);
+            $purchasingPrice = isset($productData['PURCHASING_PRICE']) ? (float)$productData['PURCHASING_PRICE'] : null;
+            $purchasingCurrency = $productData['PURCHASING_CURRENCY'] ?? null;
 
             $productId = (int)($element['PROPERTY_CML2_LINK_VALUE'] ?? 0);
             if ($productId <= 0) {
@@ -150,6 +156,8 @@ class InitPayloadService
                 'measure' => $measureInfo,
                 'measureRatio' => $measureRatio,
                 'prices' => $prices,
+                'purchasingPrice' => $purchasingPrice,
+                'purchasingCurrency' => $purchasingCurrency,
                 'properties' => $properties,
                 // bundleId теперь не нужен в offer, он общий для всех
             ];
@@ -365,82 +373,65 @@ class InitPayloadService
         $configManager = new ConfigManager();
         $moduleIblocks = $configManager->getAllIblockIds();
 
-        $iblocks = [
-            'products' => $configManager->getProductIblockId(),
-            'offers' => $configManager->getSkuIblockId(),
-            'materials' => (int)Option::get(self::MODULE_ID, 'IBLOCK_MATERIALS', 0),
-            'operations' => (int)Option::get(self::MODULE_ID, 'IBLOCK_OPERATIONS', 0),
-            'equipment' => (int)Option::get(self::MODULE_ID, 'IBLOCK_EQUIPMENT', 0),
-            'details' => (int)Option::get(self::MODULE_ID, 'IBLOCK_DETAILS', 0),
-            'calculators' => (int)Option::get(self::MODULE_ID, 'IBLOCK_CALCULATORS', 0),
-            'configurations' => (int)Option::get(self::MODULE_ID, 'IBLOCK_CONFIGURATIONS', 0),
-            'calcPresets' => (int)($moduleIblocks['CALC_PRESETS'] ?? 0),
-            'calcStages' => (int)($moduleIblocks['CALC_STAGES'] ?? 0),
-            'calcStagesVariants' => (int)($moduleIblocks['CALC_STAGES_VARIANTS'] ?? 0),
-            'calcSettings' => (int)($moduleIblocks['CALC_SETTINGS'] ?? 0),
-            'calcCustomFields' => (int)($moduleIblocks['CALC_CUSTOM_FIELDS'] ?? 0),
-            'calcMaterials' => (int)($moduleIblocks['CALC_MATERIALS'] ?? 0),
-            'calcMaterialsVariants' => (int)($moduleIblocks['CALC_MATERIALS_VARIANTS'] ?? 0),
-            'calcOperations' => (int)($moduleIblocks['CALC_OPERATIONS'] ?? 0),
-            'calcOperationsVariants' => (int)($moduleIblocks['CALC_OPERATIONS_VARIANTS'] ?? 0),
-            'calcEquipment' => (int)($moduleIblocks['CALC_EQUIPMENT'] ?? 0),
-            'calcDetails' => (int)($moduleIblocks['CALC_DETAILS'] ?? 0),
-            'calcDetailsVariants' => (int)($moduleIblocks['CALC_DETAILS_VARIANTS'] ?? 0),
+        $map = [
+            'PRODUCTS' => $configManager->getProductIblockId(),
+            'OFFERS' => $configManager->getSkuIblockId(),
+            'CALC_PRESETS' => (int)($moduleIblocks['CALC_PRESETS'] ?? 0),
+            'CALC_STAGES' => (int)($moduleIblocks['CALC_STAGES'] ?? 0),
+            'CALC_STAGES_VARIANTS' => (int)($moduleIblocks['CALC_STAGES_VARIANTS'] ?? 0),
+            'CALC_SETTINGS' => (int)($moduleIblocks['CALC_SETTINGS'] ?? 0),
+            'CALC_CUSTOM_FIELDS' => (int)($moduleIblocks['CALC_CUSTOM_FIELDS'] ?? 0),
+            'CALC_MATERIALS' => (int)($moduleIblocks['CALC_MATERIALS'] ?? 0),
+            'CALC_MATERIALS_VARIANTS' => (int)($moduleIblocks['CALC_MATERIALS_VARIANTS'] ?? 0),
+            'CALC_OPERATIONS' => (int)($moduleIblocks['CALC_OPERATIONS'] ?? 0),
+            'CALC_OPERATIONS_VARIANTS' => (int)($moduleIblocks['CALC_OPERATIONS_VARIANTS'] ?? 0),
+            'CALC_EQUIPMENT' => (int)($moduleIblocks['CALC_EQUIPMENT'] ?? 0),
+            'CALC_DETAILS' => (int)($moduleIblocks['CALC_DETAILS'] ?? 0),
+            'CALC_DETAILS_VARIANTS' => (int)($moduleIblocks['CALC_DETAILS_VARIANTS'] ?? 0),
         ];
 
-        return array_filter($iblocks, static fn($value) => $value > 0);
-    }
-
-    /**
-     * Построить карту типов инфоблоков по их ID
-     */
-    private function getIblockTypes(array $iblocks): array
-    {
-        $types = [];
-
-        $desiredOrder = [
-            'calcDetails',
-            'calcDetailsVariants',
-            'calcMaterials',
-            'calcMaterialsVariants',
-            'calcOperations',
-            'calcOperationsVariants',
-            'calcEquipment',
+        $parentMap = [
+            'CALC_MATERIALS_VARIANTS' => 'CALC_MATERIALS',
+            'CALC_OPERATIONS_VARIANTS' => 'CALC_OPERATIONS',
+            'CALC_DETAILS_VARIANTS' => 'CALC_DETAILS',
+            'CALC_STAGES_VARIANTS' => 'CALC_STAGES',
         ];
 
-        $orderedIds = [];
+        $result = [];
 
-        foreach ($desiredOrder as $key) {
-            if (!empty($iblocks[$key])) {
-                $orderedIds[] = (int)$iblocks[$key];
-            }
-        }
-
-        foreach ($iblocks as $key => $iblockId) {
-            if (in_array($key, $desiredOrder, true)) {
-                continue;
-            }
-
-            $orderedIds[] = (int)$iblockId;
-        }
-
-        foreach ($orderedIds as $iblockId) {
-            $id = (int)$iblockId;
+        foreach ($map as $code => $id) {
+            $id = (int)$id;
             if ($id <= 0) {
                 continue;
             }
 
-            $iblock = \CIBlock::GetArrayByID($id);
-            $typeId = (string)($iblock['IBLOCK_TYPE_ID'] ?? '');
-
-            if ($typeId === '') {
-                continue;
-            }
-
-            $types[(string)$id] = $typeId;
+            $iblock = \CIBlock::GetArrayByID($id) ?: [];
+            $result[] = [
+                'id' => $id,
+                'code' => $code,
+                'type' => $iblock['IBLOCK_TYPE_ID'] ?? null,
+                'name' => $iblock['NAME'] ?? $code,
+                'parent' => isset($parentMap[$code], $map[$parentMap[$code]]) && (int)$map[$parentMap[$code]] > 0
+                    ? (int)$map[$parentMap[$code]]
+                    : null,
+            ];
         }
 
-        return $types;
+        return $result;
+    }
+
+    /**
+     * Найти ID инфоблока по его коду в массиве объектов.
+     */
+    private function findIblockIdByCode(array $iblocks, string $code): int
+    {
+        foreach ($iblocks as $iblock) {
+            if (($iblock['code'] ?? null) === $code) {
+                return (int)($iblock['id'] ?? 0);
+            }
+        }
+
+        return 0;
     }
 
 
@@ -477,39 +468,22 @@ class InitPayloadService
             return null;
         }
 
-        // Получаем свойства через GetProperty (работает для версии 2)
-        $propertiesRaw = $this->loadPresetProperties($iblockId, $presetId);
-
-        // Парсим JSON-свойство
-        $json = [];
-        if (! empty($propertiesRaw['JSON'])) {
-            $jsonValue = $propertiesRaw['JSON'][0] ?? null;
-            if (is_array($jsonValue) && isset($jsonValue['TEXT'])) {
-                $decoded = json_decode($jsonValue['TEXT'], true);
-                if (is_array($decoded)) {
-                    $json = $decoded;
-                }
-            } elseif (is_string($jsonValue)) {
-                $decoded = json_decode($jsonValue, true);
-                if (is_array($decoded)) {
-                    $json = $decoded;
-                }
-            }
+        $elementDataService = new ElementDataService();
+        $presetElement = $elementDataService->loadSingleElement($iblockId, $presetId, null, true);
+        if (!$presetElement) {
+            return null;
         }
 
-        // Собираем ID связанных элементов
-        $linkedElementIds = $this->collectLinkedElementIdsFromRaw($propertiesRaw);
-        
-        // Загружаем данные связанных элементов
-        $elements = $this->loadPresetElements($linkedElementIds);
+        $propertiesRaw = $this->loadPresetProperties($iblockId, $presetId);
+        $presetElement['properties'] = array_map(
+            static fn(array $property) => $property['values'] ?? [],
+            $propertiesRaw
+        );
+        $presetElement['iblockId'] = $iblockId;
 
-        return [
-            'id' => $presetId,
-            'name' => $fields['NAME'] ?? '',
-            'code' => $fields['CODE'] ?? '',
-            'json' => $json,
-            'elements' => $elements,
-        ];
+        $this->elementsStore = $this->buildElementsStore($propertiesRaw);
+
+        return $presetElement;
     }
 
     /**
@@ -521,123 +495,73 @@ class InitPayloadService
     */
     private function loadPresetProperties(int $iblockId, int $elementId): array
     {
-        $propCodes = [
-            'JSON',
-            'CALC_STAGES',
-            'CALC_SETTINGS',
-            'CALC_MATERIALS',
-            'CALC_MATERIALS_VARIANTS',
-            'CALC_OPERATIONS',
-            'CALC_OPERATIONS_VARIANTS',
-            'CALC_EQUIPMENT',
-            'CALC_DETAILS',
-            'CALC_DETAILS_VARIANTS',
-        ];
-        
         $result = [];
-        
-        foreach ($propCodes as $code) {
-            $result[$code] = [];
-            
-            $rsProperty = \CIBlockElement::GetProperty(
-                $iblockId,
-                $elementId,
-                [],
-                ['CODE' => $code]
-            );
-            
-            while ($arProp = $rsProperty->Fetch()) {
-                if ($arProp['VALUE'] !== null && $arProp['VALUE'] !== '') {
-                    $result[$code][] = $arProp['VALUE'];
-                }
+
+        $rsProperty = \CIBlockElement::GetProperty(
+            $iblockId,
+            $elementId,
+            [],
+            []
+        );
+
+        while ($arProp = $rsProperty->Fetch()) {
+            $code = $arProp['CODE'] ?: (string)$arProp['ID'];
+
+            if (in_array($code, ['JSON', 'CALC_DIMENSIONS_WEIGHT'], true)) {
+                continue;
+            }
+
+            if (!isset($result[$code])) {
+                $result[$code] = [
+                    'property' => $arProp,
+                    'values' => [],
+                ];
+            }
+
+            if ($arProp['VALUE'] !== null && $arProp['VALUE'] !== '') {
+                $result[$code]['values'][] = $arProp['VALUE'];
             }
         }
-        
+
         return $result;
     }
 
     /**
-    * Собрать ID связанных элементов из сырых данных свойств
-    * 
-    * @param array $propertiesRaw Массив [CODE => [values]]
-    * @return array
-    */
-    private function collectLinkedElementIdsFromRaw(array $propertiesRaw): array
-    {
-        $map = [
-            'calcConfig' => 'CALC_STAGES',
-            'calcSettings' => 'CALC_SETTINGS',
-            'materials' => 'CALC_MATERIALS',
-            'materialsVariants' => 'CALC_MATERIALS_VARIANTS',
-            'operations' => 'CALC_OPERATIONS',
-            'operationsVariants' => 'CALC_OPERATIONS_VARIANTS',
-            'equipment' => 'CALC_EQUIPMENT',
-            'details' => 'CALC_DETAILS',
-            'detailsVariants' => 'CALC_DETAILS_VARIANTS',
-        ];
-        
-        $result = [];
-        
-        foreach ($map as $jsKey => $propCode) {
-            $values = $propertiesRaw[$propCode] ??  [];
-            $result[$jsKey] = array_filter(array_map('intval', $values), fn($id) => $id > 0);
-        }
-        
-        return $result;
-    }
-
-    /**
-     * Загрузить данные связанных элементов
-     * 
-     * @param array $linkedIds Массив ID по категориям
-     * @return array
+     * Собирает элементы в elementsStore по коду свойства.
      */
-    private function loadPresetElements(array $linkedIds): array
+    private function buildElementsStore(array $propertiesRaw): array
     {
         $elementDataService = new ElementDataService();
-        $configManager = new ConfigManager();
-        
-        $iblockMap = [
-            'calcConfig' => $configManager->getIblockId('CALC_STAGES'),
-            'calcSettings' => $configManager->getIblockId('CALC_SETTINGS'),
-            'materials' => $configManager->getIblockId('CALC_MATERIALS'),
-            'materialsVariants' => $configManager->getIblockId('CALC_MATERIALS_VARIANTS'),
-            'operations' => $configManager->getIblockId('CALC_OPERATIONS'),
-            'operationsVariants' => $configManager->getIblockId('CALC_OPERATIONS_VARIANTS'),
-            'equipment' => $configManager->getIblockId('CALC_EQUIPMENT'),
-            'details' => $configManager->getIblockId('CALC_DETAILS'),
-            'detailsVariants' => $configManager->getIblockId('CALC_DETAILS_VARIANTS'),
-        ];
-        
-        $result = [];
-        
-        foreach ($linkedIds as $key => $ids) {
+        $store = [];
+
+        foreach ($propertiesRaw as $code => $propertyData) {
+            $values = $propertyData['values'] ?? [];
+            $ids = array_filter(array_map('intval', $values), static fn($id) => $id > 0);
             if (empty($ids)) {
-                $result[$key] = [];
                 continue;
             }
-            
-            $iblockId = $iblockMap[$key] ?? 0;
-            if ($iblockId <= 0) {
-                $result[$key] = [];
+
+            $linkIblockId = isset($propertyData['property']['LINK_IBLOCK_ID'])
+                ? (int)$propertyData['property']['LINK_IBLOCK_ID']
+                : 0;
+
+            if ($linkIblockId <= 0) {
                 continue;
             }
-            
-            // Определяем, нужен ли родитель (для вариантов)
-            $includeParent = in_array($key, ['materialsVariants', 'operationsVariants', 'detailsVariants']);
-            
+
             $payload = $elementDataService->prepareRefreshPayload([
                 [
-                    'iblockId' => $iblockId,
+                    'iblockId' => $linkIblockId,
+                    'iblockType' => null,
                     'ids' => $ids,
-                    'includeParent' => $includeParent,
+                    'includeParent' => true,
                 ],
             ]);
-            
-            $result[$key] = $payload[0]['data'] ?? [];
+
+            $store[$code] = $payload[0]['data'] ?? [];
         }
-        
-        return $result;
+
+        return $store;
     }
 
     /**
@@ -651,28 +575,34 @@ class InitPayloadService
         $trees = [];
 
         // CALC_SETTINGS
-        if (!empty($iblocks['calcSettings'])) {
-            $trees['calcSettings'] = $this->buildIblockTree($iblocks['calcSettings']);
+        $calcSettingsId = $this->findIblockIdByCode($iblocks, 'CALC_SETTINGS');
+        if ($calcSettingsId > 0) {
+            $trees['calcSettings'] = $this->buildIblockTree($calcSettingsId);
         }
 
         // CALC_EQUIPMENT
-        if (!empty($iblocks['calcEquipment'])) {
-            $trees['calcEquipment'] = $this->buildIblockTree($iblocks['calcEquipment']);
+        $calcEquipmentId = $this->findIblockIdByCode($iblocks, 'CALC_EQUIPMENT');
+        if ($calcEquipmentId > 0) {
+            $trees['calcEquipment'] = $this->buildIblockTree($calcEquipmentId);
         }
 
         // CALC_MATERIALS с variants
-        if (!empty($iblocks['calcMaterials'])) {
+        $calcMaterialsId = $this->findIblockIdByCode($iblocks, 'CALC_MATERIALS');
+        $calcMaterialsVariantsId = $this->findIblockIdByCode($iblocks, 'CALC_MATERIALS_VARIANTS');
+        if ($calcMaterialsId > 0) {
             $trees['calcMaterials'] = $this->buildCatalogTree(
-                $iblocks['calcMaterials'],
-                $iblocks['calcMaterialsVariants'] ?? 0
+                $calcMaterialsId,
+                $calcMaterialsVariantsId
             );
         }
         
         // CALC_OPERATIONS с variants
-        if (!empty($iblocks['calcOperations'])) {
+        $calcOperationsId = $this->findIblockIdByCode($iblocks, 'CALC_OPERATIONS');
+        $calcOperationsVariantsId = $this->findIblockIdByCode($iblocks, 'CALC_OPERATIONS_VARIANTS');
+        if ($calcOperationsId > 0) {
             $trees['calcOperations'] = $this->buildCatalogTree(
-                $iblocks['calcOperations'],
-                $iblocks['calcOperationsVariants'] ?? 0
+                $calcOperationsId,
+                $calcOperationsVariantsId
             );
         }
 

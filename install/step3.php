@@ -528,6 +528,20 @@ switch ($currentStep) {
                 'IS_REQUIRED' => 'N',
                 'SORT' => 700,
             ],
+            'PREV_STAGE' => [
+                'NAME' => 'Предыдущий этап',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'N',
+                'MULTIPLE_CNT' => 1,
+                'SORT' => 800,
+            ],
+            'NEXT_STAGE' => [
+                'NAME' => 'Следующий этап',
+                'TYPE' => 'E',
+                'MULTIPLE' => 'N',
+                'MULTIPLE_CNT' => 1,
+                'SORT' => 900,
+            ],
         ];
         
         $settingsProps = [
@@ -773,21 +787,6 @@ switch ($currentStep) {
 
         // Свойства инфоблока:  Сборки для расчётов
         $bundlesProps = [
-            'JSON' => [
-                'NAME' => 'JSON',
-                'TYPE' => 'S',
-                'USER_TYPE' => 'HTML',
-                'SORT' => 100,
-            ],
-            'CALC_DIMENSIONS_WEIGHT' => [
-                'NAME' => 'Расчёт габаритов и веса',
-                'TYPE' => 'L',
-                'SORT' => 150,
-                'VALUES' => [
-                    ['XML_ID' => 'Y', 'VALUE' => 'Да'],
-                    ['XML_ID' => 'N', 'VALUE' => 'Нет', 'DEF' => 'Y'],
-                ],
-            ],
             // Привязки к catalog (CALC_STAGES, CALC_SETTINGS)
             'CALC_STAGES' => [
                 'NAME' => 'Этапы калькуляций',
@@ -993,6 +992,20 @@ switch ($currentStep) {
                     $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $installData['iblock_ids']['CALC_MATERIALS_VARIANTS']]);
                     installLog("  → Обновлено свойство MATERIAL_VARIANT", 'success');
                 }
+            }
+
+            // Обновляем PREV_STAGE
+            $rsPrevStage = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $configIblockId, 'CODE' => 'PREV_STAGE']);
+            if ($arProperty = $rsPrevStage->Fetch()) {
+                $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $configIblockId]);
+                installLog("  → Обновлено свойство PREV_STAGE", 'success');
+            }
+
+            // Обновляем NEXT_STAGE
+            $rsNextStage = \CIBlockProperty::GetList([], ['IBLOCK_ID' => $configIblockId, 'CODE' => 'NEXT_STAGE']);
+            if ($arProperty = $rsNextStage->Fetch()) {
+                $ibp->Update($arProperty['ID'], ['LINK_IBLOCK_ID' => $configIblockId]);
+                installLog("  → Обновлено свойство NEXT_STAGE", 'success');
             }
         }
         

@@ -379,8 +379,9 @@
         async handleSelectDetailsRequest(message, origin) {
             const requestPayload = message.payload || {};
             // Получить iblockId для CALC_DETAILS из initData
-            const iblockId = this.initData?.iblocks?.calcDetails || requestPayload.iblockId || null;
-            const iblockType = this.initData?.iblocksTypes?.[iblockId] || requestPayload.iblockType || null;
+            const calcDetails = this.findIblockByCode('CALC_DETAILS');
+            const iblockId = calcDetails?.id || requestPayload.iblockId || null;
+            const iblockType = calcDetails?.type || requestPayload.iblockType || null;
             const lang = requestPayload.lang || (this.initData?.lang) || null;
 
             const selectedIds = await this.openElementSelectionDialog({
@@ -412,12 +413,9 @@
         }
 
         async handleAddOfferRequest(message, origin) {
-            const offersIblockId = (this.initData && this.initData.iblocks && this.initData.iblocks.offers)
-                ? this.initData.iblocks.offers
-                : null;
-            const iblockType = offersIblockId && this.initData && this.initData.iblocksTypes
-                ? this.initData.iblocksTypes[offersIblockId]
-                : null;
+            const offersIblock = this.findIblockByCode('OFFERS');
+            const offersIblockId = offersIblock ? offersIblock.id : null;
+            const iblockType = offersIblock ? offersIblock.type : null;
 
             const selectedIds = await this.openElementSelectionDialog({
                 iblockId: offersIblockId,
@@ -1877,11 +1875,30 @@
             return {
                 mode: payload ? payload.mode : null,
                 offers: payload && payload.selectedOffers ? payload.selectedOffers.length : 0,
-                ib_offers: payload && payload.iblocks ? payload.iblocks.offers : undefined,
-                ib_products: payload && payload.iblocks ? payload.iblocks.products : undefined,
+                ib_offers: payload && payload.iblocks ? (this.findIblockIdByCode(payload.iblocks, 'OFFERS')) : undefined,
+                ib_products: payload && payload.iblocks ? (this.findIblockIdByCode(payload.iblocks, 'PRODUCTS')) : undefined,
                 lang: payload && payload.context ? payload.context.lang : undefined,
                 url: payload && payload.context ? payload.context.url : undefined,
             };
+        }
+
+        /**
+         * Поиск инфоблока по коду в массиве объектов
+         */
+        findIblockByCode(iblocksOrCode, maybeCode) {
+            const hasSeparateCode = typeof maybeCode !== 'undefined';
+            const code = hasSeparateCode ? maybeCode : iblocksOrCode;
+            const iblocks = hasSeparateCode ? iblocksOrCode : (this.initData?.iblocks || []);
+            const items = iblocks || [];
+            return items.find((item) => item && item.code === code) || null;
+        }
+
+        /**
+         * Получить ID инфоблока по коду
+         */
+        findIblockIdByCode(iblocksOrCode, maybeCode) {
+            const iblock = this.findIblockByCode(iblocksOrCode, maybeCode);
+            return iblock ? iblock.id : null;
         }
 
         /**
