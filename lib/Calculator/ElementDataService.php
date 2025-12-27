@@ -167,6 +167,10 @@ class ElementDataService
             $measureInfo = $this->getMeasureInfo((int)($productData['MEASURE'] ?? 0));
             $measureRatio = $this->getMeasureRatio($elementId);
             $prices = $this->getPrices($elementId);
+            $purchasingPrice = isset($productData['PURCHASING_PRICE'])
+                ? (float)$productData['PURCHASING_PRICE']
+                : null;
+            $purchasingCurrency = $productData['PURCHASING_CURRENCY'] ?? null;
 
             // Определяем productId (ID родительского элемента)
             $productId = (int)($fields['PROPERTY_CML2_LINK_VALUE'] ?? 0);
@@ -179,6 +183,7 @@ class ElementDataService
 
             $elementData = [
                 'id' => (int)$fields['ID'],
+                'iblockId' => (int)$fields['IBLOCK_ID'],
                 'code' => $fields['CODE'] ?? null,
                 'productId' => $productId > 0 ? $productId : null,
                 'name' => $fields['NAME'] ?? '',
@@ -190,6 +195,8 @@ class ElementDataService
                 ],
                 'measure' => $measureInfo,
                 'measureRatio' => $measureRatio,
+                'purchasingPrice' => $purchasingPrice,
+                'purchasingCurrency' => $purchasingCurrency,
                 'prices' => $prices,
                 'properties' => $properties,
             ];
