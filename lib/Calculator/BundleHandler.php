@@ -934,7 +934,9 @@ class BundleHandler
         $newId = (int)$newId;
 
         // Копируем все свойства этапа
-        $propValues = $this->getElementPropertyValuesForClone($stageId, $stagesIblockId);
+        $propValues = $this->omitEmptyHtmlPropertyValues(
+            $this->getElementPropertyValuesForClone($stageId, $stagesIblockId)
+        );
         if (array_key_exists('CALC_SETTINGS', $propValues)) {
             $propValues['CALC_SETTINGS'] = $this->mapIdListOrFail(
                 $this->normalizeToIntArray($propValues['CALC_SETTINGS']),
