@@ -164,12 +164,26 @@ final class CalculatorContractService
                 $propertyValues[$code] = $this->copyPropertyValue($property);
             }
         }
+        // Older settings can predate the required USED_ENTITYS property.
+        // Resolve the new copy's required enum IDs from its owning stage's
+        // stable capability codes, without changing the shared source.
+        if (($properties['USED_ENTITYS']['IS_REQUIRED'] ?? '') === 'Y'
+            && empty($properties['USED_ENTITYS']['VALUE'])) {
+            $codes = [];
+            $rows = \CIBlockElement::GetProperty($stageIblockId, $currentStageId, [], ['CODE' => 'USED_ENTITY_CODES']);
+            while ($row = $rows->Fetch()) if (is_string($row['VALUE'] ?? null) && $row['VALUE'] !== '') $codes[] = $row['VALUE'];
+            $enums = [];
+            $rows = \CIBlockPropertyEnum::GetList([], ['PROPERTY_ID' => (int)$properties['USED_ENTITYS']['ID']]);
+            while ($row = $rows->Fetch()) $enums[] = $row;
+            $propertyValues['USED_ENTITYS'] = self::requiredEntityEnumIds($codes, $enums);
+        }
 
         $element = new \CIBlockElement();
         $newSettingsId = (int)$element->Add([
             'IBLOCK_ID' => $settingsIblockId,
             'IBLOCK_SECTION_ID' => (int)($fields['IBLOCK_SECTION_ID'] ?? 0) ?: false,
             'ACTIVE' => (string)($fields['ACTIVE'] ?? 'Y'),
+            'CODE' => 'calc_' . $settingsId . '_stage_' . $currentStageId . '_' . bin2hex(random_bytes(6)),
             'NAME' => (string)($fields['NAME'] ?? ('Калькулятор #' . $settingsId)) . ' — новая версия',
             'PROPERTY_VALUES' => $propertyValues,
         ]);
@@ -200,6 +214,20 @@ final class CalculatorContractService
         }
 
         return ['status' => 'ok', 'settingsId' => $newSettingsId, 'mode' => 'clone'];
+    }
+
+    /** @param string[] $codes @param array<int,array<string,mixed>> $enums @return int[] */
+    public static function requiredEntityEnumIds(array $codes, array $enums): array
+    {
+        $byCode = [];
+        foreach ($enums as $enum) $byCode[(string)($enum['XML_ID'] ?? '')] = (int)($enum['ID'] ?? 0);
+        $result = [];
+        foreach (array_unique($codes) as $code) {
+            if (empty($byCode[$code])) throw new \RuntimeException('Required settings entity is unavailable: ' . $code, 409);
+            $result[] = $byCode[$code];
+        }
+        if (!$result) throw new \RuntimeException('Required settings entities cannot be inferred from the owning stage.', 409);
+        return $result;
     }
 
     private function findIds(int $iblockId, array $filter): array
@@ -292,7 +320,7 @@ final class CalculatorContractService
             ['IBLOCK_ID' => $detailIblockId, 'ACTIVE' => 'Y', 'PROPERTY_CALC_STAGES' => array_keys($allowedStages)],
             false,
             false,
-            ['ID']
+            ['ID', 'IBLOCK_ID']
         );
         while ($element = $rows->GetNextElement()) {
             $fields = $element->GetFields();
@@ -318,7 +346,7 @@ final class CalculatorContractService
             ['IBLOCK_ID' => $iblockId, 'ID' => $elementId],
             false,
             false,
-            ['ID']
+            ['ID', 'IBLOCK_ID']
         )->GetNextElement();
         if (!$element) {
             return [];
@@ -361,15 +389,16 @@ final class CalculatorContractService
 
     private function copyPropertyValue(array $property)
     {
-        $value = $property['VALUE'] ?? false;
+        $value = $property['~VALUE'] ?? $property['VALUE'] ?? false;
         if (($property['WITH_DESCRIPTION'] ?? 'N') !== 'Y') {
             return $value === '' || $value === [] ? false : $value;
         }
 
         $values = is_array($value) ? array_values($value) : [$value];
-        $descriptions = is_array($property['DESCRIPTION'] ?? null)
-            ? array_values($property['DESCRIPTION'])
-            : [(string)($property['DESCRIPTION'] ?? '')];
+        $rawDescription = $property['~DESCRIPTION'] ?? $property['DESCRIPTION'] ?? null;
+        $descriptions = is_array($rawDescription)
+            ? array_values($rawDescription)
+            : [(string)($rawDescription ?? '')];
         $result = [];
         foreach ($values as $index => $item) {
             $result[] = [
