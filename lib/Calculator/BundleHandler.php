@@ -222,7 +222,7 @@ class BundleHandler
                 $settingsMap,
                 'настроек пресета'
             ) ?: false;
-            $propertyValues = $this->remapPresetStageReferences($propertyValues, $stageMap);
+            $propertyValues = $this->remapPresetStageReferences($propertyValues, $stageMap, $detailMap);
             
             \CIBlockElement::SetPropertyValuesEx($newPresetId, $presetsIblockId, $propertyValues);
 
@@ -278,11 +278,11 @@ class BundleHandler
      *
      * @param array<int, int> $stageMap
      */
-    private function remapPresetStageReferences(array $propertyValues, array $stageMap): array
+    private function remapPresetStageReferences(array $propertyValues, array $stageMap, array $detailMap = []): array
     {
         foreach ($propertyValues as $code => $value) {
             if ($code === 'STAGE_GROUPS') {
-                $propertyValues[$code] = $this->remapStageGroupsValue($value, $stageMap);
+                $propertyValues[$code] = $this->remapStageGroupsValue($value, $stageMap, $detailMap);
                 continue;
             }
             $propertyValues[$code] = $this->replaceStageTokensRecursive($value, $stageMap);
@@ -296,7 +296,7 @@ class BundleHandler
      * @param array<int, int> $stageMap
      * @return mixed
      */
-    private function remapStageGroupsValue($value, array $stageMap)
+    private function remapStageGroupsValue($value, array $stageMap, array $detailMap = [])
     {
         $text = null;
         $write = null;
@@ -329,7 +329,7 @@ class BundleHandler
             throw new \Exception('STAGE_GROUPS исходного пресета содержит некорректный JSON');
         }
 
-        $decoded = $this->remapStageGroupNode($decoded, $stageMap);
+        $decoded = $this->remapStageGroupNode($decoded, $stageMap, $detailMap);
         $encoded = json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if (!is_string($encoded)) {
             throw new \Exception('Не удалось сериализовать STAGE_GROUPS клонированного пресета');
@@ -343,13 +343,17 @@ class BundleHandler
      * @param array<int, int> $stageMap
      * @return mixed
      */
-    private function remapStageGroupNode($node, array $stageMap)
+    private function remapStageGroupNode($node, array $stageMap, array $detailMap = [])
     {
         if (!is_array($node)) {
             return $node;
         }
 
         foreach ($node as $key => $value) {
+            if ($key === 'detailId' && isset($detailMap[(int)$value])) {
+                $node[$key] = (int)$detailMap[(int)$value];
+                continue;
+            }
             if ($key === 'stageIds' && is_array($value)) {
                 $node[$key] = $this->mapIdListOrFail(
                     $this->normalizeToIntArray($value),
@@ -358,7 +362,7 @@ class BundleHandler
                 );
                 continue;
             }
-            $node[$key] = $this->remapStageGroupNode($value, $stageMap);
+            $node[$key] = $this->remapStageGroupNode($value, $stageMap, $detailMap);
         }
 
         return $node;

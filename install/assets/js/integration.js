@@ -3223,6 +3223,9 @@
                 const result = await this.fetchRefreshData([
                     {
                         action: 'changeSortStage',
+                        stageGroups: payload.stageGroups,
+                        expectedStageGroups: payload.expectedStageGroups,
+                        expectedSorting: payload.expectedSorting,
                         detailId: detailId,
                         sorting: sorting,
                         presetId: presetId,
@@ -3596,6 +3599,10 @@
 
                 const result = await this.fetchRefreshData([{
                     action: 'moveStage',
+                    stageGroups: payload.stageGroups,
+                    expectedStageGroups: payload.expectedStageGroups,
+                    expectedSourceSorting: payload.expectedSourceSorting,
+                    expectedTargetSorting: payload.expectedTargetSorting,
                     stageId: Number(payload.stageId || 0),
                     sourceDetailId: Number(payload.sourceDetailId || 0),
                     targetDetailId: Number(payload.targetDetailId || 0),

@@ -95,7 +95,7 @@ if (
     $cloneDetail === ''
     || strpos($cloneDetail, "['DETAILS' => false]") !== false
     || strpos($cloneDetail, "['CALC_DETAILS' => false]") !== false
-    || strpos($cloneDetail, 'cloneStageGroupsForStageMap($presetId, $stageMap, $newDetailId)') === false
+    || strpos($cloneDetail, 'cloneStageGroupsForStageMap($presetId, $stageMap, $newDetailId, $detailMap)') === false
 ) {
     throw new RuntimeException('Cloning must preserve stage groups without publishing an intermediate empty topology');
 }

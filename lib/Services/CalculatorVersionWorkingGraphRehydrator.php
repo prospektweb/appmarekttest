@@ -988,7 +988,8 @@ final class CalculatorVersionWorkingGraphRehydrator
                     if (array_key_exists($valueKey, $property)) {
                         $property[$valueKey] = self::remapStageGroupsValue(
                             $property[$valueKey],
-                            $maps['stage']
+                            $maps['stage'],
+                            $maps['detail']
                         );
                     }
                 }
@@ -1035,19 +1036,19 @@ final class CalculatorVersionWorkingGraphRehydrator
     }
 
     /** @return mixed */
-    private static function remapStageGroupsValue($value, array $stageMap)
+    private static function remapStageGroupsValue($value, array $stageMap, array $detailMap = [])
     {
         if (is_array($value) && array_key_exists('TEXT', $value)) {
-            $value['TEXT'] = self::remapStageGroupsJson((string)$value['TEXT'], $stageMap);
+            $value['TEXT'] = self::remapStageGroupsJson((string)$value['TEXT'], $stageMap, $detailMap);
             return $value;
         }
         if ($value === null || $value === '') {
             return $value;
         }
-        return self::remapStageGroupsJson((string)$value, $stageMap);
+        return self::remapStageGroupsJson((string)$value, $stageMap, $detailMap);
     }
 
-    private static function remapStageGroupsJson(string $json, array $stageMap): string
+    private static function remapStageGroupsJson(string $json, array $stageMap, array $detailMap = []): string
     {
         if (trim($json) === '') {
             return $json;
@@ -1057,12 +1058,14 @@ final class CalculatorVersionWorkingGraphRehydrator
             throw new \RuntimeException('Saved STAGE_GROUPS JSON is invalid.', 409);
         }
         $walk = null;
-        $walk = static function ($node) use (&$walk, $stageMap) {
+        $walk = static function ($node) use (&$walk, $stageMap, $detailMap) {
             if (!is_array($node)) {
                 return self::replaceStageTokensRecursive($node, $stageMap);
             }
             foreach ($node as $key => $child) {
-                if ($key === 'stageIds') {
+                if ($key === 'detailId') {
+                    $node[$key] = self::remapLinkValue($child, $detailMap, 'STAGE_GROUPS.detailId');
+                } elseif ($key === 'stageIds') {
                     $node[$key] = self::remapLinkValue($child, $stageMap, 'STAGE_GROUPS.stageIds');
                 } else {
                     $node[$key] = $walk($child);

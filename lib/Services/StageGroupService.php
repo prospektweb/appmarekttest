@@ -118,10 +118,13 @@ final class StageGroupService
                 $usedByParent[$scope][$stageId] = true;
                 $stageIds[] = $stageId;
             }
-            if ($kind !== 'condition' && count($stageIds) < 2) {
-                throw new \InvalidArgumentException('Группа должна содержать как минимум два этапа');
-            }
             $container = $stageIds === [] ? null : $stageTopology[$stageIds[0]]['container'];
+            $detailId = (int)($group['detailId'] ?? 0);
+            if ($detailId > 0 && (!in_array($detailId, $this->collectPresetDetailIds($presetId), true)
+                || ($container !== null && $container !== 'detail:' . $detailId))) {
+                throw new \InvalidArgumentException('Колонка группы не принадлежит этому пресету или её этапам');
+            }
+
             foreach ($stageIds as $stageId) {
                 if ($stageTopology[$stageId]['container'] !== $container) {
                     throw new \InvalidArgumentException('Все этапы группы должны находиться в одной колонке');
@@ -209,6 +212,7 @@ final class StageGroupService
                 'stageIds' => $stageIds,
                 'parentId' => $parentId,
                 'branches' => $branches,
+                ...($detailId > 0 ? ['detailId' => $detailId] : []),
             ];
         }
         $json = json_encode(['version' => 3, 'groups' => $clean], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
@@ -244,6 +248,70 @@ final class StageGroupService
             throw $error;
         }
         return ['status' => 'ok', 'groups' => $clean];
+    }
+
+    /** Reject a stale drag before either the order or group membership is written. */
+    public function assertDragSnapshot(array $request): void
+    {
+        if (!isset($request['stageGroups'])) return;
+        if (!is_array($request['stageGroups']) || !is_array($request['expectedStageGroups'] ?? null)) {
+            throw new \InvalidArgumentException('Для переноса нужен исходный снимок групп');
+        }
+        $presetId = (int)($request['presetId'] ?? 0);
+        $element = \CIBlockElement::GetList([], ['ID' => $presetId, 'IBLOCK_ID' => $this->presetsIblockId],
+            false, ['nTopCount' => 1], ['ID', 'IBLOCK_ID'])->GetNextElement();
+        $properties = $element ? $element->GetProperties() : [];
+        $text = $properties[self::PROPERTY_CODE]['~VALUE']['TEXT']
+            ?? $properties[self::PROPERTY_CODE]['VALUE']['TEXT']
+            ?? $properties[self::PROPERTY_CODE]['VALUE'] ?? '';
+        $stored = is_string($text) && trim($text) !== '' ? json_decode($text, true, 512, JSON_THROW_ON_ERROR) : ['groups' => []];
+        if ($this->canonicalGroups($stored['groups'] ?? []) !== $this->canonicalGroups($request['expectedStageGroups'])) {
+            throw new \RuntimeException('Состав групп изменился. Обновите редактор и повторите перенос', 409);
+        }
+        $checks = isset($request['detailId'])
+            ? [[(int)$request['detailId'], 'expectedSorting']]
+            : [[(int)($request['sourceDetailId'] ?? 0), 'expectedSourceSorting'], [(int)($request['targetDetailId'] ?? 0), 'expectedTargetSorting']];
+        foreach ($checks as [$detailId, $key]) {
+            if (!is_array($request[$key] ?? null)
+                || $this->propertyIds($this->detailsIblockId, $detailId, 'CALC_STAGES') !== array_map('intval', $request[$key])) {
+                throw new \RuntimeException('Порядок этапов изменился. Обновите редактор и повторите перенос', 409);
+            }
+        }
+    }
+
+    private function canonicalGroups(array $groups): string
+    {
+        $normalized = array_map(static function (array $group): array {
+            return [
+                'id' => (string)$group['id'], 'kind' => $group['kind'] ?? 'group',
+                'title' => trim((string)($group['title'] ?? '')), 'description' => trim((string)($group['description'] ?? '')),
+                'parentId' => $group['parentId'] ?? null, 'detailId' => (int)($group['detailId'] ?? 0),
+                'stageIds' => array_map('intval', $group['stageIds'] ?? []),
+                'branches' => array_map(static fn(array $branch): array => [
+                    'id' => (string)$branch['id'], 'title' => trim((string)($branch['title'] ?? '')),
+                    'mode' => $branch['mode'] ?? 'or', 'isElse' => ($branch['isElse'] ?? false) === true,
+                    'stageIds' => array_map('intval', $branch['stageIds'] ?? []),
+                    'operands' => array_map(static fn(array $operand): array => [
+                        'kind' => $operand['kind'], 'code' => trim((string)$operand['code']),
+                    ], $branch['operands'] ?? []),
+                ], $group['branches'] ?? []),
+            ];
+        }, $groups);
+        usort($normalized, static fn(array $a, array $b): int => strcmp($a['id'], $b['id']));
+        return json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    }
+
+    private function collectPresetDetailIds(int $presetId): array
+    {
+        $queue = $this->propertyIds($this->presetsIblockId, $presetId, 'CALC_DETAILS');
+        $visited = [];
+        while ($queue !== []) {
+            $id = (int)array_shift($queue);
+            if (isset($visited[$id])) continue;
+            $visited[$id] = true;
+            array_push($queue, ...$this->propertyIds($this->detailsIblockId, $id, 'DETAILS'));
+        }
+        return array_keys($visited);
     }
 
     private function ensureProperty(int $iblockId): int

@@ -125,6 +125,7 @@ class DetailHandler
         $createdDetailIds = [];
         $createdConfigIds = [];
         $stageMap = [];
+        $detailMap = [];
         try {
             $detailId = (int)($data['detailId'] ?? 0);
             $presetId = (int)($data['presetId'] ?? 0);
@@ -139,7 +140,7 @@ class DetailHandler
             }
 
             // Клонируем деталь 1:1
-            $cloneResult = $this->cloneDetailRecursive($originalDetail, $createdDetailIds, $createdConfigIds, $stageMap);
+            $cloneResult = $this->cloneDetailRecursive($originalDetail, $createdDetailIds, $createdConfigIds, $stageMap, $detailMap);
             if (!$cloneResult || ($cloneResult['status'] ?? 'error') !== 'ok') {
                 $this->rollbackCreated($createdDetailIds, $createdConfigIds);
                 return ['status' => 'error', 'message' => 'Не удалось клонировать деталь'];
@@ -201,7 +202,7 @@ class DetailHandler
                     array_map('intval', $createdDetailIds)
                 )));
 
-                $this->cloneStageGroupsForStageMap($presetId, $stageMap, $newDetailId);
+                $this->cloneStageGroupsForStageMap($presetId, $stageMap, $newDetailId, $detailMap);
             }
 
             return [
@@ -1487,7 +1488,7 @@ class DetailHandler
     /**
      * Клонировать деталь рекурсивно (1:1)
      */
-    private function cloneDetailRecursive(array $originalDetail, array &$createdDetailIds, array &$createdConfigIds, array &$stageMap): array
+    private function cloneDetailRecursive(array $originalDetail, array &$createdDetailIds, array &$createdConfigIds, array &$stageMap, array &$detailMap): array
     {
         $cloneName = (string)$originalDetail['NAME'] . ' (копия)';
         $newDetailId = $this->createDetailElement($cloneName, $originalDetail['TYPE']);
@@ -1495,6 +1496,7 @@ class DetailHandler
             return ['status' => 'error', 'message' => 'Не удалось создать клон детали'];
         }
         $createdDetailIds[] = $newDetailId;
+        $detailMap[(int)$originalDetail['ID']] = (int)$newDetailId;
 
         // Клонируем конфигурации
         $newConfigIds = [];
@@ -1512,7 +1514,7 @@ class DetailHandler
             foreach ($originalDetail['DETAIL_IDS'] as $childId) {
                 $childDetail = $this->getDetailById($childId);
                 if ($childDetail) {
-                    $childClone = $this->cloneDetailRecursive($childDetail, $createdDetailIds, $createdConfigIds, $stageMap);
+                    $childClone = $this->cloneDetailRecursive($childDetail, $createdDetailIds, $createdConfigIds, $stageMap, $detailMap);
                     if (($childClone['status'] ?? 'error') === 'ok') {
                         $newDetailIds[] = $childClone['detail']['id'];
                     }
@@ -1554,9 +1556,9 @@ class DetailHandler
      *
      * @param array<int, int> $stageMap
      */
-    private function cloneStageGroupsForStageMap(int $presetId, array $stageMap, int $cloneDetailId): void
+    private function cloneStageGroupsForStageMap(int $presetId, array $stageMap, int $cloneDetailId, array $detailMap): void
     {
-        if ($presetId <= 0 || $stageMap === []) {
+        if ($presetId <= 0 || ($stageMap === [] && $detailMap === [])) {
             return;
         }
 
@@ -1593,7 +1595,8 @@ class DetailHandler
                 continue;
             }
             $stageIds = array_values(array_filter(array_map('intval', is_array($group['stageIds'] ?? null) ? $group['stageIds'] : [])));
-            if ($stageIds !== [] && count(array_filter($stageIds, static fn(int $id): bool => isset($sourceStageIds[$id]))) === count($stageIds)) {
+            if (($stageIds === [] && isset($detailMap[(int)($group['detailId'] ?? 0)]))
+                || ($stageIds !== [] && count(array_filter($stageIds, static fn(int $id): bool => isset($sourceStageIds[$id]))) === count($stageIds))) {
                 $selected[(string)($group['id'] ?? '')] = true;
             }
         }
@@ -1652,6 +1655,9 @@ class DetailHandler
             }
             $clone = $this->remapStageIdsRecursive($group, $stageMap);
             $clone['id'] = $groupIdMap[$oldId];
+            if (isset($detailMap[(int)($group['detailId'] ?? 0)])) {
+                $clone['detailId'] = (int)$detailMap[(int)$group['detailId']];
+            }
             $clone['parentId'] = $parentId !== '' ? $groupIdMap[$parentId] : null;
             $clones[] = $clone;
         }

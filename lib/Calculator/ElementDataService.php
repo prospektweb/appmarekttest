@@ -1535,8 +1535,13 @@ class ElementDataService
                                 $protected,
                                 'stage order'
                             );
+                            $groupService = new \Prospektweb\Calc\Services\StageGroupService($pinnedIblockIds);
+                            $groupService->assertDragSnapshot($request);
                             $changed = (new \Prospektweb\Calc\Services\DetailHandler($pinnedIblockIds))
                                 ->changeSortStage($detailId, $sorting, false);
+                            if (isset($request['stageGroups'])) {
+                                $groupService->save(['presetId' => $presetId, 'groups' => $request['stageGroups']], false);
+                            }
                             return $this->completeStructuralMutationPinned(
                                 $changed,
                                 $presetId,
@@ -1669,6 +1674,8 @@ class ElementDataService
                                 $targetDetailId,
                                 $protected
                             );
+                            $groupService = new \Prospektweb\Calc\Services\StageGroupService($lockedIblockIds);
+                            $groupService->assertDragSnapshot($request);
                             $moved = (new \Prospektweb\Calc\Services\DetailHandler($lockedIblockIds))->moveStage(
                                 $stageId,
                                 $sourceDetailId,
@@ -1677,6 +1684,9 @@ class ElementDataService
                                 $targetSorting,
                                 false
                             );
+                            if (isset($request['stageGroups'])) {
+                                $groupService->save(['presetId' => $presetId, 'groups' => $request['stageGroups']], false);
+                            }
                             return $this->completeStructuralMutationPinned(
                                 $moved,
                                 $presetId,
