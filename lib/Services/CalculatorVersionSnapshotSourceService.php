@@ -178,8 +178,8 @@ final class CalculatorVersionSnapshotSourceService
                         : $calculatorPresetId;
                     $globalSymbols = (new GlobalSymbolService())
                         ->listReadOnlyFromIblockId($globalSymbolIblockId, $globalOwnerPresetId);
-                    $runtimePayload = (new InitPayloadService())
-                        ->preparePresetCalculationPayloadReadOnlyPinned(
+                    $initService = new InitPayloadService();
+                    $runtimePayload = $initService->preparePresetCalculationPayloadReadOnlyPinned(
                             $sourcePresetId,
                             [],
                             defined('SITE_ID') ? (string)SITE_ID : '',
@@ -199,6 +199,9 @@ final class CalculatorVersionSnapshotSourceService
                         $graph,
                         $payload,
                         $iblockIds
+                    );
+                    $runtimePayload['elementsStore'] = $initService->completeStageSelectionStoreReadOnly(
+                        $runtimePayload['elementsStore']
                     );
                     if (!is_array($runtimePayload['globalSymbols'] ?? null)) {
                         throw new \RuntimeException('Logic runtime global-symbol projection is invalid.', 409);

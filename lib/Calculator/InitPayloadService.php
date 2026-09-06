@@ -1035,6 +1035,7 @@ class InitPayloadService
         foreach ($projection['store'] as $code => $rows) {
             $this->elementsStore[$code] = $rows;
         }
+        $this->elementsStore = $this->completeStageSelectionStoreReadOnly($this->elementsStore);
     }
 
     /**
@@ -2122,7 +2123,6 @@ class InitPayloadService
     {
         $elementDataService = $this->elementDataService();
         $store = [];
-        $linkedIblockIds = [];
 
         foreach ($propertiesRaw as $code => $propertyData) {
             $values = $propertyData['values'] ?? [];
@@ -2144,8 +2144,6 @@ class InitPayloadService
                 );
             }
 
-            $linkedIblockIds[$code] = $linkIblockId;
-
             if (empty($ids)) {
                 if ($code === 'CALC_CUSTOM_FIELDS') {
                     $store[$code] = [];
@@ -2165,77 +2163,21 @@ class InitPayloadService
             $store[$code] = $payload[0]['data'] ?? [];
         }
 
-        // Equipment selected through OPTIONS_EQUIPMENT is not necessarily the
-        // stage's static EQUIPMENT value. Preload every mapped candidate so the
-        // calculation runtime can resolve stable stage equipment paths after it
-        // chooses a mapping for the current product/offer.
-        $mappedEquipmentIds = self::extractMappedVariantIdsFromStages(
-            $store['CALC_STAGES'] ?? [],
-            'OPTIONS_EQUIPMENT'
-        );
-        $loadedEquipmentIds = array_map(
-            static fn(array $item): int => (int)($item['id'] ?? 0),
-            is_array($store['CALC_EQUIPMENT'] ?? null) ? $store['CALC_EQUIPMENT'] : []
-        );
-        $missingEquipmentIds = array_values(array_diff($mappedEquipmentIds, $loadedEquipmentIds));
-        $equipmentIblockId = (int)($linkedIblockIds['CALC_EQUIPMENT'] ?? 0);
+        return $this->completeStageSelectionStoreReadOnly($store);
+    }
 
-        if ($equipmentIblockId > 0 && !empty($missingEquipmentIds)) {
-            $payload = $elementDataService->prepareRefreshPayload([
-                [
-                    'iblockId' => $equipmentIblockId,
-                    'iblockType' => null,
-                    'ids' => $missingEquipmentIds,
-                    'includeParent' => true,
-                ],
-            ]);
-            $mappedEquipment = $payload[0]['data'] ?? [];
-            $equipmentById = [];
-            foreach (array_merge($store['CALC_EQUIPMENT'] ?? [], $mappedEquipment) as $equipment) {
-                $equipmentId = (int)($equipment['id'] ?? 0);
-                if ($equipmentId > 0) {
-                    $equipmentById[$equipmentId] = $equipment;
-                }
-            }
-            $store['CALC_EQUIPMENT'] = array_values($equipmentById);
-        }
-
-        // Material selection v2 may contain candidates from many material
-        // families and may terminate at a parent material without variants.
-        // Preload every explicit candidate into its owning store; do not rely
-        // on the static stage variant's sibling family.
-        $materialReferences = self::extractMappedMaterialReferencesFromStages($store['CALC_STAGES'] ?? []);
-        foreach ([
-            'material' => 'CALC_MATERIALS',
-            'variant' => 'CALC_MATERIALS_VARIANTS',
-        ] as $entityType => $storeCode) {
-            $candidateIds = [];
-            foreach ($materialReferences as $reference) {
-                if (($reference['entity_type'] ?? null) === $entityType) {
-                    $candidateIds[] = (int)$reference['entity_id'];
-                }
-            }
-            $loadedIds = array_map(static fn(array $item): int => (int)($item['id'] ?? 0), $store[$storeCode] ?? []);
-            $missingIds = array_values(array_diff(array_values(array_unique($candidateIds)), $loadedIds));
-            $iblockId = $this->runtimeIblockId($storeCode);
-            if ($iblockId <= 0 || $missingIds === []) continue;
-            $payload = $elementDataService->prepareRefreshPayload([[
-                'iblockId' => $iblockId,
-                'iblockType' => null,
-                'ids' => $missingIds,
-                'includeParent' => $entityType === 'variant',
-            ]]);
-            $byId = [];
-            foreach (array_merge($store[$storeCode] ?? [], $payload[0]['data'] ?? []) as $entity) {
-                $entityId = (int)($entity['id'] ?? 0);
-                if ($entityId > 0) $byId[$entityId] = $entity;
-            }
-            $store[$storeCode] = array_values($byId);
-        }
-
-        $parameterReferences = self::extractEntityParameterReferencesFromStages($store['CALC_STAGES'] ?? []);
+    /**
+     * Close the catalog dependencies of the actual stage graph, including
+     * automatic selections without a static binding. Used before capturing a
+     * snapshot, never to change the catalog of an already saved snapshot.
+     */
+    public function completeStageSelectionStoreReadOnly(array $store): array
+    {
+        $elementDataService = $this->elementDataService();
+        $parameterReferences = self::extractStageSelectionReferencesFromStages($store['CALC_STAGES'] ?? []);
         $idLookupTypes = self::extractEntityIdLookupTypesFromStages($store['CALC_STAGES'] ?? []);
         foreach ([
+            'calculator' => 'CALC_SETTINGS',
             'operation' => 'CALC_OPERATIONS',
             'operation_variant' => 'CALC_OPERATIONS_VARIANTS',
             'material' => 'CALC_MATERIALS',
@@ -2269,6 +2211,27 @@ class InitPayloadService
                 if ($entityId > 0) $byId[$entityId] = $entity;
             }
             $store[$storeCode] = array_values($byId);
+        }
+
+        // includeParent enriches a variant but does not add its parent to
+        // elementsStore. Stable .operation/.material paths and the context
+        // explorer need those entities in their own pinned catalog as well.
+        foreach (['CALC_OPERATIONS_VARIANTS' => 'CALC_OPERATIONS', 'CALC_MATERIALS_VARIANTS' => 'CALC_MATERIALS'] as $variantCode => $parentCode) {
+            $parentIds = array_values(array_unique(array_filter(array_map(
+                static fn(array $entity): int => (int)($entity['productId'] ?? 0),
+                $store[$variantCode] ?? []
+            ))));
+            $loadedIds = array_map(static fn(array $entity): int => (int)($entity['id'] ?? 0), $store[$parentCode] ?? []);
+            $missingIds = array_values(array_diff($parentIds, $loadedIds));
+            $iblockId = $this->runtimeIblockId($parentCode);
+            if ($iblockId <= 0 || $missingIds === []) continue;
+            $payload = $elementDataService->prepareRefreshPayload([[
+                'iblockId' => $iblockId,
+                'iblockType' => null,
+                'ids' => $missingIds,
+                'includeParent' => false,
+            ]]);
+            $store[$parentCode] = array_merge($store[$parentCode] ?? [], $payload[0]['data'] ?? []);
         }
 
         // Parameter-based selection evaluates the current version snapshot.
@@ -2306,6 +2269,52 @@ class InitPayloadService
         }
 
         return $store;
+    }
+
+    /** @return array<int,array{entity_type:string,entity_id:int}> */
+    private static function extractStageSelectionReferencesFromStages(array $stages): array
+    {
+        $references = [];
+        $service = new \Prospektweb\Calc\Services\StageVariantMappingService();
+        $targets = [
+            'OPTIONS_CALCULATOR' => ['calculator' => 'calculator'],
+            'OPTIONS_OPERATION' => ['operation' => 'operation_variant'],
+            'OPTIONS_EQUIPMENT' => ['equipment' => 'equipment'],
+            'OPTIONS_MATERIAL' => ['material' => 'material', 'variant' => 'material_variant'],
+        ];
+        foreach ($stages as $stage) {
+            foreach ($targets as $propertyCode => $treeKinds) {
+                $property = $stage['properties'][$propertyCode] ?? null;
+                if (!is_array($property)) continue;
+                $raw = $property['~VALUE'] ?? $property['VALUE'] ?? null;
+                if (is_array($raw) && array_key_exists('TEXT', $raw)) $raw = $raw['TEXT'];
+                if (!is_string($raw) || trim($raw) === '') continue;
+                try {
+                    $raw = $service->normalizeMaterialJson(html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                    $document = json_decode($raw, true);
+                    $candidates = $service->materialReferencesFromJson($raw);
+                } catch (\InvalidArgumentException $error) {
+                    continue;
+                }
+                foreach ($candidates as $candidate) {
+                    $kind = $candidate['entity_type'];
+                    if ($document['contract'] === $service::CONTRACT) {
+                        $kind = $propertyCode === 'OPTIONS_MATERIAL' ? 'material_variant' : reset($treeKinds);
+                    } elseif ($document['contract'] === $service::MATERIAL_DECISION_TREE_CONTRACT) {
+                        $kind = $treeKinds[$kind] ?? null;
+                    } else {
+                        // Parameter selection's operation means a parent,
+                        // whereas a decision-tree operation means a variant.
+                        $expectedTarget = strtolower(substr($propertyCode, 8));
+                        if (($document['target'] ?? '') !== $expectedTarget) continue;
+                    }
+                    if ($kind === null) continue;
+                    $key = $kind . ':' . $candidate['entity_id'];
+                    $references[$key] = ['entity_type' => $kind, 'entity_id' => $candidate['entity_id']];
+                }
+            }
+        }
+        return array_values($references);
     }
 
     /**
