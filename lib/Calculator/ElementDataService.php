@@ -2125,10 +2125,11 @@ class ElementDataService
                                         (int)($pinnedIblockIds['CALC_MATERIALS_VARIANTS'] ?? 0)
                                     );
                                 } elseif ($propertyCode === 'OPTIONS_OPERATION') {
-                                    self::assertDecisionReferencesByType($value, [
-                                        'operation' => (int)($pinnedIblockIds['CALC_OPERATIONS'] ?? 0),
-                                        'operation_variant' => (int)($pinnedIblockIds['CALC_OPERATIONS_VARIANTS'] ?? 0),
-                                    ]);
+                                    self::assertOperationDecisionReferences(
+                                        $value,
+                                        (int)($pinnedIblockIds['CALC_OPERATIONS'] ?? 0),
+                                        (int)($pinnedIblockIds['CALC_OPERATIONS_VARIANTS'] ?? 0)
+                                    );
                                 } else {
                                     $referenceAuthority = [
                                         'OPTIONS_EQUIPMENT' => ['equipment', 'CALC_EQUIPMENT'],
@@ -3570,6 +3571,24 @@ class ElementDataService
             $entityId = (int)($reference['entity_id'] ?? 0);
             self::assertPinnedElementExists($entityId, $iblockId, $entityType);
         }
+    }
+
+    private static function assertOperationDecisionReferences(
+        string $mappingJson,
+        int $operationsIblockId,
+        int $variantsIblockId
+    ): void {
+        $document = json_decode($mappingJson, true, 512, JSON_THROW_ON_ERROR);
+        // In v4 trees "operation" denotes a selectable variant. Parameter selection
+        // distinguishes the parent "operation" from "operation_variant" explicitly.
+        $isTree = ($document['contract'] ?? null)
+            === \Prospektweb\Calc\Services\StageVariantMappingService::MATERIAL_DECISION_TREE_CONTRACT;
+        self::assertDecisionReferencesByType($mappingJson, $isTree ? [
+            'operation' => $variantsIblockId,
+        ] : [
+            'operation' => $operationsIblockId,
+            'operation_variant' => $variantsIblockId,
+        ]);
     }
 
     /** @param array<string,int> $iblockIdsByType */
