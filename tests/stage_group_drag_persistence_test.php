@@ -45,7 +45,10 @@ namespace {
     $saved = $service->save(['presetId' => 10, 'groups' => [$draft]])['groups'];
     $assert($saved[0]['stageIds'] === [] && $saved[0]['detailId'] === 20, 'Empty group must persist with its column');
     $singleton = array_replace($draft, ['stageIds' => [1]]);
+    $singleton['activationCondition'] = ['version' => 2, 'enabled' => true, 'mode' => 'and', 'operands' => [['kind' => 'input', 'code' => 'protection']]];
     $saved = $service->save(['presetId' => 10, 'groups' => [$singleton]])['groups'];
+    $assert($saved[0]['activationCondition'] === $singleton['activationCondition'], 'Group activation must survive storage');
+    $rejects(fn() => $service->save(['presetId' => 10, 'groups' => [array_replace($singleton, ['activationCondition' => ['version' => 2, 'enabled' => true, 'mode' => 'and', 'operands' => []]])]]), 'Выберите значение');
     $assert($saved[0]['stageIds'] === [1], 'Singleton group must persist');
     $child = array_replace($draft, ['id' => 'child', 'parentId' => 'draft']);
     $saved = $service->save(['presetId' => 10, 'groups' => [$singleton, $child]])['groups'];

@@ -32,6 +32,27 @@ final class StageGroupService
         }
     }
 
+    public static function normalizeActivationCondition($raw): array
+    {
+        if (!is_array($raw) || ($raw['version'] ?? null) !== 2 || !is_bool($raw['enabled'] ?? null)
+            || !in_array($raw['mode'] ?? null, ['and', 'or'], true) || !is_array($raw['operands'] ?? null)
+            || count($raw['operands']) > 200) {
+            throw new \InvalidArgumentException('Некорректное условие активации группы');
+        }
+        $operands = [];
+        foreach ($raw['operands'] as $operand) {
+            $kind = $operand['kind'] ?? null;
+            $code = trim((string)($operand['code'] ?? ''));
+            $valid = $kind === 'input'
+                ? preg_match('/^(?:section:)?[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/D', $code) === 1 && strlen($code) <= 128
+                : in_array($kind, ['variable', 'constant'], true) && preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/D', $code) === 1;
+            if (!$valid) throw new \InvalidArgumentException('Некорректное значение активации группы');
+            $operands[$kind . ':' . $code] = ['kind' => $kind, 'code' => $code];
+        }
+        if ($raw['enabled'] && !$operands) throw new \InvalidArgumentException('Выберите значение для активации группы');
+        return ['version' => 2, 'enabled' => $raw['enabled'], 'mode' => $raw['mode'], 'operands' => array_values($operands)];
+    }
+
     public function save(array $request, bool $manageTransaction = true): array
     {
         global $USER;
@@ -176,7 +197,7 @@ final class StageGroupService
                             : (($operand['kind'] ?? null) === 'variable' ? 'variable' : (($operand['kind'] ?? null) === 'constant' ? 'constant' : null));
                         $code = trim((string)($operand['code'] ?? ''));
                         $validCode = $operandKind === 'input'
-                            ? preg_match('/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/', $code) === 1 && strlen($code) <= 120
+                            ? preg_match('/^(?:section:)?[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/D', $code) === 1 && strlen($code) <= 128
                             : preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $code) === 1;
                         if (!$operandKind || !$validCode) {
                             throw new \InvalidArgumentException('Некорректное глобальное значение в условии ветки');
@@ -212,6 +233,7 @@ final class StageGroupService
                 'stageIds' => $stageIds,
                 'parentId' => $parentId,
                 'branches' => $branches,
+                ...(isset($group['activationCondition']) ? ['activationCondition' => self::normalizeActivationCondition($group['activationCondition'])] : []),
                 ...($detailId > 0 ? ['detailId' => $detailId] : []),
             ];
         }

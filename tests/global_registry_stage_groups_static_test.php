@@ -77,9 +77,9 @@ $checks = [
         && strpos($groups, "'branches' => \$branches") !== false
         && strpos($groups, "\$elseCount !== 1") !== false
         && strpos($groups, "['version' => 3") !== false,
-    'stage conditions accept form input constants with the neutral field-id contract' => strpos($groups, "=== 'input'") !== false
+    'stage conditions accept form fields and namespaced section booleans' => strpos($groups, "=== 'input'") !== false
         && strpos($groups, "(?:[._-][a-z0-9]+)*") !== false
-        && strpos($groups, "strlen(\$code) <= 120") !== false,
+        && strpos($groups, "strlen(\$code) <= 128") !== false,
     'global refactor never rewrites form input constant identifiers' => strpos($refactor, "(\$value['kind'] ?? null) === 'input'") !== false,
     'every condition branch may remain empty while its condition is configured' => strpos($groups, "if (!\$isElse && \$branchStageIds === [])") === false
         && strpos($groups, "\$kind === 'condition' && count(\$stageIds) < 1") === false
