@@ -123,6 +123,8 @@ namespace {
         'launchContext',
         'formDefinition',
         'bindingDefinition',
+        'runtimeSchema',
+        'storefronts',
         'publication',
         'calculatorInputMapping',
         'catalogScenarios',
@@ -130,6 +132,7 @@ namespace {
         'catalogOutputMapping',
         'catalogWriteback',
     ], 'editorRuntime has the exact v2 top-level shape');
+    $assert($runtime['runtimeSchema']['_form_first']['compileHash'] === $compileHash, 'Internal form uses the same pinned compiled rules as public calculation');
     $assert($runtime['contract'] === 'prospektweb.calc.editor-runtime/v2', 'editor runtime contract');
     $assert($runtime['launchContext'] === [
         'contract' => 'prospektweb.calc.launch-context/v2',

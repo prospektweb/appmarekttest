@@ -4,6 +4,7 @@ namespace Prospektweb\Calc\Calculator;
 
 require_once dirname(__DIR__) . '/Services/CatalogRuntimeConfigAuthorityService.php';
 require_once dirname(__DIR__) . '/Services/PresetLifecycleMutationService.php';
+require_once __DIR__ . '/EditorFormRuntimeService.php';
 
 use Bitrix\Main\Application;
 use Bitrix\Main\Config\Option;
@@ -1182,6 +1183,14 @@ class InitPayloadService
         }
         sort($offerIds, SORT_NUMERIC);
 
+        $storefronts = $needsPublishedBundle
+            ? EditorFormRuntimeService::storefronts(
+                $publishedSnapshot,
+                $authoring,
+                (new \Prospektweb\Frontcalc\Service\StorefrontRepository())->listStorefronts($presetId)
+            )
+            : [];
+
         return [
             'contract' => 'prospektweb.calc.editor-runtime/v2',
             'launchContext' => [
@@ -1193,6 +1202,8 @@ class InitPayloadService
             ],
             'formDefinition' => $formDefinition,
             'bindingDefinition' => $bindingDefinition,
+            'runtimeSchema' => $publishedSnapshot,
+            'storefronts' => $storefronts,
             'publication' => $publication,
             'calculatorInputMapping' => $inputMapping,
             'catalogScenarios' => $preview['scenarios'],

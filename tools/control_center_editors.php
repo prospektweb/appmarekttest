@@ -2029,6 +2029,11 @@ try {
                 $bundle['documents']['outputMappings'],
                 $bundle['documents']['commercialPolicy']
             );
+        $initPayload['editorRuntime']['storefronts'] = \Prospektweb\Calc\Calculator\EditorFormRuntimeService::storefronts(
+            $runtimeSnapshot,
+            $authoring,
+            $bundle['documents']['storefronts']
+        );
         $respond(200, [
             'success' => true,
             'data' => $initPayload,
