@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 namespace Prospektweb\Frontcalc\Service {
+    final class SystemFormFieldConfigResolver {
+        public function resolve(array $authoring, ?array $storefront): array { return ['layoutCount' => ['defaultValue' => 1]]; }
+    }
     final class StorefrontPresentationProjector {
         public function apply(array $schema, array $authoring, ?array $storefront): array {
             if (($storefront['id'] ?? '') === 'broken') throw new \RuntimeException('Broken patch');

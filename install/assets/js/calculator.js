@@ -8,7 +8,7 @@ console.log('[BitrixBridge] calculator.js loaded, init integration...');
 
 var ProspekwebCalc = {
     // Пути
-    appUrl: '/local/apps/prospektweb.calc/index.html?v=dc23b6a0dd86',
+    appUrl: '/local/apps/prospektweb.calc/index.html?v=4e06508fbff0',
     cssPath: '/local/css/prospektweb.calc/calculator.css',
 
     loadCss: function(href) {

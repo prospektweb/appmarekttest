@@ -23,6 +23,7 @@ final class EditorFormRuntimeService
             $row = ['id' => (string)$definition['id'], 'name' => (string)$definition['name']];
             try {
                 $row['runtimeSchema'] = $projector->apply($schema, $authoring, $definition);
+                $row['systemFields'] = (new \Prospektweb\Frontcalc\Service\SystemFormFieldConfigResolver())->resolve($authoring, $definition);
             } catch (\Throwable $error) {
                 // A broken optional storefront must not prevent testing the base form.
                 $row['error'] = $error->getMessage();
